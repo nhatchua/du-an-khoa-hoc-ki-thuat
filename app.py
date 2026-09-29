@@ -18,7 +18,7 @@ def clean_ai_response(text: str) -> str:
     for keyword in ["role:", "language:", "constraint:", "check:", "refining", "let's write"]:
         idx = lower_text.find(keyword)
         if idx != -1:
-            text = text[idx + len(keyword):] # Cắt bỏ phần rác phía trước
+            text = text[idx + len(keyword):]
             lower_text = text.lower()
 
     forbidden_phrases = [
@@ -167,16 +167,23 @@ with tab1:
             with st.spinner(f"⏳ AI đang phân tích dữ liệu chuẩn SGK 'Kết Nối Tri Thức Với Cuộc Sống' cho bài: **{lesson_input}**..."):
                 genai.configure(api_key=api_key_to_use)
                 
-                available_models = [
-                    "gemini-2.5-flash",
-                    "gemini-2.0-flash",
-                    "gemini-1.5-flash",
-                    "models/gemini-2.5-flash",
-                    "models/gemini-2.0-flash",
-                    "models/gemini-1.5-flash"
-                ]
+                # Tự động quét model từ API key để tránh lỗi 404
+                available_models = []
+                try:
+                    for m in genai.list_models():
+                        if 'generateContent' in m.supported_generation_methods:
+                            available_models.append(m.name)
+                except Exception:
+                    pass
                 
-                # SỬ DỤNG PROMPT HOÀN TOÀN BẰNG TIẾNG VIỆT THUẦN TÚY ĐỂ TRIỆT TIÊU HOÀN TOÀN TÌNH TRẠNG NHẠI LỆNH TIẾNG ANH
+                if not available_models:
+                    available_models = [
+                        "gemini-2.5-flash",
+                        "gemini-2.0-flash",
+                        "models/gemini-2.5-flash",
+                        "models/gemini-2.0-flash"
+                    ]
+                
                 full_prompt = f"""
 Hãy đóng vai một giáo viên giỏi soạn nội dung học tập theo chương trình sách giáo khoa Kết Nối Tri Thức Với Cuộc Sống tại Việt Nam. 
 Hãy viết toàn bộ nội dung sau hoàn toàn bằng tiếng Việt chuẩn xác, tuyệt đối không dùng tiếng Anh, không giải thích dài dòng ngoài lề, không viết câu suy luận nội tâm:
