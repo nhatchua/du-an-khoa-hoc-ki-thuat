@@ -8,26 +8,44 @@ st.set_page_config(
     layout="wide"
 )
 
-# HÀM LỌC SẠCH NÂNG CẤP: CẮT BỎ HOÀN TOÀN MỌI ĐOẠN SUY LUẬN TIẾNG ANH PHÍA TRƯỚC
+# HÀM LỌC SẠCH SIÊU MẠNH: TỰ ĐỘNG CẮT VÀ XÓA SẠCH MỌI DÒNG NHÁP TIẾNG ANH
 def clean_ai_response(text: str) -> str:
     if not text:
         return ""
     
-    # Tìm vị trí bắt đầu của tiêu đề chính thức bằng tiếng Việt
-    start_keyword = "# 📌 I. KIẾN THỨC CỐT LÕI CẦN GHI NHỚ"
-    idx = text.find(start_keyword)
+    # 1. Cắt bỏ toàn bộ phần rác nằm trước tiêu đề bài học
+    start_keywords = ["# 📌 I. KIẾN THỨC CỐT LÕI", "I. KIẾN THỨC CỐT LÕI"]
+    best_idx = -1
+    for kw in start_keywords:
+        idx = text.find(kw)
+        if idx != -1:
+            best_idx = idx
+            break
     
-    if idx != -1:
-        # Cắt bỏ toàn bộ phần rác/suy luận tiếng Anh nằm trước tiêu đề này
-        text = text[idx:]
-    else:
-        # Dự phòng trường hợp AI viết khác dấu câu một chút
-        alt_keyword = "I. KIẾN THỨC CỐT LÕI"
-        idx_alt = text.find(alt_keyword)
-        if idx_alt != -1:
-            text = text[idx_alt:]
-
-    return text.strip()
+    if best_idx != -1:
+        text = text[best_idx:]
+        
+    # 2. Lọc bỏ các dòng nháp / suy luận nội tâm tiếng Anh rải rác bên trong nội dung
+    lines = text.split('\n')
+    filtered_lines = []
+    
+    english_draft_patterns = [
+        "refining", "final polish", "wait,", "drafting", "check against", 
+        "role:", "curriculum:", "topic:", "no internal", "let's go",
+        "multiple choice:", "short answer:", "question:", "hint:"
+    ]
+    
+    for line in lines:
+        line_stripped = line.strip()
+        line_lower = line_stripped.lower()
+        
+        # Kiểm tra xem dòng có chứa từ khóa nháp tiếng Anh không
+        is_draft = any(pattern in line_lower for pattern in english_draft_patterns)
+        
+        if not is_draft:
+            filtered_lines.append(line)
+            
+    return '\n'.join(filtered_lines).strip()
 
 
 # 2. Thanh bên (Sidebar)
@@ -43,7 +61,7 @@ with st.sidebar:
     
     st.markdown("---")
     st.subheader("👨‍🎓 THÔNG TIN HỌC SINH")
-    name = st.text_input("Họ và tên em (Không bắt buộc):", placeholder="Ví dụ: Nguyễn Văn A")
+    name = st.text_input("Họ và tên:", placeholder="Ví dụ: Nguyễn Văn A")
     
     st.markdown("---")
     st.subheader("🔑 ĐƯỜNG TRUYỀN AI CÁ NHÂN")
@@ -55,7 +73,7 @@ with st.sidebar:
     )
     
     user_api_key = st.text_input(
-        "Dán Mã Kết Nối (API Key) của em vào đây:", 
+        "Dán Mã Kết Nối (API Key):", 
         type="password", 
         placeholder="Nhập mã bí mật tại đây..."
     )
@@ -105,9 +123,9 @@ with st.sidebar:
             placeholder="Mô tả cụ thể vấn đề em gặp phải...",
             label_visibility="collapsed"
         )
-        if st.button("📩 Gửi phản hồi đến Thầy", use_container_width=True):
+        if st.button("📩 Gửi phản hồi", use_container_width=True):
             if feedback_text or issue_type:
-                st.success("Cảm ơn em! Phản hồi đã được gửi thành công.")
+                st.success("Đã gửi phản hồi thành công.")
             else:
                 st.warning("Vui lòng nhập nội dung trước khi gửi!")
         
@@ -152,12 +170,11 @@ with tab1:
         if not lesson_input.strip():
             st.warning("⚠️ Vui lòng nhập tên bài học trước khi bấm tổng hợp!")
         elif not api_key_to_use:
-            st.error("🔑 Chưa phát hiện Mã Kết Nối! Vui lòng dán Mã Kết Nối (API Key) ở thanh bên trái để kích hoạt AI.")
+            st.error("🔑 Chưa phát hiện Mã Kết Nối! Vui lòng dán Mã Kết Nối (API Key) ở thanh bên trái.")
         else:
             with st.spinner(f"⏳ AI đang phân tích dữ liệu chuẩn SGK 'Kết Nối Tri Thức Với Cuộc Sống' cho bài: **{lesson_input}**..."):
                 genai.configure(api_key=api_key_to_use)
                 
-                # Quét model khả dụng tự động
                 available_models = []
                 try:
                     for m in genai.list_models():
@@ -262,7 +279,7 @@ D. ...
     
     lab_input = st.text_input(
         "Ví dụ: Mô phỏng chuyển động ném ngang...",
-        placeholder="Ví dụ: Khảo sát đồ thị hàm số bậc 3, Mô phỏng chuyển động ném ngang...",
+        placeholder="Ví dụ: Khảo sát đồ thị hàm số bậc 3...",
         label_visibility="collapsed"
     )
     
