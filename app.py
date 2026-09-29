@@ -9,16 +9,25 @@ st.set_page_config(
     layout="wide"
 )
 
-# HÀM LỌC SẠCH DỨT ĐIỂM 100% TIẾNG ANH VÀ SUY LUẬN HỆ THỐNG (BẢN CHUẨN CỦA NHẬT)
+# HÀM LỌC SẠCH DỨT ĐIỂM 100% TIẾNG ANH VÀ SUY LUẬN NỘI TÂM CỦA AI
 def clean_ai_response(text: str) -> str:
     if not text:
         return ""
     
-    # Danh sách các từ khóa Tiếng Anh gây lỗi suy luận cần BỎ HOÀN TOÀN
+    # 1. Cắt bỏ toàn bộ phần suy luận/tự check của AI nếu nó lỡ tuôn ra ở đầu hoặc cuối
+    lower_text = text.lower()
+    for keyword in ["check:", "refining", "let's write", "note:", "thought:"]:
+        idx = lower_text.find(keyword)
+        if idx != -1:
+            text = text[:idx]
+            lower_text = text.lower()
+
+    # 2. Danh sách từ khóa Tiếng Anh và suy luận nội tâm cần loại bỏ theo dòng
     forbidden_words = [
         "language", "constraint", "format", "exercise", "guidance", "rule", "crucial",
         "section", "graph", "how to draw", "direction", "special case", "common mistake",
-        "forgetting", "incorrectly", "role", "task", "curriculum", "subject", "grade", "topic"
+        "forgetting", "incorrectly", "role", "task", "curriculum", "subject", "grade", "topic",
+        "definition", "shape", "key elements", "slope", "intercept", "question", "options", "hint"
     ]
     
     lines = text.split('\n')
@@ -26,17 +35,16 @@ def clean_ai_response(text: str) -> str:
     
     for line in lines:
         line_str = line.strip()
-        # Kiểm tra xem dòng có chứa từ tiếng Anh bị cấm không
+        # Bỏ qua các dòng trống quá nhiều hoặc chứa từ khóa tiếng Anh bị cấm
         contains_english = any(word in line_str.lower() for word in forbidden_words)
         
-        # Nếu không chứa từ Tiếng Anh cấm thì mới giữ lại
-        if not contains_english:
+        if not contains_english and line_str:
+            filtered_lines.append(line)
+        elif not line_str:
+            # Giữ lại khoảng trắng ngắt dòng hợp lý nếu cần thiết, hoặc lọc bớt
             filtered_lines.append(line)
             
-    result = '\n'.join(filtered_lines).strip()
-    
-    # Xóa các dòng trống thừa ở đầu
-    return result
+    return '\n'.join(filtered_lines).strip()
 
 
 # 2. Thanh bên (Sidebar)
@@ -194,11 +202,13 @@ with tab1:
                         "models/gemini-1.5-flash"
                     ]
                 
-                # Prompt viết THUẦN TIẾNG VIỆT, KHÔNG CHỨA BẤT KỲ TỪ TIẾNG ANH NÀO ĐỂ AI KHÔNG BỊ NHẦM LẪN
+                # System instruction cực kỳ nghiêm ngặt, cấm tuyệt đối suy luận nội tâm ra ngoài
                 system_instruction = """
                 Bạn là giáo viên biên soạn tài liệu học tập theo bộ sách Kết Nối Tri Thức Với Cuộc Sống.
-                Toàn bộ văn bản phải viết hoàn toàn bằng tiếng Việt.
-                Không dùng tiếng Anh. Không tóm tắt quy tắc.
+                QUY TẮC BẮT BUỘC:
+                1. Chỉ xuất ra nội dung bài học bằng tiếng Việt chuẩn xác.
+                2. TUYỆT ĐỐI KHÔNG viết các câu suy luận nội tâm, không viết các đoạn kiểm tra (ví dụ: Check:, Refining:, Let's write).
+                3. Không dùng tiếng Anh dưới mọi hình thức trong phần phản hồi.
                 """
                 
                 user_prompt = f"""
@@ -247,7 +257,7 @@ with tab1:
                 """
                 
                 generation_config = genai.types.GenerationConfig(
-                    temperature=0.1,
+                    temperature=0.0,  # Đặt bằng 0 để mô hình không sáng tạo lung tung
                     top_p=0.8
                 )
                 
@@ -272,7 +282,7 @@ with tab1:
                         continue
                 
                 if response_text:
-                    # Lọc sạch dứt điểm Tiếng Anh bằng hàm lọc chuẩn
+                    # Lọc sạch dứt điểm bằng hàm lọc nâng cấp
                     final_text = clean_ai_response(response_text)
                     st.success(f"✅ Đã hoàn thành tổng hợp kiến thức bài: **{lesson_input}** ({subject} - {grade})")
                     st.markdown("---")
