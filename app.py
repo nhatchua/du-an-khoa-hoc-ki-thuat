@@ -9,12 +9,20 @@ st.set_page_config(
     layout="wide"
 )
 
-# Hàm lọc sạch Tiếng Anh và các dòng suy luận hệ thống của AI
+# HÀM XỬ LÝ LỌC SẠCH 100% TIẾNG ANH & SUY LUẬN HỆ THỐNG
 def clean_ai_response(text: str) -> str:
     if not text:
         return ""
     
+    # 1. Tìm vị trí tiêu đề chính Tiếng Việt "# 📌 I." hoặc "# I."
+    # Mọi câu chữ/suy luận bằng Tiếng Anh xuất hiện trước tiêu đề này sẽ bị CẮT BỎ HOÀN TOÀN
+    match = re.search(r'(#\s*📌?\s*I\..*)', text, re.DOTALL)
+    if match:
+        text = match.group(1)
+    
+    # 2. Quét lọc phụ: Loại bỏ tất cả các dòng còn chứa ký tự Tiếng Anh hệ thống nếu có
     english_patterns = [
+        r'^\s*[\-\*]?\s*Constraint.*$',
         r'^\s*[\-\*]?\s*Role\s*:.*$',
         r'^\s*[\-\*]?\s*Task\s*:.*$',
         r'^\s*[\-\*]?\s*Curriculum\s*:.*$',
@@ -22,18 +30,15 @@ def clean_ai_response(text: str) -> str:
         r'^\s*[\-\*]?\s*Grade\s*:.*$',
         r'^\s*[\-\*]?\s*Topic\s*:.*$',
         r'^\s*[\-\*]?\s*Rule\s*\d*\s*:.*$',
-        r'^\s*[\-\*]?\s*Strict Rules\s*:.*$',
-        r'^\s*[\-\*]?\s*Function\s*:.*$',
+        r'^\s*[\-\*]?\s*Definition\s*:.*$',
         r'^\s*[\-\*]?\s*Graph shape\s*:.*$',
-        r'^\s*[\-\*]?\s*Vertex\s*:.*$'
+        r'^\s*[\-\*]?\s*Key elements\s*:.*$'
     ]
     
     lines = text.split('\n')
     filtered_lines = []
-    
     for line in lines:
-        is_english_line = any(re.match(pattern, line.strip(), re.IGNORECASE) for pattern in english_patterns)
-        if not is_english_line:
+        if not any(re.match(pattern, line.strip(), re.IGNORECASE) for pattern in english_patterns):
             filtered_lines.append(line)
             
     return '\n'.join(filtered_lines).strip()
@@ -129,7 +134,7 @@ with st.sidebar:
                 st.warning("Vui lòng nhập nội dung trước khi gửi!")
         
     st.markdown("<br>", unsafe_allow_html=True)
-    st.info("💡 **Triết lý:** Dưỡng thiện tâm - Ươm nhân tài • Dẫn dắt tư duy tự học!")
+    st.info("💡 **Triết lý:** Dưỡng thiện tâm - Ươm nhân tài • Dẫn dắt tưได tự học!")
 
 
 # 3. Khu vực chính
@@ -175,7 +180,7 @@ with tab1:
             with st.spinner(f"⏳ AI đang phân tích dữ liệu chuẩn SGK 'Kết Nối Tri Thức Với Cuộc Sống' cho bài: **{lesson_input}**..."):
                 genai.configure(api_key=api_key_to_use)
                 
-                # 1. Tự động lấy danh sách Model đang hoạt động thực tế từ Google API
+                # Tìm danh sách model khả dụng
                 available_models = []
                 try:
                     for m in genai.list_models():
@@ -184,7 +189,6 @@ with tab1:
                 except Exception:
                     pass
                 
-                # Dự phòng danh sách các tên model phổ biến nếu không lấy được động
                 if not available_models:
                     available_models = [
                         "gemini-2.5-flash",
@@ -198,13 +202,14 @@ with tab1:
                 system_instruction = """
                 BẠN LÀ GIÁO VIÊN NÒNG CỐT CHƯƠNG TRÌNH GDPT 2018 - BỘ SÁCH KẾT NỐI TRI THỨC VỚI CUỘC SỐNG.
                 
-                QUY TẮC BẮT BUỘC:
-                1. TUYỆT ĐỐI 100% KHÔNG NÓI HAY XUẤT RA TIẾNG ANH. Không ghi câu suy luận tiếng Anh, không ghi "Role:", "Task:", "Rule:".
+                Nhiệm vụ: Hãy bắt đầu BÀI VIẾT NGUYÊN BẢN BẰNG TIẾNG VIỆT ngay lập tức từ dòng tiêu đề '# 📌 I. KIẾN THỨC CỐT LÕI CẦN GHI NHỚ'.
+                
+                QUY TẮC BẮT BUỘC KHÔNG VI PHẠM:
+                1. KHÔNG VIẾT SUY LUẬN BẰNG TIẾNG ANH (Không Constraint, không Definition, không Key elements...).
                 2. KHÔNG SOẠN THEO DẠNG GIÁO ÁN. Trình bày dạng "Sổ Tay Ghi Nhớ Kiến Thức Cốt Lõi".
-                3. TIÊU ĐỀ MỤC LỚN PHẢI VIẾT HOA CÓ CỠ CHỮ LỚN (# hoặc ##).
-                4. BÀI TẬP BẮT BUỘC CÓ 2 DẠNG: Trắc Nghiệm Tương Tác và Tự Luận Trả Lời Ngắn.
-                5. HƯỚNG DẪN GIẢI ĐẶT TRONG THẺ <details><summary>🔍 Nhấp vào đây để xem hướng dẫn từng bước (Khi bí quá)</summary>...</details>.
-                6. BẮT BUỘC: TUYỆT ĐỐI KHÔNG GHI ĐÁP ÁN/KẾT QUẢ CUỐI CÙNG (Dùng dấu ...? hoặc câu hỏi gợi mở).
+                3. BÀI TẬP BẮT BUỘC CÓ 2 DẠNG: Trắc Nghiệm Tương Tác và Tự Luận Trả Lời Ngắn.
+                4. HƯỚNG DẪN GIẢI ĐẶT TRONG THẺ <details><summary>🔍 Nhấp vào đây để xem hướng dẫn từng bước (Khi bí quá)</summary>...</details>.
+                5. BẮT BUỘC: TUYỆT ĐỐI KHÔNG GHI ĐÁP ÁN/KẾT QUẢ CUỐI CÙNG (Dùng dấu ...? hoặc câu hỏi gợi mở).
                 """
                 
                 user_prompt = f"""
@@ -213,13 +218,13 @@ with tab1:
                 - Khối lớp: {grade}
                 - Tên bài học: {lesson_input}
 
-                CẤU TRÚC BẮT BUỘC VIẾT BẰNG TIẾNG VIỆT HOÀN TOÀN:
+                HÃY TRÌNH BÀY BẰNG TIẾNG VIỆT HOÀN TOÀN TỪ DÒNG ĐẦU TIÊN THEO ĐÚNG CẤU TRÚC SAU:
 
                 # 📌 I. KIẾN THỨC CỐT LÕI CẦN GHI NHỚ
-                (Trình bày khái niệm, công thức LaTeX chuẩn xác)
+                (Trình bày khái niệm, công thức LaTeX chuẩn xác theo SGK)
 
                 # ⚠️ II. CÁC LỖI SAI THƯỜNG GẶP KHI LÀM BÀI
-                (Trình bày các điểm sai lầm phổ biến)
+                (Trình bày các điểm sai lầm phổ biến của học sinh)
 
                 # ✍️ III. BÀI TẬP TƯƠNG TÁC & THỬ THÁCH
 
@@ -260,7 +265,6 @@ with tab1:
                 response_text = None
                 last_error = ""
                 
-                # 2. Vòng lặp tự động chuyển sang model hoạt động nếu gặp lỗi 404
                 for model_name in available_models:
                     try:
                         model = genai.GenerativeModel(
@@ -279,6 +283,7 @@ with tab1:
                         continue
                 
                 if response_text:
+                    # Lọc cắt bỏ toàn bộ tiếng Anh trước tiêu đề chính
                     final_text = clean_ai_response(response_text)
                     st.success(f"✅ Đã hoàn thành tổng hợp kiến thức bài: **{lesson_input}** ({subject} - {grade})")
                     st.markdown("---")
