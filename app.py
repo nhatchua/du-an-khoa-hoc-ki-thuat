@@ -2,44 +2,46 @@ import re
 import streamlit as st
 import google.generativeai as genai
 
-# 1. Cấu hình trang
+# 1. Cấu hình trang Streamlit
 st.set_page_config(
     page_title="Gia Sư AI - Hệ Sinh Thái Lớp Học Đảo Ngược",
     page_icon="🤖",
     layout="wide"
 )
 
-# HÀM LỌC SẠCH DỨT ĐIỂM 100% TIẾNG ANH VÀ SUY LUẬN HỆ THỐNG
+# 2. HÀM TỐI ƯU CẮT SẠCH 100% TIẾNG ANH VÀ DÒNG SUY LUẬN HỆ THỐNG
 def clean_ai_response(text: str) -> str:
     if not text:
         return ""
     
-    # Danh sách các từ khóa Tiếng Anh gây lỗi suy luận cần BỎ HOÀN TOÀN
-    forbidden_words = [
-        "language", "constraint", "format", "exercise", "guidance", "rule", "crucial",
-        "section", "graph", "how to draw", "direction", "special case", "common mistake",
-        "forgetting", "incorrectly", "role", "task", "curriculum", "subject", "grade", "topic"
+    # 1. Tìm vị trí tiêu đề chính Tiếng Việt đầu tiên (# 📌 I. hoặc # I.)
+    # Cắt bỏ toàn bộ phần chữ tiếng Anh / suy luận hệ thống đứng trước nó
+    match = re.search(r'(#\s*📌?\s*I\..*)', text, re.DOTALL)
+    if match:
+        text = match.group(1)
+    
+    # 2. Lọc bỏ từng dòng nếu chứa từ khóa suy luận hệ thống bằng Tiếng Anh
+    english_keywords = [
+        "constraint", "language:", "format:", "exercise:", "guidance:", 
+        "crucial rule:", "section i", "section ii", "graph:", "how to draw:", 
+        "direction:", "special cases:", "common mistakes:", "forgetting", 
+        "incorrectly", "role:", "task:", "curriculum:", "definition:", "key elements:"
     ]
     
     lines = text.split('\n')
     filtered_lines = []
     
     for line in lines:
-        line_str = line.strip()
-        # Kiểm tra xem dòng có chứa từ tiếng Anh bị cấm không
-        contains_english = any(word in line_str.lower() for word in forbidden_words)
-        
-        # Nếu không chứa từ Tiếng Anh cấm thì mới giữ lại
-        if not contains_english:
+        line_lower = line.strip().lower()
+        # Kiểm tra xem dòng đó có chứa bất kỳ từ khóa tiếng Anh bị cấm nào không
+        is_bad_line = any(keyword in line_lower for keyword in english_keywords)
+        if not is_bad_line:
             filtered_lines.append(line)
             
-    result = '\n'.join(filtered_lines).strip()
-    
-    # Xóa các dòng trống thừa ở đầu
-    return result
+    return '\n'.join(filtered_lines).strip()
 
 
-# 2. Thanh bên (Sidebar)
+# 3. Thanh bên (Sidebar)
 with st.sidebar:
     st.header("⚙️ THIẾT LẬP HỌC TẬP")
     
@@ -132,7 +134,7 @@ with st.sidebar:
     st.info("💡 **Triết lý:** Dưỡng thiện tâm - Ươm nhân tài • Dẫn dắt tư duy tự học!")
 
 
-# 3. Khu vực chính
+# 4. Khu vực chính
 st.markdown("<h1 style='text-align: center; color: #1E88E5;'>🤖 GIA SƯ AI - HỆ SINH THÁI LỚP HỌC ĐẢO NGƯỢC</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; font-size: 18px; font-weight: bold;'>Trường THPT Tân Hiệp</p>", unsafe_allow_html=True)
 
@@ -144,7 +146,7 @@ with col_b3:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# 4. Hệ thống Trạm
+# 5. Hệ thống Trạm
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "💡 Trạm 1: Học Tập & Phòng Thí Nghiệm",
     "✍️ Trạm 2: Gia Sư Tương Tác",
@@ -194,31 +196,31 @@ with tab1:
                         "models/gemini-1.5-flash"
                     ]
                 
-                # Prompt viết THUẦN TIẾNG VIỆT, KHÔNG CHỨA BẤT KỲ TỪ TIẾNG ANH NÀO ĐỂ AI KHÔNG BỊ NHẦM LẪN
+                # Prompt thuần Việt 100%
                 system_instruction = """
-                Bạn là giáo viên biên soạn tài liệu học tập theo bộ sách Kết Nối Tri Thức Với Cuộc Sống.
-                Toàn bộ văn bản phải viết hoàn toàn bằng tiếng Việt.
-                Không dùng tiếng Anh. Không tóm tắt quy tắc.
+                Bạn là giáo viên biên soạn tài liệu học tập chuẩn chương trình Giáo Dục Phổ Thông 2018 (Bộ sách Kết Nối Tri Thức Với Cuộc Sống).
+                Tất cả văn bản xuất ra bắt buộc phải viết bằng tiếng Việt.
+                Không tự tóm tắt quy tắc, không ghi chú lại yêu cầu.
                 """
                 
                 user_prompt = f"""
-                Hãy soạn nội dung bài học theo thông tin sau:
+                Tổng hợp kiến thức bài học:
                 - Môn học: {subject}
-                - Lớp: {grade}
-                - Tên bài: {lesson_input}
+                - Khối lớp: {grade}
+                - Tên bài học: {lesson_input}
 
-                Yêu cầu trình bày chính xác theo cấu trúc Tiếng Việt sau:
+                Bắt đầu ngay lập tức bằng tiếng Việt từ dòng tiêu đề sau:
 
                 # 📌 I. KIẾN THỨC CỐT LÕI CẦN GHI NHỚ
-                (Trình bày chi tiết lý thuyết, khái niệm và công thức bằng tiếng Việt)
+                (Trình bày khái niệm, lý thuyết, công thức chính xác)
 
                 # ⚠️ II. CÁC LỖI SAI THƯỜNG GẶP KHI LÀM BÀI
-                (Liệt kê các lỗi sai phổ biến của học sinh bằng tiếng Việt)
+                (Trình bày các điểm sai lầm phổ biến của học sinh)
 
                 # ✍️ III. BÀI TẬP TƯƠNG TÁC & THỬ THÁCH
 
                 ## 1. Dạng Trắc Nghiệm Tương Tác
-                **Câu 1:** (Đề bài trắc nghiệm)  
+                **Câu 1:** (Ghi rõ đề bài)  
                 A. ...  
                 B. ...  
                 C. ...  
@@ -229,25 +231,26 @@ with tab1:
 
                 - **Bước 1:** ...  
                 - **Bước 2:** ...  
-                - **Gợi ý lựa chọn:** Áp dụng công thức để tìm đáp án đúng. Tuyệt đối không cho biết đáp án A, B, C hay D.
+                - **Gợi ý lựa chọn:** Áp dụng công thức trên để tự tìm đáp án đúng. Tuyệt đối không chỉ rõ đáp án đúng là A, B, C hay D.
                 </details>
 
                 <br>
 
                 ## 2. Dạng Tự Luận Trả Lời Ngắn
-                **Câu 2:** (Đề bài tự luận)  
+                **Câu 2:** (Ghi rõ đề bài)  
 
                 <details>
                 <summary>🔍 <b>Nhấp vào đây để xem hướng dẫn từng bước (Khi bí quá)</b></summary>
 
                 - **Gợi ý bước 1:** ...  
                 - **Gợi ý bước 2:** ...  
-                - **Thử thách học sinh:** Em hãy tính kết quả cuối cùng = ...?
+                - **Thử thách học sinh:** Em hãy tính ra kết quả cuối cùng = ...?
                 </details>
                 """
                 
+                # Đặt temperature = 0.0 để AI tuân thủ tuyệt đối quy tắc
                 generation_config = genai.types.GenerationConfig(
-                    temperature=0.1,
+                    temperature=0.0,
                     top_p=0.8
                 )
                 
@@ -272,7 +275,7 @@ with tab1:
                         continue
                 
                 if response_text:
-                    # Lọc sạch dứt điểm Tiếng Anh
+                    # Lọc sạch dứt điểm Tiếng Anh trước khi hiển thị
                     final_text = clean_ai_response(response_text)
                     st.success(f"✅ Đã hoàn thành tổng hợp kiến thức bài: **{lesson_input}** ({subject} - {grade})")
                     st.markdown("---")
