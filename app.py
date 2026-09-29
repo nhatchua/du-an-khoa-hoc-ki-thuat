@@ -38,8 +38,12 @@ with st.sidebar:
     # ĐƯỜNG TRUYỀN AI CÁ NHÂN
     st.subheader("🔑 ĐƯỜNG TRUYỀN AI CÁ NHÂN")
     
-    # Nút lấy key
-    st.button("👉 Lấy Key riêng miễn phí (15s)", use_container_width=True)
+    # Nút bấm mở thẳng trang lấy API Key trên Google AI Studio
+    st.link_button(
+        "👉 Lấy Key riêng miễn phí (15s)", 
+        "https://aistudio.google.com/app/apikey", 
+        use_container_width=True
+    )
     
     # Ô nhập API Key
     user_api_key = st.text_input(
