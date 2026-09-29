@@ -1,6 +1,6 @@
 import streamlit as st
 
-# 1. Cấu hình trang (Bắt buộc phải nằm ở dòng đầu tiên sau import)
+# 1. Cấu hình trang (Giao diện rộng)
 st.set_page_config(
     page_title="Gia Sư AI - Hệ Sinh Thái Lớp Học Đảo Ngược",
     page_icon="🤖",
@@ -11,9 +11,21 @@ st.set_page_config(
 with st.sidebar:
     st.header("THIẾT LẬP HỌC TẬP")
     
-    # Hộp quét mã QR
+    # Hộp quét mã QR vào app
     with st.expander("📲 Quét mã QR vào app trên điện thoại"):
-        st.write("Dùng camera điện thoại để quét mã QR.")
+        st.write("Dùng camera điện thoại để quét mã bên dưới để truy cập nhanh:")
+        
+        # Link web ứng dụng
+        app_url = "https://du-an-khoa-hoc-ki-thuat-2026.streamlit.app/"
+        
+        # Tạo mã QR tự động từ link web
+        qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={app_url}"
+        
+        # Hiển thị ảnh mã QR
+        st.image(qr_api_url, caption="Quét mã để mở trên điện thoại", width=200)
+        
+        # Hiển thị link bấm trực tiếp
+        st.markdown(f"🔗 **Hoặc bấm vào link:** [{app_url}]({app_url})")
     
     st.markdown("---")
     
