@@ -79,7 +79,7 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # BÁO LỖI & GÓP Ý (CẬP NHẬT CHI TIẾT THEO ẢNH)
+    # BÁO LỖI & GÓP Ý (ĐÃ THÊM ĐÁNH GIÁ SAO VÀ MÔ TẢ CHI TIẾT)
     with st.expander("🛠️ Báo lỗi ứng dụng & Góp ý"):
         st.markdown("**Loại vấn đề gặp phải:**")
         issue_type = st.selectbox(
@@ -95,13 +95,21 @@ with st.sidebar:
             label_visibility="collapsed"
         )
         
-        feedback_text = st.text_area("Chi tiết mô tả lỗi hoặc góp ý (Tùy chọn):", placeholder="Nhập thêm chi tiết nếu có...")
+        # Thanh đánh giá sao (Star rating)
+        rating = st.feedback("stars")
+        
+        st.markdown("**Mô tả chi tiết:**")
+        feedback_text = st.text_area(
+            "Mô tả chi tiết:",
+            placeholder="Mô tả cụ thể vấn đề hoặc ý kiến đóng góp...",
+            label_visibility="collapsed"
+        )
         
         if st.button("📩 Gửi phản hồi đến Thầy", use_container_width=True):
             if feedback_text or issue_type:
                 st.success("Cảm ơn em! Phản hồi đã được gửi đến Thầy.")
             else:
-                st.warning("Vui lòng chọn hoặc nhập thông tin trước khi gửi!")
+                st.warning("Vui lòng nhập thông tin trước khi gửi!")
         
     st.markdown("<br>", unsafe_allow_html=True)
     
