@@ -1,4 +1,3 @@
-import re
 import streamlit as st
 import google.generativeai as genai
 
@@ -9,12 +8,12 @@ st.set_page_config(
     layout="wide"
 )
 
-# HÀM LỌC SẠCH DỨT ĐIỂM 100% TIẾNG ANH VÀ SUY LUẬN NỘI TÂM CỦA AI
+# HÀM LỌC SẠCH DỨT ĐIỂM SUY LUẬN VÀ LỖI HỆ THỐNG CỦA AI
 def clean_ai_response(text: str) -> str:
     if not text:
         return ""
     
-    # 1. Cắt bỏ toàn bộ phần suy luận/tự check của AI nếu nó lỡ tuôn ra ở đầu hoặc cuối
+    # Cắt bỏ toàn bộ phần suy luận hoặc tự check nếu AI lỡ tuôn ra
     lower_text = text.lower()
     for keyword in ["check:", "refining", "let's write", "note:", "thought:"]:
         idx = lower_text.find(keyword)
@@ -22,12 +21,14 @@ def clean_ai_response(text: str) -> str:
             text = text[:idx]
             lower_text = text.lower()
 
-    # 2. Danh sách từ khóa Tiếng Anh và suy luận nội tâm cần loại bỏ theo dòng
-    forbidden_words = [
-        "language", "constraint", "format", "exercise", "guidance", "rule", "crucial",
-        "section", "graph", "how to draw", "direction", "special case", "common mistake",
-        "forgetting", "incorrectly", "role", "task", "curriculum", "subject", "grade", "topic",
-        "definition", "shape", "key elements", "slope", "intercept", "question", "options", "hint"
+    # Các cụm từ khóa rác hệ thống cần loại bỏ
+    forbidden_system_phrases = [
+        "is everything in vietnamese", 
+        "is there any english", 
+        "the structure is followed", 
+        "refining the", 
+        "final polish", 
+        "let's write"
     ]
     
     lines = text.split('\n')
@@ -35,13 +36,10 @@ def clean_ai_response(text: str) -> str:
     
     for line in lines:
         line_str = line.strip()
-        # Bỏ qua các dòng trống quá nhiều hoặc chứa từ khóa tiếng Anh bị cấm
-        contains_english = any(word in line_str.lower() for word in forbidden_words)
+        line_lower = line_str.lower()
+        is_system_thought = any(phrase in line_lower for phrase in forbidden_system_phrases)
         
-        if not contains_english and line_str:
-            filtered_lines.append(line)
-        elif not line_str:
-            # Giữ lại khoảng trắng ngắt dòng hợp lý nếu cần thiết, hoặc lọc bớt
+        if not is_system_thought:
             filtered_lines.append(line)
             
     return '\n'.join(filtered_lines).strip()
@@ -202,22 +200,20 @@ with tab1:
                         "models/gemini-1.5-flash"
                     ]
                 
-                # System instruction cực kỳ nghiêm ngặt, cấm tuyệt đối suy luận nội tâm ra ngoài
-                system_instruction = """
-                Bạn là giáo viên biên soạn tài liệu học tập theo bộ sách Kết Nối Tri Thức Với Cuộc Sống.
-                QUY TẮC BẮT BUỘC:
-                1. Chỉ xuất ra nội dung bài học bằng tiếng Việt chuẩn xác.
-                2. TUYỆT ĐỐI KHÔNG viết các câu suy luận nội tâm, không viết các đoạn kiểm tra (ví dụ: Check:, Refining:, Let's write).
-                3. Không dùng tiếng Anh dưới mọi hình thức trong phần phản hồi.
-                """
-                
-                user_prompt = f"""
-                Hãy soạn nội dung bài học theo thông tin sau:
+                # Gộp trực tiếp quy tắc lên đầu prompt để tránh lỗi system_instruction của SDK
+                full_prompt = f"""
+                [QUY TẮC BẮT BUỘC]:
+                - Bạn là giáo viên biên soạn tài liệu học tập theo bộ sách Kết Nối Tri Thức Với Cuộc Sống.
+                - Chỉ xuất ra nội dung bài học bằng tiếng Việt chuẩn xác.
+                - TUYỆT ĐỐI KHÔNG viết các câu suy luận nội tâm, không viết các đoạn kiểm tra hay nhại lại lệnh (Check:, Refining:, Let's write).
+                - Không dùng tiếng Anh dưới mọi hình thức trong phần phản hồi.
+
+                [YÊU CẦU NỘI DUNG]:
                 - Môn học: {subject}
                 - Lớp: {grade}
                 - Tên bài: {lesson_input}
 
-                Yêu cầu trình bày chính xác theo cấu trúc Tiếng Việt sau:
+                Hãy trình bày chính xác theo cấu trúc Tiếng Việt sau:
 
                 # 📌 I. KIẾN THỨC CỐT LÕI CẦN GHI NHỚ
                 (Trình bày chi tiết lý thuyết, khái niệm và công thức bằng tiếng Việt)
@@ -257,7 +253,7 @@ with tab1:
                 """
                 
                 generation_config = genai.types.GenerationConfig(
-                    temperature=0.0,  # Đặt bằng 0 để mô hình không sáng tạo lung tung
+                    temperature=0.0,
                     top_p=0.8
                 )
                 
@@ -266,12 +262,10 @@ with tab1:
                 
                 for model_name in available_models:
                     try:
-                        model = genai.GenerativeModel(
-                            model_name=model_name,
-                            system_instruction=system_instruction
-                        )
+                        # Khởi tạo model tiêu chuẩn không dùng system_instruction tham số để chống lỗi SDK
+                        model = genai.GenerativeModel(model_name=model_name)
                         response = model.generate_content(
-                            user_prompt,
+                            full_prompt,
                             generation_config=generation_config
                         )
                         if response and response.text:
@@ -282,7 +276,6 @@ with tab1:
                         continue
                 
                 if response_text:
-                    # Lọc sạch dứt điểm bằng hàm lọc nâng cấp
                     final_text = clean_ai_response(response_text)
                     st.success(f"✅ Đã hoàn thành tổng hợp kiến thức bài: **{lesson_input}** ({subject} - {grade})")
                     st.markdown("---")
