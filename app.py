@@ -9,7 +9,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# HÀM LỌC SẠCH DỨT ĐIỂM 100% TIẾNG ANH VÀ SUY LUẬN HỆ THỐNG (BẢN CHUẨN CỦA NHẬT)
+# HÀM LỌC SẠCH DỨT ĐIỂM 100% TIẾNG ANH VÀ SUY LUẬN HỆ THỐNG
 def clean_ai_response(text: str) -> str:
     if not text:
         return ""
@@ -272,7 +272,7 @@ with tab1:
                         continue
                 
                 if response_text:
-                    # Lọc sạch dứt điểm Tiếng Anh bằng hàm lọc chuẩn
+                    # Lọc sạch dứt điểm Tiếng Anh
                     final_text = clean_ai_response(response_text)
                     st.success(f"✅ Đã hoàn thành tổng hợp kiến thức bài: **{lesson_input}** ({subject} - {grade})")
                     st.markdown("---")
