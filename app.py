@@ -10,21 +10,21 @@ st.set_page_config(
 
 # 2. Thanh bên (Sidebar)
 with st.sidebar:
-    st.header("THIẾT LẬP HỌC TẬP")
+    st.header("⚙️ THIẾT LẬP HỌC TẬP")
     
     # Mã QR
-    with st.expander("📲 Quét mã QR vào app trên điện thoại"):
-        st.write("Dùng camera điện thoại để quét mã bên dưới để truy cập nhanh:")
+    with st.expander("📲 Quét mã QR vào ứng dụng bằng điện thoại"):
+        st.write("Dùng máy ảnh điện thoại để quét mã bên dưới để truy cập nhanh:")
         app_url = "https://du-an-khoa-hoc-ki-thuat-2026.streamlit.app/"
         qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={app_url}"
         st.image(qr_api_url, caption="Quét mã để mở trên điện thoại", width=200)
-        st.markdown(f"🔗 **Hoặc bấm vào link:** [{app_url}]({app_url})")
+        st.markdown(f"🔗 **Hoặc nhấn vào đường dẫn:** [{app_url}]({app_url})")
     
     st.markdown("---")
     
     # THÔNG TIN HỌC SINH
     st.subheader("👨‍🎓 THÔNG TIN HỌC SINH")
-    name = st.text_input("Họ và tên em (Tùy chọn):", placeholder="Ví dụ: Nguyễn Văn A")
+    name = st.text_input("Họ và tên em (Không bắt buộc):", placeholder="Ví dụ: Nguyễn Văn A")
     
     st.markdown("---")
     
@@ -32,22 +32,22 @@ with st.sidebar:
     st.subheader("🔑 ĐƯỜNG TRUYỀN AI CÁ NHÂN")
     
     st.link_button(
-        "👉 Lấy Key riêng miễn phí (15s)", 
+        "👉 Lấy Mã Riêng Miễn Phí (15 giây)", 
         "https://aistudio.google.com/app/apikey", 
         use_container_width=True
     )
     
     user_api_key = st.text_input(
-        "Dán mã API Key của em vào đây:", 
+        "Dán Mã Kết Nối (API Key) của em vào đây:", 
         type="password", 
-        placeholder="AIzaSy..."
+        placeholder="Nhập mã bí mật tại đây..."
     )
     
     if user_api_key:
-        st.success("🟢 Đang dùng đường truyền AI Cá nhân")
+        st.success("🟢 Đang sử dụng đường truyền AI Cá nhân")
         api_key_to_use = user_api_key
     else:
-        st.info("🔵 Đang dùng đường truyền chung của Trường")
+        st.info("🔵 Đang sử dụng đường truyền chung của Trường")
         api_key_to_use = st.secrets.get("GEMINI_API_KEY", "")
         
     st.markdown("<br>", unsafe_allow_html=True)
@@ -77,8 +77,8 @@ with st.sidebar:
             "Loại vấn đề gặp phải:",
             [
                 "📷 Lỗi nhận diện chữ viết tay / hình ảnh",
-                "📊 Lỗi hiển thị đồ thị / Phòng Lab ảo",
-                "🧠 AI giải thích khó hiểu / chưa sát SGK",
+                "📊 Lỗi hiển thị đồ thị / Phòng Thí Nghiệm Ảo",
+                "🧠 AI giải thích khó hiểu / chưa sát Sách Giảng Dạy",
                 "⏳ Ứng dụng phản hồi chậm / quá tải",
                 "💡 Đề xuất tính năng mới",
                 "❓ Lỗi khác..."
@@ -88,59 +88,60 @@ with st.sidebar:
         rating = st.feedback("stars")
         feedback_text = st.text_area(
             "Mô tả chi tiết:",
-            placeholder="Mô tả cụ thể vấn đề...",
+            placeholder="Mô tả cụ thể vấn đề em gặp phải...",
             label_visibility="collapsed"
         )
         if st.button("📩 Gửi phản hồi đến Thầy", use_container_width=True):
             if feedback_text or issue_type:
-                st.success("Cảm ơn em! Phản hồi đã được gửi đến Thầy.")
+                st.success("Cảm ơn em! Phản hồi đã được gửi thành công.")
             else:
-                st.warning("Vui lòng nhập thông tin trước khi gửi!")
+                st.warning("Vui lòng nhập nội dung trước khi gửi!")
         
     st.markdown("<br>", unsafe_allow_html=True)
     st.info("💡 **Triết lý:** Dưỡng thiện tâm - Ươm nhân tài • Dẫn dắt tư duy tự học!")
 
 
-# 3. Khu vực chính (Main Content)
-st.markdown("<h1 style='text-align: center;'>🤖 GIA SƯ AI - HỆ SINH THÁI LỚP HỌC ĐẢO NGƯỢC</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; font-size: 18px;'>Trường THPT Tân Hiệp</p>", unsafe_allow_html=True)
+# 3. Khu vực chính
+st.markdown("<h1 style='text-align: center; color: #1E88E5;'>🤖 GIA SƯ AI - HỆ SINH THÁI LỚP HỌC ĐẢO NGƯỢC</h1>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-size: 18px; font-weight: bold;'>Trường THPT Tân Hiệp</p>", unsafe_allow_html=True)
 
 col_b1, col_b2, col_b3, col_b4 = st.columns([1, 2, 2, 1])
 with col_b2:
     st.info("📚 Bộ sách: Kết Nối Tri Thức Với Cuộc Sống")
 with col_b3:
-    st.success("🎯 Chuẩn CT GDPT 2018 / Định dạng 2025")
+    st.success("🎯 Chuẩn Chương Trình Giáo Dục Phổ Thông 2018")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# 4. Hệ thống Trạm (Tabs)
+# 4. Hệ thống Trạm
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "💡 Trạm 1: Học Tập & Phòng Lab",
-    "✍️ Trạm 2: Gia Sư Socratic",
+    "💡 Trạm 1: Học Tập & Phòng Thí Nghiệm",
+    "✍️ Trạm 2: Gia Sư Tương Tác",
     "🏆 Trạm 3: Khảo Thí Tự Do",
-    "📊 Trạm 4: Nhật Ký KHKT",
-    "📉 Trạm 5: Thống Kê & T-Test"
+    "📊 Trạm 4: Nhật Ký Nghiên Cứu",
+    "📉 Trạm 5: Thống Kê & Đánh Giá"
 ])
 
 # TRẠM 1: TỰ HỌC & CHIẾM LĨNH KIẾN THỨC
 with tab1:
-    st.markdown(f"## 📖 Tự học & Chiếm lĩnh kiến thức môn {subject} - {grade}")
+    st.markdown(f"# 📖 TỰ HỌC & CHIẾM LĨNH KIẾN THỨC: MON {subject.upper()} - {grade.upper()}")
     
+    st.markdown("### 📝 **Nhập tên bài học em muốn tổng hợp:**")
     lesson_input = st.text_input(
         "Nhập bài học cần chiếm lĩnh kiến thức:",
-        placeholder="Ví dụ: Khảo sát hàm số, Hình chóp, Mạch điện xoay chiều...",
+        placeholder="Ví dụ: Đồ thị hàm số bậc hai, Hàm số lượng giác, Mạch điện xoay chiều...",
         label_visibility="collapsed"
     )
     
-    btn_soan_bai = st.button("🧪 Tổng hợp kiến thức trọng tâm", type="primary")
+    btn_soan_bai = st.button("🧪 Tổng Hợp Kiến Thức Cốt Lõi", type="primary")
     
     if btn_soan_bai:
         if not lesson_input.strip():
             st.warning("⚠️ Vui lòng nhập tên bài học trước khi bấm tổng hợp!")
         elif not api_key_to_use:
-            st.error("🔑 Chưa phát hiện API Key! Vui lòng nhập API Key ở thanh bên (Sidebar) để kích hoạt AI.")
+            st.error("🔑 Chưa phát hiện Mã Kết Nối! Vui lòng dán Mã Kết Nối (API Key) ở thanh bên trái để kích hoạt AI.")
         else:
-            with st.spinner(f"⏳ AI đang tổng hợp kiến thức cốt lõi cho bài: **{lesson_input}**..."):
+            with st.spinner(f"⏳ AI đang phân tích dữ liệu chuẩn Sách Giáo Khoa 'Kết Nối Tri Thức Với Cuộc Sống' cho bài: **{lesson_input}**..."):
                 genai.configure(api_key=api_key_to_use)
                 
                 # Danh sách model lấy động
@@ -162,41 +163,62 @@ with tab1:
                         "models/gemini-1.5-flash"
                     ]
                 
-                # Prompt hoàn toàn bằng Tiếng Việt, định dạng Kiến thức cốt lõi & Không cho đáp án
                 system_prompt = f"""
-                Bạn là một trợ lý học tập AI chuyên tóm tắt kiến thức cốt lõi dành cho học sinh THPT.
-                Hãy tổng hợp nội dung bài học theo đúng bộ sách SGK 'Kết nối tri thức với cuộc sống'.
-                
-                QUY TẮC BẮT BUỘC:
-                1. TUYỆT ĐỐI KHÔNG DÙNG TIẾNG ANH. Toàn bộ thuật ngữ, tiêu đề, nội dung phải trình bày 100% bằng Tiếng Việt chuẩn.
-                2. NỘI DUNG LÀ KIẾN THỨC CỐT LÕI (Dạng ghi nhớ/Sổ tay học tập), KHÔNG soạn thành dạng giáo án giảng dạy hay mục tiêu bài học.
-                3. PHẦN VÍ DỤ VÀ BÀI TẬP:
-                   - Trình bày rõ ràng, mỗi ý/bước phải XUỐNG DÒNG minh bạch.
-                   - Có phần gợi ý định hướng các bước làm.
-                   - CỰC KỲ QUAN TRỌNG: TUYỆT ĐỐI KHÔNG CHO ĐÁP ÁN/ĐÁP SỐ CỦA BÀI TẬP. Để trống kết quả cuối cùng dưới dạng '...' hoặc đặt câu hỏi gợi mở để học sinh tự tính toán/suy luận.
+                Bạn là một Trợ Lý Giáo Dục AI chuyên soạn Sổ Tay Kiến Thức Cốt Lõi cho học sinh THPT tại Việt Nam.
+                Nhiệm vụ của bạn là tóm tắt bài học theo đúng bộ Sách Giáo Khoa 'Kết nối tri thức với cuộc sống'.
+
+                QUY TẮC NGHIÊM NGẶT:
+                1. TUYỆT ĐỐI 100% KHÔNG NÓI TIẾNG ANH. Tất cả tiêu đề, thuật ngữ, hướng dẫn phải ghi hoàn toàn bằng Tiếng Việt.
+                2. KHÔNG SOẠN THEO DẠNG GIÁO ÁN GIẢNG DẠY. Trình bày dưới dạng "Kiến thức trọng tâm - Sổ tay ghi nhớ".
+                3. TIÊU ĐỀ MỤC LỚN PHẢI VIẾT HOA VÀ CÓ CỠ CHỮ LỚN (Định dạng # hoặc ## trong Markdown).
+                4. QUY TẮC BÀI TẬP VÀ VÍ DỤ:
+                   - Phải bao gồm cả 2 dạng: **Dạng Trắc Nghiệm** và **Dạng Tự Luận Trả Lời Ngắn**.
+                   - Mọi bước làm, yêu cầu phải được XUỐNG DÒNG rõ ràng.
+                   - PHẦN HƯỚNG DẪN GIẢI: Phải nằm hoàn toàn trong khối ẩn/hiện `<details><summary>👉 Nhấp vào đây để xem hướng dẫn từng bước (Khi bí quá)</summary>...</details>`.
+                   - BẮT BUỘC: TUYỆT ĐỐI KHÔNG CHO ĐÁP SỐ / ĐÁP ÁN CUỐI CÙNG. Hãy để kết quả cuối là dấu '...?' hoặc câu hỏi gợi mở để học sinh tự tính toán.
 
                 THÔNG TIN BÀI HỌC:
                 - Môn học: {subject}
                 - Khối lớp: {grade}
-                - Tên bài học: {lesson_input}
+                - Bài học: {lesson_input}
 
-                CẤU TRÚC TRÌNH BÀY (Dùng Markdown đẹp mắt):
+                CẤU TRÚC TRÌNH BÀY (Sử dụng Markdown và HTML đẹp mắt, chữ to phân biệt):
 
-                📌 **1. TÓM TẮT KIẾN THỨC CỐT LÕI**
-                - Công thức, định lý, khái niệm quan trọng nhất (Dùng LaTeX cho công thức toán/lý/hóa).
-                - Các tính chất/quy tắc cần ghi nhớ.
+                # 📌 I. KIẾN THỨC CỐT LÕI CẦN GHI NHỚ
+                - Định nghĩa, khái niệm cốt lõi (Trình bày ngắn gọn, đống khung hoặc gạch đầu dòng rõ ràng).
+                - Công thức quan trọng (Dùng LaTeX rõ ràng).
+                - Quy tắc/Tính chất trọng tâm.
 
-                ⚠️ **2. CÁC ĐIỂM DỄ BỊ LẪN LỘN / SAI LẦM CẦN TRÁNH**
-                - 2-3 lưu ý ngắn gọn giúp học sinh không bị mất điểm khi làm bài.
+                # ⚠️ II. CÁC LỖI SAI THƯỜNG GẶP KHI LÀM BÀI
+                - Điểm học sinh dễ nhầm lẫn, tính sai hoặc khoanh nhầm đáp án.
 
-                ✍️ **3. VÍ DỤ MINH HỌA & THỬ THÁCH TƯƠNG TÁC**
-                - Cho 2 ví dụ tiêu biểu.
-                - Mỗi ví dụ cần xuống dòng rõ ràng các phần:
-                  + **Đề bài:** ...
-                  + **Gợi ý từng bước:**
-                    * Bước 1: ...
-                    * Bước 2: ...
-                  + **Thử thách học sinh:** (Đặt câu hỏi yêu cầu học sinh tự tính ra kết quả cuối cùng - KHÔNG đưa ra đáp số).
+                # ✍️ III. BÀI TẬP TƯƠNG TÁC & THỬ THÁCH
+
+                ## 1. Dạng Trắc Nghiệm Tương Tác
+                - **Câu hỏi trắc nghiệm 1:** (Ghi rõ đề bài)
+                  A. ...  
+                  B. ...  
+                  C. ...  
+                  D. ...  
+                <details>
+                <summary>🔍 <b>Ấn vào đây nếu em chưa tìm ra hướng giải</b></summary>
+
+                - **Bước 1:** ...  
+                - **Bước 2:** ...  
+                - **Gợi ý lựa chọn:** Áp dụng công thức trên để loại trừ đáp án sai. (TUYỆT ĐỐI KHÔNG GHI ĐÁP ÁN ĐÚNG LÀ A, B, C HAY D).
+                </details>
+
+                <br>
+
+                ## 2. Dạng Tự Luận Trả Lời Ngắn
+                - **Đề bài tự luận:** (Ghi rõ đề bài)  
+                <details>
+                <summary>🔍 <b>Ấn vào đây nếu em chưa tìm ra hướng giải</b></summary>
+
+                - **Gợi ý bước 1:** ...  
+                - **Gợi ý bước 2:** ...  
+                - **Thử thách học sinh:** Em hãy thay số và tính ra kết quả cuối cùng = ...?
+                </details>
                 """
                 
                 response_text = None
@@ -216,44 +238,44 @@ with tab1:
                         continue
                 
                 if response_text:
-                    st.success(f"✅ Đã tổng hợp xong kiến thức: **{lesson_input}** ({subject} - {grade})")
+                    st.success(f"✅ Đã hoàn thành tổng hợp kiến thức bài: **{lesson_input}** ({subject} - {grade})")
                     st.markdown("---")
-                    st.markdown(response_text)
+                    st.markdown(response_text, unsafe_allow_html=True)
                 else:
-                    st.error(f"❌ Không thể kết nối AI. Lỗi từ Google API: `{last_error}`")
-                    st.info("💡 **Mẹo:** Kiểm tra lại mã API Key ở thanh bên (Sidebar) nhé!")
+                    st.error(f"❌ Không thể kết nối AI. Chi tiết lỗi từ hệ thống: `{last_error}`")
+                    st.info("💡 **Mẹo:** Nhật kiểm tra lại Mã Kết Nối (API Key) ở thanh bên trái nhé!")
 
     st.markdown("---")
     
     # KHU VỰC PHÒNG THÍ NGHIỆM ẢO
     st.markdown(
         """
-        <div style="border: 2px solid #1E88E5; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 15px;">
-            <h2 style="margin: 0; color: #ffffff;">🔬 PHÒNG THÍ NGHIỆM ẢO</h2>
+        <div style="border: 2px solid #1E88E5; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 15px; background-color: #0E1117;">
+            <h1 style="margin: 0; color: #FFFFFF; font-size: 28px;">🔬 PHÒNG THÍ NGHIỆM ẢO</h1>
         </div>
         """,
         unsafe_allow_html=True
     )
     
     lab_input = st.text_input(
-        "Ví dụ: Khảo sát hàm số bậc 3...",
-        placeholder="Ví dụ: Khảo sát hàm số bậc 3, Thí nghiệm đo gia tốc trọng trường...",
+        "Ví dụ: Mô phỏng chuyển động ném ngang...",
+        placeholder="Ví dụ: Khảo sát đồ thị hàm số bậc 3, Mô phỏng chuyển động ném ngang...",
         label_visibility="collapsed"
     )
     
-    st.button("⚙️ Khởi chạy Phòng Lab", type="primary")
+    st.button("⚙️ Khởi Chạy Mô Phỏng", type="primary")
 
 with tab2:
-    st.subheader("Trạm 2: Gia Sư Socratic")
-    st.write(f"Gia sư AI gợi mở câu hỏi môn **{subject} ({grade})**...")
+    st.subheader("Trạm 2: Gia Sư Tương Tác")
+    st.write(f"Gia sư AI sẵn sàng đặt câu hỏi gợi mở môn **{subject} ({grade})**...")
 
 with tab3:
     st.subheader("Trạm 3: Khảo Thí Tự Do")
-    st.write(f"Khu vực ôn luyện và làm bài kiểm tra môn **{subject} ({grade})**...")
+    st.write(f"Khu vực luyện tập và tự kiểm tra môn **{subject} ({grade})**...")
 
 with tab4:
-    st.subheader("Trạm 4: Nhật Ký Khoa Học Kỹ Thuật")
-    st.write("Ghi chép tiến độ dự án KHKT...")
+    st.subheader("Trạm 4: Nhật Ký Nghiên Cứu Khoa Học")
+    st.write("Theo dõi và ghi chép tiến độ dự án...")
 
 with tab5:
-    st.warning("🔒 Trạm Thống Kê & Paired T-Test bị khóa. Vui lòng đăng nhập ở Trạm 4 trước.")
+    st.warning("🔒 Trạm Thống Kê & Đánh Giá bị khóa. Vui lòng đăng nhập ở Trạm 4 trước.")
