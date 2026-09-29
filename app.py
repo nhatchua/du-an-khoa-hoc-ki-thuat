@@ -9,39 +9,34 @@ st.set_page_config(
     layout="wide"
 )
 
-# HÀM XỬ LÝ LỌC SẠCH 100% TIẾNG ANH & SUY LUẬN HỆ THỐNG
+# HÀM LỌC SẠCH DỨT ĐIỂM 100% TIẾNG ANH VÀ SUY LUẬN HỆ THỐNG
 def clean_ai_response(text: str) -> str:
     if not text:
         return ""
     
-    # 1. Tìm vị trí tiêu đề chính Tiếng Việt "# 📌 I." hoặc "# I."
-    # Mọi câu chữ/suy luận bằng Tiếng Anh xuất hiện trước tiêu đề này sẽ bị CẮT BỎ HOÀN TOÀN
-    match = re.search(r'(#\s*📌?\s*I\..*)', text, re.DOTALL)
-    if match:
-        text = match.group(1)
-    
-    # 2. Quét lọc phụ: Loại bỏ tất cả các dòng còn chứa ký tự Tiếng Anh hệ thống nếu có
-    english_patterns = [
-        r'^\s*[\-\*]?\s*Constraint.*$',
-        r'^\s*[\-\*]?\s*Role\s*:.*$',
-        r'^\s*[\-\*]?\s*Task\s*:.*$',
-        r'^\s*[\-\*]?\s*Curriculum\s*:.*$',
-        r'^\s*[\-\*]?\s*Subject\s*:.*$',
-        r'^\s*[\-\*]?\s*Grade\s*:.*$',
-        r'^\s*[\-\*]?\s*Topic\s*:.*$',
-        r'^\s*[\-\*]?\s*Rule\s*\d*\s*:.*$',
-        r'^\s*[\-\*]?\s*Definition\s*:.*$',
-        r'^\s*[\-\*]?\s*Graph shape\s*:.*$',
-        r'^\s*[\-\*]?\s*Key elements\s*:.*$'
+    # Danh sách các từ khóa Tiếng Anh gây lỗi suy luận cần BỎ HOÀN TOÀN
+    forbidden_words = [
+        "language", "constraint", "format", "exercise", "guidance", "rule", "crucial",
+        "section", "graph", "how to draw", "direction", "special case", "common mistake",
+        "forgetting", "incorrectly", "role", "task", "curriculum", "subject", "grade", "topic"
     ]
     
     lines = text.split('\n')
     filtered_lines = []
+    
     for line in lines:
-        if not any(re.match(pattern, line.strip(), re.IGNORECASE) for pattern in english_patterns):
+        line_str = line.strip()
+        # Kiểm tra xem dòng có chứa từ tiếng Anh bị cấm không
+        contains_english = any(word in line_str.lower() for word in forbidden_words)
+        
+        # Nếu không chứa từ Tiếng Anh cấm thì mới giữ lại
+        if not contains_english:
             filtered_lines.append(line)
             
-    return '\n'.join(filtered_lines).strip()
+    result = '\n'.join(filtered_lines).strip()
+    
+    # Xóa các dòng trống thừa ở đầu
+    return result
 
 
 # 2. Thanh bên (Sidebar)
@@ -134,7 +129,7 @@ with st.sidebar:
                 st.warning("Vui lòng nhập nội dung trước khi gửi!")
         
     st.markdown("<br>", unsafe_allow_html=True)
-    st.info("💡 **Triết lý:** Dưỡng thiện tâm - Ươm nhân tài • Dẫn dắt tưได tự học!")
+    st.info("💡 **Triết lý:** Dưỡng thiện tâm - Ươm nhân tài • Dẫn dắt tư duy tự học!")
 
 
 # 3. Khu vực chính
@@ -199,37 +194,31 @@ with tab1:
                         "models/gemini-1.5-flash"
                     ]
                 
+                # Prompt viết THUẦN TIẾNG VIỆT, KHÔNG CHỨA BẤT KỲ TỪ TIẾNG ANH NÀO ĐỂ AI KHÔNG BỊ NHẦM LẪN
                 system_instruction = """
-                BẠN LÀ GIÁO VIÊN NÒNG CỐT CHƯƠNG TRÌNH GDPT 2018 - BỘ SÁCH KẾT NỐI TRI THỨC VỚI CUỘC SỐNG.
-                
-                Nhiệm vụ: Hãy bắt đầu BÀI VIẾT NGUYÊN BẢN BẰNG TIẾNG VIỆT ngay lập tức từ dòng tiêu đề '# 📌 I. KIẾN THỨC CỐT LÕI CẦN GHI NHỚ'.
-                
-                QUY TẮC BẮT BUỘC KHÔNG VI PHẠM:
-                1. KHÔNG VIẾT SUY LUẬN BẰNG TIẾNG ANH (Không Constraint, không Definition, không Key elements...).
-                2. KHÔNG SOẠN THEO DẠNG GIÁO ÁN. Trình bày dạng "Sổ Tay Ghi Nhớ Kiến Thức Cốt Lõi".
-                3. BÀI TẬP BẮT BUỘC CÓ 2 DẠNG: Trắc Nghiệm Tương Tác và Tự Luận Trả Lời Ngắn.
-                4. HƯỚNG DẪN GIẢI ĐẶT TRONG THẺ <details><summary>🔍 Nhấp vào đây để xem hướng dẫn từng bước (Khi bí quá)</summary>...</details>.
-                5. BẮT BUỘC: TUYỆT ĐỐI KHÔNG GHI ĐÁP ÁN/KẾT QUẢ CUỐI CÙNG (Dùng dấu ...? hoặc câu hỏi gợi mở).
+                Bạn là giáo viên biên soạn tài liệu học tập theo bộ sách Kết Nối Tri Thức Với Cuộc Sống.
+                Toàn bộ văn bản phải viết hoàn toàn bằng tiếng Việt.
+                Không dùng tiếng Anh. Không tóm tắt quy tắc.
                 """
                 
                 user_prompt = f"""
-                Tổng hợp kiến thức bài học chuẩn SGK Kết nối tri thức với cuộc sống:
+                Hãy soạn nội dung bài học theo thông tin sau:
                 - Môn học: {subject}
-                - Khối lớp: {grade}
-                - Tên bài học: {lesson_input}
+                - Lớp: {grade}
+                - Tên bài: {lesson_input}
 
-                HÃY TRÌNH BÀY BẰNG TIẾNG VIỆT HOÀN TOÀN TỪ DÒNG ĐẦU TIÊN THEO ĐÚNG CẤU TRÚC SAU:
+                Yêu cầu trình bày chính xác theo cấu trúc Tiếng Việt sau:
 
                 # 📌 I. KIẾN THỨC CỐT LÕI CẦN GHI NHỚ
-                (Trình bày khái niệm, công thức LaTeX chuẩn xác theo SGK)
+                (Trình bày chi tiết lý thuyết, khái niệm và công thức bằng tiếng Việt)
 
                 # ⚠️ II. CÁC LỖI SAI THƯỜNG GẶP KHI LÀM BÀI
-                (Trình bày các điểm sai lầm phổ biến của học sinh)
+                (Liệt kê các lỗi sai phổ biến của học sinh bằng tiếng Việt)
 
                 # ✍️ III. BÀI TẬP TƯƠNG TÁC & THỬ THÁCH
 
                 ## 1. Dạng Trắc Nghiệm Tương Tác
-                **Câu 1:** (Ghi rõ đề bài)  
+                **Câu 1:** (Đề bài trắc nghiệm)  
                 A. ...  
                 B. ...  
                 C. ...  
@@ -240,20 +229,20 @@ with tab1:
 
                 - **Bước 1:** ...  
                 - **Bước 2:** ...  
-                - **Gợi ý lựa chọn:** Áp dụng công thức trên để tự tìm đáp án đúng. (TUYỆT ĐỐI KHÔNG CHỈ ĐÁP ÁN ĐÚNG LÀ A, B, C HAY D).
+                - **Gợi ý lựa chọn:** Áp dụng công thức để tìm đáp án đúng. Tuyệt đối không cho biết đáp án A, B, C hay D.
                 </details>
 
                 <br>
 
                 ## 2. Dạng Tự Luận Trả Lời Ngắn
-                **Câu 2:** (Ghi rõ đề bài)  
+                **Câu 2:** (Đề bài tự luận)  
 
                 <details>
                 <summary>🔍 <b>Nhấp vào đây để xem hướng dẫn từng bước (Khi bí quá)</b></summary>
 
                 - **Gợi ý bước 1:** ...  
                 - **Gợi ý bước 2:** ...  
-                - **Thử thách học sinh:** Em hãy thay số và tính ra kết quả cuối cùng = ...?
+                - **Thử thách học sinh:** Em hãy tính kết quả cuối cùng = ...?
                 </details>
                 """
                 
@@ -283,7 +272,7 @@ with tab1:
                         continue
                 
                 if response_text:
-                    # Lọc cắt bỏ toàn bộ tiếng Anh trước tiêu đề chính
+                    # Lọc sạch dứt điểm Tiếng Anh
                     final_text = clean_ai_response(response_text)
                     st.success(f"✅ Đã hoàn thành tổng hợp kiến thức bài: **{lesson_input}** ({subject} - {grade})")
                     st.markdown("---")
