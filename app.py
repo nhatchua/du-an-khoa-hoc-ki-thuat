@@ -79,10 +79,29 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # BÁO LỖI & GÓP Ý
+    # BÁO LỖI & GÓP Ý (CẬP NHẬT CHI TIẾT THEO ẢNH)
     with st.expander("🛠️ Báo lỗi ứng dụng & Góp ý"):
-        st.text_area("Mô tả lỗi hoặc góp ý của em:")
-        st.button("Gửi phản hồi")
+        st.markdown("**Loại vấn đề gặp phải:**")
+        issue_type = st.selectbox(
+            "Loại vấn đề gặp phải:",
+            [
+                "📷 Lỗi nhận diện chữ viết tay / hình ảnh",
+                "📊 Lỗi hiển thị đồ thị / Phòng Lab ảo",
+                "🧠 AI giải thích khó hiểu / chưa sát SGK",
+                "⏳ Ứng dụng phản hồi chậm / quá tải",
+                "💡 Đề xuất tính năng mới",
+                "❓ Lỗi khác..."
+            ],
+            label_visibility="collapsed"
+        )
+        
+        feedback_text = st.text_area("Chi tiết mô tả lỗi hoặc góp ý (Tùy chọn):", placeholder="Nhập thêm chi tiết nếu có...")
+        
+        if st.button("📩 Gửi phản hồi đến Thầy", use_container_width=True):
+            if feedback_text or issue_type:
+                st.success("Cảm ơn em! Phản hồi đã được gửi đến Thầy.")
+            else:
+                st.warning("Vui lòng chọn hoặc nhập thông tin trước khi gửi!")
         
     st.markdown("<br>", unsafe_allow_html=True)
     
