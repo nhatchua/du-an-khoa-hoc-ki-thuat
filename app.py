@@ -163,12 +163,12 @@ with tab1:
             st.error("🔑 Chưa phát hiện API Key! Vui lòng nhập API Key ở thanh bên (Sidebar) để kích hoạt AI.")
         else:
             with st.spinner(f"⏳ AI đang phân tích dữ liệu chuẩn Sách SGK 'Kết nối tri thức với cuộc sống' cho bài: **{lesson_input}**..."):
-                # Danh sách các mô hình Gemini chạy dự phòng theo thứ tự ưu tiên
+                # Danh sách tên model Gemini chính thức
                 MODEL_CANDIDATES = [
+                    "gemini-2.5-flash",
+                    "gemini-2.5-pro",
                     "gemini-1.5-flash",
-                    "gemini-2.0-flash",
-                    "gemini-1.5-pro",
-                    "gemini-2.0-flash-lite"
+                    "gemini-1.5-pro"
                 ]
                 
                 genai.configure(api_key=api_key_to_use)
@@ -196,24 +196,28 @@ with tab1:
                 
                 response_text = None
                 used_model_name = ""
+                last_error = ""
                 
-                # Vòng lặp thử từng model đến khi thành công
+                # Thử lần lượt các model đến khi chọn được cái chạy ổn định
                 for model_name in MODEL_CANDIDATES:
                     try:
                         model = genai.GenerativeModel(model_name)
                         response = model.generate_content(system_prompt)
-                        response_text = response.text
-                        used_model_name = model_name
-                        break  # Thoát vòng lặp khi tạo nội dung thành công
-                    except Exception:
-                        continue  # Nếu model bị lỗi, tự động thử model kế tiếp
+                        if response and response.text:
+                            response_text = response.text
+                            used_model_name = model_name
+                            break
+                    except Exception as err:
+                        last_error = str(err)
+                        continue
                 
                 if response_text:
-                    st.success(f"✅ Đã hoàn thành soạn bài học: **{lesson_input}** ({subject} - {grade})")
+                    st.success(f"✅ Đã hoàn thành soạn bài học: **{lesson_input}** ({subject} - {grade}) - Kết nối qua: `{used_model_name}`")
                     st.markdown("---")
                     st.markdown(response_text)
                 else:
-                    st.error("❌ Tất cả các tuyến kết nối AI hiện đang bận hoặc API Key không hợp lệ. Vui lòng kiểm tra lại Key hoặc thử lại sau ít phút!")
+                    st.error(f"❌ Không thể kết nối AI. Chi tiết lỗi từ Google API: `{last_error}`")
+                    st.info("💡 **Mẹo:** Nhật bấm vào nút '👉 Lấy Key riêng miễn phí (15s)' ở Sidebar để lấy mã Key mới rồi dán vào ô 'Dán mã API Key của em vào đây' nhé!")
 
     st.markdown("---")
     
