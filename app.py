@@ -15,17 +15,9 @@ with st.sidebar:
     # Hộp quét mã QR vào app
     with st.expander("📲 Quét mã QR vào app trên điện thoại"):
         st.write("Dùng camera điện thoại để quét mã bên dưới để truy cập nhanh:")
-        
-        # Link web ứng dụng
         app_url = "https://du-an-khoa-hoc-ki-thuat-2026.streamlit.app/"
-        
-        # Tạo mã QR tự động từ link web
         qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={app_url}"
-        
-        # Hiển thị ảnh mã QR
         st.image(qr_api_url, caption="Quét mã để mở trên điện thoại", width=200)
-        
-        # Hiển thị link bấm trực tiếp
         st.markdown(f"🔗 **Hoặc bấm vào link:** [{app_url}]({app_url})")
     
     st.markdown("---")
@@ -39,21 +31,18 @@ with st.sidebar:
     # ĐƯỜNG TRUYỀN AI CÁ NHÂN
     st.subheader("🔑 ĐƯỜNG TRUYỀN AI CÁ NHÂN")
     
-    # Nút bấm mở thẳng trang lấy API Key trên Google AI Studio
     st.link_button(
         "👉 Lấy Key riêng miễn phí (15s)", 
         "https://aistudio.google.com/app/apikey", 
         use_container_width=True
     )
     
-    # Ô nhập API Key
     user_api_key = st.text_input(
         "Dán mã API Key của em vào đây:", 
         type="password", 
         placeholder="AIzaSy..."
     )
     
-    # Thông báo trạng thái đường truyền & xác định API Key sử dụng
     if user_api_key:
         st.success("🟢 Đang dùng đường truyền AI Cá nhân")
         api_key_to_use = user_api_key
@@ -84,7 +73,6 @@ with st.sidebar:
     
     # BÁO LỖI & GÓP Ý
     with st.expander("🛠️ Báo lỗi ứng dụng & Góp ý"):
-        st.markdown("**Loại vấn đề gặp phải:**")
         issue_type = st.selectbox(
             "Loại vấn đề gặp phải:",
             [
@@ -97,17 +85,12 @@ with st.sidebar:
             ],
             label_visibility="collapsed"
         )
-        
-        # Thanh đánh giá sao
         rating = st.feedback("stars")
-        
-        st.markdown("**Mô tả chi tiết:**")
         feedback_text = st.text_area(
             "Mô tả chi tiết:",
-            placeholder="Mô tả cụ thể vấn đề hoặc ý kiến đóng góp...",
+            placeholder="Mô tả cụ thể vấn đề...",
             label_visibility="collapsed"
         )
-        
         if st.button("📩 Gửi phản hồi đến Thầy", use_container_width=True):
             if feedback_text or issue_type:
                 st.success("Cảm ơn em! Phản hồi đã được gửi đến Thầy.")
@@ -115,8 +98,6 @@ with st.sidebar:
                 st.warning("Vui lòng nhập thông tin trước khi gửi!")
         
     st.markdown("<br>", unsafe_allow_html=True)
-    
-    # TRIẾT LÝ
     st.info("💡 **Triết lý:** Dưỡng thiện tâm - Ươm nhân tài • Dẫn dắt tư duy tự học!")
 
 
@@ -124,7 +105,6 @@ with st.sidebar:
 st.markdown("<h1 style='text-align: center;'>🤖 GIA SƯ AI - HỆ SINH THÁI LỚP HỌC ĐẢO NGƯỢC</h1>", unsafe_allow_html=True)
 st.markdown("<p style='text-align: center; font-size: 18px;'>Trường THPT Tân Hiệp</p>", unsafe_allow_html=True)
 
-# Badge thông tin
 col_b1, col_b2, col_b3, col_b4 = st.columns([1, 2, 2, 1])
 with col_b2:
     st.info("📚 Bộ sách: Kết Nối Tri Thức Với Cuộc Sống")
@@ -133,7 +113,7 @@ with col_b3:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# 4. Hệ thống Trạm (Tabs chuyển hướng)
+# 4. Hệ thống Trạm (Tabs)
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "💡 Trạm 1: Học Tập & Phòng Lab",
     "✍️ Trạm 2: Gia Sư Socratic",
@@ -146,7 +126,6 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 with tab1:
     st.markdown(f"## 📖 Tự học & Chiếm lĩnh kiến thức môn {subject} - {grade}")
     
-    st.markdown("**📄 Nhập bài học cần chiếm lĩnh kiến thức:**")
     lesson_input = st.text_input(
         "Nhập bài học cần chiếm lĩnh kiến thức:",
         placeholder="Ví dụ: Khảo sát hàm số, Hình chóp, Mạch điện xoay chiều...",
@@ -155,7 +134,6 @@ with tab1:
     
     btn_soan_bai = st.button("🧪 Soạn bài học chuẩn GDPT 2018", type="primary")
     
-    # Xử lý khi bấm nút Soạn bài
     if btn_soan_bai:
         if not lesson_input.strip():
             st.warning("⚠️ Vui lòng nhập tên bài học trước khi bấm soạn bài!")
@@ -163,15 +141,27 @@ with tab1:
             st.error("🔑 Chưa phát hiện API Key! Vui lòng nhập API Key ở thanh bên (Sidebar) để kích hoạt AI.")
         else:
             with st.spinner(f"⏳ AI đang phân tích dữ liệu chuẩn Sách SGK 'Kết nối tri thức với cuộc sống' cho bài: **{lesson_input}**..."):
-                # Danh sách tên model Gemini chính thức
-                MODEL_CANDIDATES = [
-                    "gemini-2.5-flash",
-                    "gemini-2.5-pro",
-                    "gemini-1.5-flash",
-                    "gemini-1.5-pro"
-                ]
-                
                 genai.configure(api_key=api_key_to_use)
+                
+                # 1. Tự động lấy danh sách các model khả dụng từ API Key
+                available_models = []
+                try:
+                    for m in genai.list_models():
+                        if 'generateContent' in m.supported_generation_methods:
+                            available_models.append(m.name)
+                except Exception as e:
+                    pass
+                
+                # 2. Nếu không lấy được danh sách động, dùng danh sách dự phòng chuẩn
+                if not available_models:
+                    available_models = [
+                        "gemini-2.5-flash",
+                        "gemini-2.0-flash",
+                        "gemini-1.5-flash",
+                        "models/gemini-2.5-flash",
+                        "models/gemini-2.0-flash",
+                        "models/gemini-1.5-flash"
+                    ]
                 
                 system_prompt = f"""
                 Bạn là một Chuyên gia Giáo dục & Giáo viên Giỏi bậc THPT tại Việt Nam.
@@ -198,8 +188,8 @@ with tab1:
                 used_model_name = ""
                 last_error = ""
                 
-                # Thử lần lượt các model đến khi chọn được cái chạy ổn định
-                for model_name in MODEL_CANDIDATES:
+                # 3. Chạy qua các model lấy được
+                for model_name in available_models:
                     try:
                         model = genai.GenerativeModel(model_name)
                         response = model.generate_content(system_prompt)
@@ -212,12 +202,12 @@ with tab1:
                         continue
                 
                 if response_text:
-                    st.success(f"✅ Đã hoàn thành soạn bài học: **{lesson_input}** ({subject} - {grade}) - Kết nối qua: `{used_model_name}`")
+                    st.success(f"✅ Đã hoàn thành soạn bài học: **{lesson_input}** ({subject} - {grade}) - Mô hình AI: `{used_model_name}`")
                     st.markdown("---")
                     st.markdown(response_text)
                 else:
-                    st.error(f"❌ Không thể kết nối AI. Chi tiết lỗi từ Google API: `{last_error}`")
-                    st.info("💡 **Mẹo:** Nhật bấm vào nút '👉 Lấy Key riêng miễn phí (15s)' ở Sidebar để lấy mã Key mới rồi dán vào ô 'Dán mã API Key của em vào đây' nhé!")
+                    st.error(f"❌ Không thể kết nối AI. Lỗi từ Google API: `{last_error}`")
+                    st.info("💡 **Mẹo:** Kiểm tra lại API Key ở Sidebar. Nếu là Key mới tạo, Nhật hãy đảm bảo đã bật Gemini API trong Google AI Studio!")
 
     st.markdown("---")
     
