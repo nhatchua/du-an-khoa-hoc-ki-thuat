@@ -124,7 +124,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 
 # TRẠM 1: TỰ HỌC & CHIẾM LĨNH KIẾN THỨC
 with tab1:
-    st.markdown(f"# 📖 TỰ HỌC & CHIẾM LĨNH KIẾN THỨC: MON {subject.upper()} - {grade.upper()}")
+    st.markdown(f"# 📖 TỰ HỌC & CHIẾM LĨNH KIẾN THỨC: MÔN {subject.upper()} - {grade.upper()}")
     
     st.markdown("### 📝 **Nhập tên bài học em muốn tổng hợp:**")
     lesson_input = st.text_input(
@@ -163,61 +163,70 @@ with tab1:
                         "models/gemini-1.5-flash"
                     ]
                 
+                # Cấu hình giảm ảo giác (temperature = 0.2)
+                generation_config = genai.types.GenerationConfig(
+                    temperature=0.2,
+                    top_p=0.95
+                )
+
                 system_prompt = f"""
-                Bạn là một Trợ Lý Giáo Dục AI chuyên soạn Sổ Tay Kiến Thức Cốt Lõi cho học sinh THPT tại Việt Nam.
-                Nhiệm vụ của bạn là tóm tắt bài học theo đúng bộ Sách Giáo Khoa 'Kết nối tri thức với cuộc sống'.
+                Bạn là một Trợ Lý Giáo Dục AI chuyên viết Sổ Tay Kiến Thức Cốt Lõi cho học sinh phổ thông tại Việt Nam.
+                Nhiệm vụ: Tổng hợp kiến thức bài học chuẩn theo Chương trình Giáo dục phổ thông 2018 - Bộ sách 'Kết nối tri thức với cuộc sống'.
 
-                QUY TẮC NGHIÊM NGẶT:
-                1. TUYỆT ĐỐI 100% KHÔNG NÓI TIẾNG ANH. Tất cả tiêu đề, thuật ngữ, hướng dẫn phải ghi hoàn toàn bằng Tiếng Việt.
-                2. KHÔNG SOẠN THEO DẠNG GIÁO ÁN GIẢNG DẠY. Trình bày dưới dạng "Kiến thức trọng tâm - Sổ tay ghi nhớ".
+                THÔNG TIN BÀI HỌC DỰ KIẾN:
+                - Môn học chọn: {subject}
+                - Khối lớp chọn: {grade}
+                - Bài học yêu cầu: {lesson_input}
+
+                QUY TẮC BẮT BUỘC (VI PHẠM SẼ BỊ LỖI):
+                1. TUYỆT ĐỐI 100% KHÔNG DÙNG TIẾNG ANH. Không ghi câu suy luận tiếng Anh, không ghi ghi chú tiếng Anh. Toàn bộ câu chữ từ đầu đến cuối PHẢI là Tiếng Việt chuẩn.
+                2. KHÔNG SOẠN THEO DẠNG GIÁO ÁN GIẢNG DẠY (không ghi Mục tiêu, Năng lực, Phẩm chất...). Trình bày theo dạng "Sổ tay ghi nhớ - Kiến thức trọng tâm".
                 3. TIÊU ĐỀ MỤC LỚN PHẢI VIẾT HOA VÀ CÓ CỠ CHỮ LỚN (Định dạng # hoặc ## trong Markdown).
-                4. QUY TẮC BÀI TẬP VÀ VÍ DỤ:
-                   - Phải bao gồm cả 2 dạng: **Dạng Trắc Nghiệm** và **Dạng Tự Luận Trả Lời Ngắn**.
-                   - Mọi bước làm, yêu cầu phải được XUỐNG DÒNG rõ ràng.
-                   - PHẦN HƯỚNG DẪN GIẢI: Phải nằm hoàn toàn trong khối ẩn/hiện `<details><summary>👉 Nhấp vào đây để xem hướng dẫn từng bước (Khi bí quá)</summary>...</details>`.
-                   - BẮT BUỘC: TUYỆT ĐỐI KHÔNG CHO ĐÁP SỐ / ĐÁP ÁN CUỐI CÙNG. Hãy để kết quả cuối là dấu '...?' hoặc câu hỏi gợi mở để học sinh tự tính toán.
+                4. CHỐNG ẢO GIÁC & CHUẨN SGK: Nếu bài học thuộc khối lớp khác trong bộ SGK 'Kết nối tri thức với cuộc sống' (ví dụ bài thuộc Lớp 10 nhưng người dùng chọn Lớp 11), hãy âm thầm căn chỉnh kiến thức chuẩn theo SGK Kết nối tri thức mà KHÔNG được ghi lời giải thích hay tranh luận bằng tiếng Anh.
+                5. QUY TẮC BÀI TẬP VÀ VÍ DỤ:
+                   - BẮT BUỘC bao gồm cả 2 dạng: **1. Dạng Trắc Nghiệm** và **2. Dạng Tự Luận Trả Lời Ngắn**.
+                   - Xuống dòng rõ ràng cho từng lựa chọn, từng bước hướng dẫn.
+                   - PHẦN HƯỚNG DẪN GIẢI: Nằm hoàn toàn trong thẻ `<details><summary>🔍 Nhấp vào đây để xem hướng dẫn từng bước (Khi bí quá)</summary>...</details>`.
+                   - BẮT BUỘC: TUYỆT ĐỐI KHÔNG RA ĐÁP SỐ / ĐÁP ÁN CUỐI CÙNG. Đặt dấu '...?' hoặc câu hỏi gợi mở để học sinh tự tính toán.
 
-                THÔNG TIN BÀI HỌC:
-                - Môn học: {subject}
-                - Khối lớp: {grade}
-                - Bài học: {lesson_input}
-
-                CẤU TRÚC TRÌNH BÀY (Sử dụng Markdown và HTML đẹp mắt, chữ to phân biệt):
+                CẤU TRÚC TRÌNH BÀY HOÀN CHỈNH (Trình bày đúng định dạng bên dưới):
 
                 # 📌 I. KIẾN THỨC CỐT LÕI CẦN GHI NHỚ
-                - Định nghĩa, khái niệm cốt lõi (Trình bày ngắn gọn, đống khung hoặc gạch đầu dòng rõ ràng).
-                - Công thức quan trọng (Dùng LaTeX rõ ràng).
-                - Quy tắc/Tính chất trọng tâm.
+                - Định nghĩa, khái niệm cốt lõi.
+                - Công thức trọng tâm (Dùng định dạng LaTeX rõ ràng).
+                - Các tính chất/quy tắc bắt buộc thuộc lòng.
 
                 # ⚠️ II. CÁC LỖI SAI THƯỜNG GẶP KHI LÀM BÀI
-                - Điểm học sinh dễ nhầm lẫn, tính sai hoặc khoanh nhầm đáp án.
+                - 2-3 điểm học sinh rất hay nhầm lẫn hoặc khoanh sai đáp án.
 
                 # ✍️ III. BÀI TẬP TƯƠNG TÁC & THỬ THÁCH
 
                 ## 1. Dạng Trắc Nghiệm Tương Tác
-                - **Câu hỏi trắc nghiệm 1:** (Ghi rõ đề bài)
-                  A. ...  
-                  B. ...  
-                  C. ...  
-                  D. ...  
-                <details>
-                <summary>🔍 <b>Ấn vào đây nếu em chưa tìm ra hướng giải</b></summary>
+                **Câu hỏi:** (Ghi đề bài trắc nghiệm)  
+                A. ...  
+                B. ...  
+                C. ...  
+                D. ...  
 
-                - **Bước 1:** ...  
-                - **Bước 2:** ...  
-                - **Gợi ý lựa chọn:** Áp dụng công thức trên để loại trừ đáp án sai. (TUYỆT ĐỐI KHÔNG GHI ĐÁP ÁN ĐÚNG LÀ A, B, C HAY D).
+                <details>
+                <summary>🔍 <b>Nhấp vào đây để xem hướng dẫn từng bước (Khi bí quá)</b></summary>
+
+                * **Bước 1:** ...  
+                * **Bước 2:** ...  
+                * **Gợi ý:** Sử dụng công thức trên để loại trừ các đáp án sai. (KHÔNG ĐƯỢC CHỈ RA ĐÁP ÁN ĐÚNG LÀ A, B, C HOẶC D).
                 </details>
 
                 <br>
 
                 ## 2. Dạng Tự Luận Trả Lời Ngắn
-                - **Đề bài tự luận:** (Ghi rõ đề bài)  
-                <details>
-                <summary>🔍 <b>Ấn vào đây nếu em chưa tìm ra hướng giải</b></summary>
+                **Câu hỏi:** (Ghi đề bài tự luận)  
 
-                - **Gợi ý bước 1:** ...  
-                - **Gợi ý bước 2:** ...  
-                - **Thử thách học sinh:** Em hãy thay số và tính ra kết quả cuối cùng = ...?
+                <details>
+                <summary>🔍 <b>Nhấp vào đây để xem hướng dẫn từng bước (Khi bí quá)</b></summary>
+
+                * **Gợi ý bước 1:** ...  
+                * **Gợi ý bước 2:** ...  
+                * **Thử thách học sinh:** Em hãy thay số vào công thức và tính ra đáp số cuối cùng = ...?
                 </details>
                 """
                 
@@ -228,7 +237,10 @@ with tab1:
                 for model_name in available_models:
                     try:
                         model = genai.GenerativeModel(model_name)
-                        response = model.generate_content(system_prompt)
+                        response = model.generate_content(
+                            system_prompt,
+                            generation_config=generation_config
+                        )
                         if response and response.text:
                             response_text = response.text
                             used_model_name = model_name
