@@ -1,18 +1,18 @@
 import streamlit as st
 import google.generativeai as genai
 
-# 1. Cấu hình trang (Giao diện rộng)
+# 1. Cấu hình trang
 st.set_page_config(
     page_title="Gia Sư AI - Hệ Sinh Thái Lớp Học Đảo Ngược",
     page_icon="🤖",
     layout="wide"
 )
 
-# 2. Thanh bên (Sidebar) - THIẾT LẬP HỌC TẬP
+# 2. Thanh bên (Sidebar)
 with st.sidebar:
     st.header("THIẾT LẬP HỌC TẬP")
     
-    # Hộp quét mã QR vào app
+    # Mã QR
     with st.expander("📲 Quét mã QR vào app trên điện thoại"):
         st.write("Dùng camera điện thoại để quét mã bên dưới để truy cập nhanh:")
         app_url = "https://du-an-khoa-hoc-ki-thuat-2026.streamlit.app/"
@@ -57,7 +57,7 @@ with st.sidebar:
     grade = st.selectbox(
         "Chọn khối lớp",
         ["Lớp 6", "Lớp 7", "Lớp 8", "Lớp 9", "Lớp 10", "Lớp 11", "Lớp 12"],
-        index=5, # Mặc định chọn Lớp 11
+        index=5,
         label_visibility="collapsed"
     )
     
@@ -65,7 +65,7 @@ with st.sidebar:
     subject = st.selectbox(
         "Môn học cần hỗ trợ",
         ["Toán học", "Vật lý", "Hóa học", "Sinh học", "Tin học", "Ngữ văn", "Tiếng Anh", "Lịch sử & Địa lý"],
-        index=0, # Mặc định chọn Toán học
+        index=0,
         label_visibility="collapsed"
     )
     
@@ -132,27 +132,26 @@ with tab1:
         label_visibility="collapsed"
     )
     
-    btn_soan_bai = st.button("🧪 Soạn bài học chuẩn GDPT 2018", type="primary")
+    btn_soan_bai = st.button("🧪 Tổng hợp kiến thức trọng tâm", type="primary")
     
     if btn_soan_bai:
         if not lesson_input.strip():
-            st.warning("⚠️ Vui lòng nhập tên bài học trước khi bấm soạn bài!")
+            st.warning("⚠️ Vui lòng nhập tên bài học trước khi bấm tổng hợp!")
         elif not api_key_to_use:
             st.error("🔑 Chưa phát hiện API Key! Vui lòng nhập API Key ở thanh bên (Sidebar) để kích hoạt AI.")
         else:
-            with st.spinner(f"⏳ AI đang phân tích dữ liệu chuẩn Sách SGK 'Kết nối tri thức với cuộc sống' cho bài: **{lesson_input}**..."):
+            with st.spinner(f"⏳ AI đang tổng hợp kiến thức cốt lõi cho bài: **{lesson_input}**..."):
                 genai.configure(api_key=api_key_to_use)
                 
-                # 1. Tự động lấy danh sách các model khả dụng từ API Key
+                # Danh sách model lấy động
                 available_models = []
                 try:
                     for m in genai.list_models():
                         if 'generateContent' in m.supported_generation_methods:
                             available_models.append(m.name)
-                except Exception as e:
+                except Exception:
                     pass
                 
-                # 2. Nếu không lấy được danh sách động, dùng danh sách dự phòng chuẩn
                 if not available_models:
                     available_models = [
                         "gemini-2.5-flash",
@@ -163,32 +162,47 @@ with tab1:
                         "models/gemini-1.5-flash"
                     ]
                 
+                # Prompt hoàn toàn bằng Tiếng Việt, định dạng Kiến thức cốt lõi & Không cho đáp án
                 system_prompt = f"""
-                Bạn là một Chuyên gia Giáo dục & Giáo viên Giỏi bậc THPT tại Việt Nam.
-                Nhiệm vụ của bạn là soạn bài hướng dẫn tự học cho học sinh theo đúng chuẩn Chương trình GDPT 2018 và bộ sách SGK 'Kết nối tri thức với cuộc sống'.
+                Bạn là một trợ lý học tập AI chuyên tóm tắt kiến thức cốt lõi dành cho học sinh THPT.
+                Hãy tổng hợp nội dung bài học theo đúng bộ sách SGK 'Kết nối tri thức với cuộc sống'.
+                
+                QUY TẮC BẮT BUỘC:
+                1. TUYỆT ĐỐI KHÔNG DÙNG TIẾNG ANH. Toàn bộ thuật ngữ, tiêu đề, nội dung phải trình bày 100% bằng Tiếng Việt chuẩn.
+                2. NỘI DUNG LÀ KIẾN THỨC CỐT LÕI (Dạng ghi nhớ/Sổ tay học tập), KHÔNG soạn thành dạng giáo án giảng dạy hay mục tiêu bài học.
+                3. PHẦN VÍ DỤ VÀ BÀI TẬP:
+                   - Trình bày rõ ràng, mỗi ý/bước phải XUỐNG DÒNG minh bạch.
+                   - Có phần gợi ý định hướng các bước làm.
+                   - CỰC KỲ QUAN TRỌNG: TUYỆT ĐỐI KHÔNG CHO ĐÁP ÁN/ĐÁP SỐ CỦA BÀI TẬP. Để trống kết quả cuối cùng dưới dạng '...' hoặc đặt câu hỏi gợi mở để học sinh tự tính toán/suy luận.
 
-                THÔNG TIN ĐẦU VÀO:
+                THÔNG TIN BÀI HỌC:
                 - Môn học: {subject}
                 - Khối lớp: {grade}
                 - Tên bài học: {lesson_input}
 
-                YÊU CẦU NỘI DUNG (NGHIÊM CẶT CHỐNG ẢO GIÁC - HALLUCINATION):
-                1. CHÍNH XÁC ABSOLUTE: Mọi khái niệm, công thức, định lý, tên gọi phải chính xác tuyệt đối 100% theo chương trình SGK Kết nối tri thức với cuộc sống. Không tự bịa ra kiến thức chưa kiểm chứng.
-                2. CẤU TRÚC BÀI HỌC Chuẩn GDPT 2018:
-                   - 📌 **I. MỤC TIÊU BÀI HỌC**: (Kiến thức, Năng lực, Phẩm chất)
-                   - 🎯 **II. KIẾN THỨC TRỌNG TÂM (SGK Kết nối tri thức)**: Tóm tắt lý thuyết cốt lõi, công thức quan trọng (trình bày công thức Toán/Lý/Hóa bằng LaTeX rõ ràng).
-                   - 💡 **III. VÍ DỤ MINH HỌA & VẬN DỤNG**: 2-3 ví dụ có lời giải chi tiết, rõ ràng từng bước.
-                   - ⚠️ **IV. CÁC LỖI SAI THƯỜNG GẶP**: Điểm học sinh hay bị nhầm lẫn khi làm bài.
-                   - ❓ **V. CÂU HỎI TỰ KIỂM TRA (Socratic)**: 3 câu hỏi trắc nghiệm hoặc tự luận ngắn để học sinh tự đánh giá mức độ hiểu bài.
+                CẤU TRÚC TRÌNH BÀY (Dùng Markdown đẹp mắt):
 
-                MÔI TRƯỜNG HIỂN THỊ: Trình bày bằng Markdown đẹp mắt, mạch lạc, dễ đọc.
+                📌 **1. TÓM TẮT KIẾN THỨC CỐT LÕI**
+                - Công thức, định lý, khái niệm quan trọng nhất (Dùng LaTeX cho công thức toán/lý/hóa).
+                - Các tính chất/quy tắc cần ghi nhớ.
+
+                ⚠️ **2. CÁC ĐIỂM DỄ BỊ LẪN LỘN / SAI LẦM CẦN TRÁNH**
+                - 2-3 lưu ý ngắn gọn giúp học sinh không bị mất điểm khi làm bài.
+
+                ✍️ **3. VÍ DỤ MINH HỌA & THỬ THÁCH TƯƠNG TÁC**
+                - Cho 2 ví dụ tiêu biểu.
+                - Mỗi ví dụ cần xuống dòng rõ ràng các phần:
+                  + **Đề bài:** ...
+                  + **Gợi ý từng bước:**
+                    * Bước 1: ...
+                    * Bước 2: ...
+                  + **Thử thách học sinh:** (Đặt câu hỏi yêu cầu học sinh tự tính ra kết quả cuối cùng - KHÔNG đưa ra đáp số).
                 """
                 
                 response_text = None
                 used_model_name = ""
                 last_error = ""
                 
-                # 3. Chạy qua các model lấy được
                 for model_name in available_models:
                     try:
                         model = genai.GenerativeModel(model_name)
@@ -202,12 +216,12 @@ with tab1:
                         continue
                 
                 if response_text:
-                    st.success(f"✅ Đã hoàn thành soạn bài học: **{lesson_input}** ({subject} - {grade}) - Mô hình AI: `{used_model_name}`")
+                    st.success(f"✅ Đã tổng hợp xong kiến thức: **{lesson_input}** ({subject} - {grade})")
                     st.markdown("---")
                     st.markdown(response_text)
                 else:
                     st.error(f"❌ Không thể kết nối AI. Lỗi từ Google API: `{last_error}`")
-                    st.info("💡 **Mẹo:** Kiểm tra lại API Key ở Sidebar. Nếu là Key mới tạo, Nhật hãy đảm bảo đã bật Gemini API trong Google AI Studio!")
+                    st.info("💡 **Mẹo:** Kiểm tra lại mã API Key ở thanh bên (Sidebar) nhé!")
 
     st.markdown("---")
     
