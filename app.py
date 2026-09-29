@@ -9,7 +9,7 @@ st.set_page_config(
     layout="wide"
 )
 
-# Hàm lọc sạch Tiếng Anh và suy luận hệ thống (Tránh leak prompt/Tiếng Anh)
+# Hàm lọc sạch Tiếng Anh và các dòng suy luận hệ thống của AI
 def clean_ai_response(text: str) -> str:
     if not text:
         return ""
@@ -164,7 +164,6 @@ with tab1:
         label_visibility="collapsed"
     )
     
-    # Định nghĩa biến nút bấm ở đây để tránh lỗi NameError
     btn_soan_bai = st.button("🧪 Tổng Hợp Kiến Thức Cốt Lõi", type="primary")
     
     if btn_soan_bai:
@@ -176,10 +175,30 @@ with tab1:
             with st.spinner(f"⏳ AI đang phân tích dữ liệu chuẩn SGK 'Kết Nối Tri Thức Với Cuộc Sống' cho bài: **{lesson_input}**..."):
                 genai.configure(api_key=api_key_to_use)
                 
+                # 1. Tự động lấy danh sách Model đang hoạt động thực tế từ Google API
+                available_models = []
+                try:
+                    for m in genai.list_models():
+                        if 'generateContent' in m.supported_generation_methods:
+                            available_models.append(m.name)
+                except Exception:
+                    pass
+                
+                # Dự phòng danh sách các tên model phổ biến nếu không lấy được động
+                if not available_models:
+                    available_models = [
+                        "gemini-2.5-flash",
+                        "gemini-2.0-flash",
+                        "gemini-1.5-flash",
+                        "models/gemini-2.5-flash",
+                        "models/gemini-2.0-flash",
+                        "models/gemini-1.5-flash"
+                    ]
+                
                 system_instruction = """
                 BẠN LÀ GIÁO VIÊN NÒNG CỐT CHƯƠNG TRÌNH GDPT 2018 - BỘ SÁCH KẾT NỐI TRI THỨC VỚI CUỘC SỐNG.
                 
-                QUY TẮC BẮT BUỘC (VI PHẠM SẼ LỖI HỆ THỐNG):
+                QUY TẮC BẮT BUỘC:
                 1. TUYỆT ĐỐI 100% KHÔNG NÓI HAY XUẤT RA TIẾNG ANH. Không ghi câu suy luận tiếng Anh, không ghi "Role:", "Task:", "Rule:".
                 2. KHÔNG SOẠN THEO DẠNG GIÁO ÁN. Trình bày dạng "Sổ Tay Ghi Nhớ Kiến Thức Cốt Lõi".
                 3. TIÊU ĐỀ MỤC LỚN PHẢI VIẾT HOA CÓ CỠ CHỮ LỚN (# hoặc ##).
@@ -238,28 +257,34 @@ with tab1:
                     top_p=0.8
                 )
                 
-                try:
-                    model = genai.GenerativeModel(
-                        model_name="gemini-1.5-flash",
-                        system_instruction=system_instruction
-                    )
-                    
-                    response = model.generate_content(
-                        user_prompt,
-                        generation_config=generation_config
-                    )
-                    
-                    raw_text = response.text if response else ""
-                    final_text = clean_ai_response(raw_text)
-                    
-                    if final_text:
-                        st.success(f"✅ Đã hoàn thành tổng hợp kiến thức bài: **{lesson_input}** ({subject} - {grade})")
-                        st.markdown("---")
-                        st.markdown(final_text, unsafe_allow_html=True)
-                    else:
-                        st.error("❌ Dữ liệu phản hồi không đúng định dạng. Vui lòng bấm thử lại.")
-                except Exception as err:
-                    st.error(f"❌ Lỗi khi kết nối với AI: `{str(err)}`")
+                response_text = None
+                last_error = ""
+                
+                # 2. Vòng lặp tự động chuyển sang model hoạt động nếu gặp lỗi 404
+                for model_name in available_models:
+                    try:
+                        model = genai.GenerativeModel(
+                            model_name=model_name,
+                            system_instruction=system_instruction
+                        )
+                        response = model.generate_content(
+                            user_prompt,
+                            generation_config=generation_config
+                        )
+                        if response and response.text:
+                            response_text = response.text
+                            break
+                    except Exception as err:
+                        last_error = str(err)
+                        continue
+                
+                if response_text:
+                    final_text = clean_ai_response(response_text)
+                    st.success(f"✅ Đã hoàn thành tổng hợp kiến thức bài: **{lesson_input}** ({subject} - {grade})")
+                    st.markdown("---")
+                    st.markdown(final_text, unsafe_allow_html=True)
+                else:
+                    st.error(f"❌ Không thể kết nối AI. Lỗi chi tiết: `{last_error}`")
 
     st.markdown("---")
     
