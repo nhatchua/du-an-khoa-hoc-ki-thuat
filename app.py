@@ -8,36 +8,26 @@ st.set_page_config(
     layout="wide"
 )
 
-# HÀM LỌC SẠCH VÀ CHẶN DỨT ĐIỂM CÁC DÒNG RÁC
+# HÀM LỌC SẠCH NÂNG CẤP: CẮT BỎ HOÀN TOÀN MỌI ĐOẠN SUY LUẬN TIẾNG ANH PHÍA TRƯỚC
 def clean_ai_response(text: str) -> str:
     if not text:
         return ""
     
-    # Cắt bỏ nếu có dấu hiệu rác ở đầu
-    lower_text = text.lower()
-    for keyword in ["role:", "language:", "constraint:", "check:", "refining", "let's write"]:
-        idx = lower_text.find(keyword)
-        if idx != -1:
-            text = text[idx + len(keyword):]
-            lower_text = text.lower()
+    # Tìm vị trí bắt đầu của tiêu đề chính thức bằng tiếng Việt
+    start_keyword = "# 📌 I. KIẾN THỨC CỐT LÕI CẦN GHI NHỚ"
+    idx = text.find(start_keyword)
+    
+    if idx != -1:
+        # Cắt bỏ toàn bộ phần rác/suy luận tiếng Anh nằm trước tiêu đề này
+        text = text[idx:]
+    else:
+        # Dự phòng trường hợp AI viết khác dấu câu một chút
+        alt_keyword = "I. KIẾN THỨC CỐT LÕI"
+        idx_alt = text.find(alt_keyword)
+        if idx_alt != -1:
+            text = text[idx_alt:]
 
-    forbidden_phrases = [
-        "role:", "language:", "constraint:", "standard vietnamese", 
-        "no english", "internal monologue", "textbook series"
-    ]
-    
-    lines = text.split('\n')
-    filtered_lines = []
-    
-    for line in lines:
-        line_str = line.strip()
-        line_lower = line_str.lower()
-        is_bad = any(phrase in line_lower for phrase in forbidden_phrases)
-        
-        if not is_bad and line_str:
-            filtered_lines.append(line)
-            
-    return '\n'.join(filtered_lines).strip()
+    return text.strip()
 
 
 # 2. Thanh bên (Sidebar)
@@ -167,7 +157,7 @@ with tab1:
             with st.spinner(f"⏳ AI đang phân tích dữ liệu chuẩn SGK 'Kết Nối Tri Thức Với Cuộc Sống' cho bài: **{lesson_input}**..."):
                 genai.configure(api_key=api_key_to_use)
                 
-                # Tự động quét model từ API key để tránh lỗi 404
+                # Quét model khả dụng tự động
                 available_models = []
                 try:
                     for m in genai.list_models():
@@ -186,7 +176,7 @@ with tab1:
                 
                 full_prompt = f"""
 Hãy đóng vai một giáo viên giỏi soạn nội dung học tập theo chương trình sách giáo khoa Kết Nối Tri Thức Với Cuộc Sống tại Việt Nam. 
-Hãy viết toàn bộ nội dung sau hoàn toàn bằng tiếng Việt chuẩn xác, tuyệt đối không dùng tiếng Anh, không giải thích dài dòng ngoài lề, không viết câu suy luận nội tâm:
+Tuyệt đối không viết các đoạn suy luận nội tâm, không viết nháp, không dùng tiếng Anh. Hãy bắt đầu ngay lập tức bằng tiêu đề tiếng Việt.
 
 Em hãy soạn nội dung kiến thức cho bài học: "{lesson_input}" thuộc môn {subject} ({grade}).
 
