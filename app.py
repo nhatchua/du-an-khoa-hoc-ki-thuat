@@ -16,10 +16,16 @@ with st.sidebar:
     with st.expander("📲 Quét mã QR vào app trên điện thoại"):
         st.write("Dùng camera điện thoại để quét mã bên dưới để truy cập nhanh:")
         
+        # Link web ứng dụng
         app_url = "https://du-an-khoa-hoc-ki-thuat-2026.streamlit.app/"
+        
+        # Tạo mã QR tự động từ link web
         qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={app_url}"
         
+        # Hiển thị ảnh mã QR
         st.image(qr_api_url, caption="Quét mã để mở trên điện thoại", width=200)
+        
+        # Hiển thị link bấm trực tiếp
         st.markdown(f"🔗 **Hoặc bấm vào link:** [{app_url}]({app_url})")
     
     st.markdown("---")
@@ -33,24 +39,26 @@ with st.sidebar:
     # ĐƯỜNG TRUYỀN AI CÁ NHÂN
     st.subheader("🔑 ĐƯỜNG TRUYỀN AI CÁ NHÂN")
     
+    # Nút bấm mở thẳng trang lấy API Key trên Google AI Studio
     st.link_button(
         "👉 Lấy Key riêng miễn phí (15s)", 
         "https://aistudio.google.com/app/apikey", 
         use_container_width=True
     )
     
+    # Ô nhập API Key
     user_api_key = st.text_input(
         "Dán mã API Key của em vào đây:", 
         type="password", 
         placeholder="AIzaSy..."
     )
     
+    # Thông báo trạng thái đường truyền & xác định API Key sử dụng
     if user_api_key:
         st.success("🟢 Đang dùng đường truyền AI Cá nhân")
         api_key_to_use = user_api_key
     else:
         st.info("🔵 Đang dùng đường truyền chung của Trường")
-        # Lấy key mặc định từ st.secrets nếu người dùng chưa nhập key riêng
         api_key_to_use = st.secrets.get("GEMINI_API_KEY", "")
         
     st.markdown("<br>", unsafe_allow_html=True)
@@ -90,6 +98,7 @@ with st.sidebar:
             label_visibility="collapsed"
         )
         
+        # Thanh đánh giá sao
         rating = st.feedback("stars")
         
         st.markdown("**Mô tả chi tiết:**")
@@ -154,41 +163,57 @@ with tab1:
             st.error("🔑 Chưa phát hiện API Key! Vui lòng nhập API Key ở thanh bên (Sidebar) để kích hoạt AI.")
         else:
             with st.spinner(f"⏳ AI đang phân tích dữ liệu chuẩn Sách SGK 'Kết nối tri thức với cuộc sống' cho bài: **{lesson_input}**..."):
-                try:
-                    # Cấu hình Gemini API
-                    genai.configure(api_key=api_key_to_use)
-                    model = genai.GenerativeModel("gemini-2.5-flash")
-                    
-                    # System Prompt chống ảo giác & bám sát chuẩn SGK Kết Nối Tri Thức
-                    system_prompt = f"""
-                    Bạn là một Chuyên gia Giáo dục & Giáo viên Giỏi bậc THPT tại Việt Nam.
-                    Nhiệm vụ của bạn là soạn bài hướng dẫn tự học cho học sinh theo đúng chuẩn Chương trình GDPT 2018 và bộ sách SGK 'Kết nối tri thức với cuộc sống'.
+                # Danh sách các mô hình Gemini chạy dự phòng theo thứ tự ưu tiên
+                MODEL_CANDIDATES = [
+                    "gemini-1.5-flash",
+                    "gemini-2.0-flash",
+                    "gemini-1.5-pro",
+                    "gemini-2.0-flash-lite"
+                ]
+                
+                genai.configure(api_key=api_key_to_use)
+                
+                system_prompt = f"""
+                Bạn là một Chuyên gia Giáo dục & Giáo viên Giỏi bậc THPT tại Việt Nam.
+                Nhiệm vụ của bạn là soạn bài hướng dẫn tự học cho học sinh theo đúng chuẩn Chương trình GDPT 2018 và bộ sách SGK 'Kết nối tri thức với cuộc sống'.
 
-                    THÔNG TIN ĐẦU VÀO:
-                    - Môn học: {subject}
-                    - Khối lớp: {grade}
-                    - Tên bài học: {lesson_input}
+                THÔNG TIN ĐẦU VÀO:
+                - Môn học: {subject}
+                - Khối lớp: {grade}
+                - Tên bài học: {lesson_input}
 
-                    YÊU CẦU NỘI DUNG (NGHIÊM CẶT CHỐNG ẢO GIÁC - HALLUCINATION):
-                    1. CHÍNH XÁC ABSOLUTE: Mọi khái niệm, công thức, định lý, tên gọi phải chính xác tuyệt đối 100% theo chương trình SGK Kết nối tri thức với cuộc sống. Không tự bịa ra kiến thức chưa kiểm chứng.
-                    2. CẤU TRÚC BÀI HỌC Chuẩn GDPT 2018:
-                       - 📌 **I. MỤC TIÊU BÀI HỌC**: (Kiến thức, Năng lực, Phẩm chất)
-                       - 🎯 **II. KIẾN THỨC TRỌNG TÂM (SGK Kết nối tri thức)**: Tóm tắt lý thuyết cốt lõi, công thức quan trọng (trình bày công thức Toán/Lý/Hóa bằng LaTeX rõ ràng).
-                       - 💡 **III. VÍ DỤ MINH HỌA & VẬN DỤNG**: 2-3 ví dụ có lời giải chi tiết, rõ ràng từng bước.
-                       - ⚠️ **IV. CÁC LỖI SAI THƯỜNG GẶP**: Điểm học sinh hay bị nhầm lẫn khi làm bài.
-                       - ❓ **V. CÂU HỎI TỰ KIỂM TRA (Socratic)**: 3 câu hỏi trắc nghiệm hoặc tự luận ngắn để học sinh tự đánh giá mức độ hiểu bài.
+                YÊU CẦU NỘI DUNG (NGHIÊM CẶT CHỐNG ẢO GIÁC - HALLUCINATION):
+                1. CHÍNH XÁC ABSOLUTE: Mọi khái niệm, công thức, định lý, tên gọi phải chính xác tuyệt đối 100% theo chương trình SGK Kết nối tri thức với cuộc sống. Không tự bịa ra kiến thức chưa kiểm chứng.
+                2. CẤU TRÚC BÀI HỌC Chuẩn GDPT 2018:
+                   - 📌 **I. MỤC TIÊU BÀI HỌC**: (Kiến thức, Năng lực, Phẩm chất)
+                   - 🎯 **II. KIẾN THỨC TRỌNG TÂM (SGK Kết nối tri thức)**: Tóm tắt lý thuyết cốt lõi, công thức quan trọng (trình bày công thức Toán/Lý/Hóa bằng LaTeX rõ ràng).
+                   - 💡 **III. VÍ DỤ MINH HỌA & VẬN DỤNG**: 2-3 ví dụ có lời giải chi tiết, rõ ràng từng bước.
+                   - ⚠️ **IV. CÁC LỖI SAI THƯỜNG GẶP**: Điểm học sinh hay bị nhầm lẫn khi làm bài.
+                   - ❓ **V. CÂU HỎI TỰ KIỂM TRA (Socratic)**: 3 câu hỏi trắc nghiệm hoặc tự luận ngắn để học sinh tự đánh giá mức độ hiểu bài.
 
-                    MÔI TRƯỜNG HIỂN THỊ: Trình bày bằng Markdown đẹp mắt, mạch lạc, dễ đọc.
-                    """
-                    
-                    response = model.generate_content(system_prompt)
-                    
+                MÔI TRƯỜNG HIỂN THỊ: Trình bày bằng Markdown đẹp mắt, mạch lạc, dễ đọc.
+                """
+                
+                response_text = None
+                used_model_name = ""
+                
+                # Vòng lặp thử từng model đến khi thành công
+                for model_name in MODEL_CANDIDATES:
+                    try:
+                        model = genai.GenerativeModel(model_name)
+                        response = model.generate_content(system_prompt)
+                        response_text = response.text
+                        used_model_name = model_name
+                        break  # Thoát vòng lặp khi tạo nội dung thành công
+                    except Exception:
+                        continue  # Nếu model bị lỗi, tự động thử model kế tiếp
+                
+                if response_text:
                     st.success(f"✅ Đã hoàn thành soạn bài học: **{lesson_input}** ({subject} - {grade})")
                     st.markdown("---")
-                    st.markdown(response.text)
-                    
-                except Exception as e:
-                    st.error(f"❌ Có lỗi xảy ra khi kết nối AI: {str(e)}")
+                    st.markdown(response_text)
+                else:
+                    st.error("❌ Tất cả các tuyến kết nối AI hiện đang bận hoặc API Key không hợp lệ. Vui lòng kiểm tra lại Key hoặc thử lại sau ít phút!")
 
     st.markdown("---")
     
