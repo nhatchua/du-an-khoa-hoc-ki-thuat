@@ -153,149 +153,85 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📉 Trạm 5: Thống Kê & Đánh Giá"
 ])
 
-# TRẠM 1: TỰ HỌC & CHIẾM LĨNH KIẾN THỨC
+# ------------------------------------------------------------------------------
+# TRẠM 1: LÝ THUYẾT & PHÒNG LAB
+# ------------------------------------------------------------------------------
 with tab1:
-    st.markdown(f"# 📖 TỰ HỌC & CHIẾM LĨNH KIẾN THỨC: MÔN {subject.upper()} - {grade.upper()}")
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.subheader(f"📖 Tự học & Chiếm lĩnh kiến thức môn {subject} - Lớp {grade_num}")
     
-    st.markdown("### 📝 **Nhập tên bài học em muốn tổng hợp:**")
-    lesson_input = st.text_input(
-        "Nhập bài học cần chiếm lĩnh kiến thức:",
-        placeholder="Ví dụ: Đồ thị hàm số bậc hai, Hàm số lượng giác, Mạch điện xoay chiều...",
-        label_visibility="collapsed"
-    )
+    topic_input = st.text_input("📝 Nhập bài học cần chiếm lĩnh kiến thức:", placeholder="Ví dụ: Khảo sát hàm số, Hình chóp...")
     
-    btn_soan_bai = st.button("🧪 Tổng Hợp Kiến Thức Cốt Lõi", type="primary")
-    
-    if btn_soan_bai:
-        if not lesson_input.strip():
-            st.warning("⚠️ Vui lòng nhập tên bài học trước khi bấm tổng hợp!")
-        elif not api_key_to_use:
-            st.error("🔑 Chưa phát hiện Mã Kết Nối! Vui lòng dán Mã Kết Nối (API Key) ở thanh bên trái.")
-        else:
-            with st.spinner(f"⏳ AI đang phân tích dữ liệu chuẩn SGK 'Kết Nối Tri Thức Với Cuộc Sống' cho bài: **{lesson_input}**..."):
-                genai.configure(api_key=api_key_to_use)
+    if st.button("🚀 Soạn bài học chuẩn GDPT 2018") and topic_input.strip():
+        with st.spinner("Đang biên soạn chuẩn ngữ liệu SGK KNTT và cấu trúc Socratic..."):
+            study_prompt = f"""
+            Môn học: {subject} LỚP {grade_num}, Bộ sách Kết Nối Tri Thức. Chủ đề: '{topic_input}'.
+            NẾU yêu cầu sai môn học, CHỈ IN RA: "Hình như em đang chọn nhầm môn học rồi kìa! 😊" VÀ DỪNG LẠI.
+            NẾU ĐÚNG MÔN: TUYỆT ĐỐI CẤM nhắc "Hàm bậc 4 trùng phương". CẤM Lực căng dây T âm.
+            KIỂM TRA CHÉO NỘI BỘ TRƯỚC KHI XUẤT: Đảm bảo Bảng biến thiên (nghiệm y'=0, dấu đạo hàm, chiều mũi tên) và Cực trị chính xác 100% về mặt toán học/vật lý. Tự giải nháp 2 lần.
+            YÊU CẦU:
+            ### PHẦN 1: TÓM TẮT CỐT LÕI (Dùng Bảng Markdown)
+            ### PHẦN 2: TRẮC NGHIỆM KHÁCH QUAN SOCRATIC (3 câu, 4 đáp án A, B, C, D rõ ràng. KHÔNG dùng "hình bên". Cuối mỗi câu ghi "CORRECT: [A/B/C/D]" và "EXPLAIN: [Gợi ý tư duy]")
+            ### PHẦN 3: BÀI TẬP TỰ LUẬN & HƯỚNG DẪN TƯ DUY
+            (TỬ HUYỆT SƯ PHẠM: Ở PHẦN 3 NÀY, BẠN CHỈ ĐƯỢC CHO ĐỀ BÀI VÀ VẠCH RA CÁC BƯỚC GỢI Ý TƯ DUY. TUYỆT ĐỐI KHÔNG ĐƯỢC GIẢI CHI TIẾT HAY ĐƯA RA KẾT QUẢ CUỐI CÙNG! NẾU BẠN GIẢI SẴN RA ĐÁP ÁN LÀ BẠN ĐÃ PHÁ HOẠI TRIẾT LÝ SOCRATIC CỦA HỆ THỐNG!)
+            """
+            try:
+                res_text = call_gemini_with_fallback(study_prompt)
+                st.session_state.current_lesson = res_text
+                st.session_state.parsed_quiz = parse_quiz_questions(res_text)
+                st.session_state.quiz_states = {}
+            except Exception as e: st.error(f"Lỗi: {e}")
+
+    if st.session_state.get("current_lesson"):
+        lesson_text = st.session_state.current_lesson
+        part2_split = re.split(r'(?i)(?:###\s*)?PHẦN 2[\:\.]?', lesson_text)
+        part3_split = re.split(r'(?i)(?:###\s*)?PHẦN 3[\:\.]?', lesson_text)
+        
+        if len(part2_split) > 0 and part2_split[0].strip():
+            st.markdown(f'<div class="markdown-text-container">{re.sub(r"\\n{3,}", "\\n\\n", part2_split[0].strip())}</div>', unsafe_allow_html=True)
+
+        quiz_list = st.session_state.get("parsed_quiz", [])
+        if quiz_list:
+            st.markdown("### 🎯 Phần 2: Trắc nghiệm khách quan Socratic")
+            for idx, q in enumerate(quiz_list):
+st.info(f"**Câu {idx+1}:** `[{q['level']}]` {q['question']}")
                 
-                available_models = []
-                try:
-                    for m in genai.list_models():
-                        if 'generateContent' in m.supported_generation_methods:
-                            available_models.append(m.name)
-                except Exception:
-                    pass
-                
-                if not available_models:
-                    available_models = [
-                        "gemini-2.5-flash",
-                        "gemini-2.0-flash",
-                        "models/gemini-2.5-flash",
-                        "models/gemini-2.0-flash"
-                    ]
-                
-                full_prompt = f"""
-Hãy đóng vai một giáo viên giỏi soạn nội dung học tập theo chương trình sách giáo khoa Kết Nối Tri Thức Với Cuộc Sống tại Việt Nam. 
-Tuyệt đối không viết các đoạn suy luận nội tâm, không viết nháp, không dùng tiếng Anh. Hãy bắt đầu ngay lập tức bằng tiêu đề tiếng Việt.
+                clean_opts_t1 = [str(opt).replace("\\infty", "∞").replace("\infty", "∞") for opt in q['options']]
+                user_choice = st.radio(f"Chọn đáp án câu {idx+1}:", clean_opts_t1, key=f"q_{idx}", label_visibility="collapsed")
+                if st.button(f"🔍 Kiểm tra câu {idx+1}", key=f"btn_{idx}"):
+                    choice_letter = re.sub(r'[^A-D]', '', user_choice.strip()[:3]).upper()[:1]
+                    if choice_letter == q['correct']: st.session_state.quiz_states[idx] = ("correct", "🎉 Xuất sắc!")
+                    else: st.session_state.quiz_states[idx] = ("incorrect", f"💡 **Gợi ý:** {q['explain']}")
+                if idx in st.session_state.quiz_states:
+                    status, msg = st.session_state.quiz_states[idx]
+                    if status == "correct": st.success(msg)
+                    else: st.warning("🤔 Chưa chính xác!"); st.info(msg)
+        
+        if len(part3_split) > 1 and part3_split[-1].strip():
+            st.markdown("### ✍️ Phần 3: Bài tập tự luận & Hướng dẫn tư duy")
+            st.markdown(re.sub(r'\n{3,}', '\n\n', part3_split[-1].strip()).replace("\nBài", "\n\n<br>**Bài"), unsafe_allow_html=True)
 
-Em hãy soạn nội dung kiến thức cho bài học: "{lesson_input}" thuộc môn {subject} ({grade}).
-
-Trình bày chính xác theo cấu trúc sau:
-
-# 📌 I. KIẾN THỨC CỐT LÕI CẦN GHI NHỚ
-(Trình bày chi tiết lý thuyết, khái niệm và công thức cốt lõi)
-
-# ⚠️ II. CÁC LỖI SAI THƯỜNG GẶP KHI LÀM BÀI
-(Liệt kê các lỗi sai phổ biến học sinh hay mắc phải)
-
-# ✍️ III. BÀI TẬP TƯƠNG TÁC & THỬ THÁCH
-
-## 1. Dạng Trắc Nghiệm Tương Tác
-**Câu 1:** (Đề bài câu hỏi trắc nghiệm)  
-A. ...  
-B. ...  
-C. ...  
-D. ...  
-
-<details>
-<summary>🔍 <b>Nhấp vào đây để xem hướng dẫn từng bước (Khi bí quá)</b></summary>
-
-- **Bước 1:** ...  
-- **Bước 2:** ...  
-- **Gợi ý lựa chọn:** Hướng dẫn cách phân tích để tìm đáp án đúng. Tuyệt đối không tiết lộ đáp án là A, B, C hay D.
-</details>
-
-<br>
-
-## 2. Dạng Tự Luận Trả Lời Ngắn
-**Câu 2:** (Đề bài tự luận)  
-
-<details>
-<summary>🔍 <b>Nhấp vào đây để xem hướng dẫn từng bước (Khi bí quá)</b></summary>
-
-- **Gợi ý bước 1:** ...  
-- **Gợi ý bước 2:** ...  
-- **Thử thách học sinh:** Em hãy tính kết quả cuối cùng = ...?
-</details>
-                """
-                
-                generation_config = genai.types.GenerationConfig(
-                    temperature=0.0,
-                    top_p=0.8
-                )
-                
-                response_text = None
-                last_error = ""
-                
-                for model_name in available_models:
-                    try:
-                        model = genai.GenerativeModel(model_name=model_name)
-                        response = model.generate_content(
-                            full_prompt,
-                            generation_config=generation_config
-                        )
-                        if response and response.text:
-                            response_text = response.text
-                            break
-                    except Exception as err:
-                        last_error = str(err)
-                        continue
-                
-                if response_text:
-                    final_text = clean_ai_response(response_text)
-                    st.success(f"✅ Đã hoàn thành tổng hợp kiến thức bài: **{lesson_input}** ({subject} - {grade})")
-                    st.markdown("---")
-                    st.markdown(final_text, unsafe_allow_html=True)
-                else:
-                    st.error(f"❌ Không thể kết nối AI. Lỗi chi tiết: `{last_error}`")
-
+    # ------------------ PHÒNG LAB ------------------
     st.markdown("---")
-    
-    st.markdown(
-        """
-        <div style="border: 2px solid #1E88E5; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 15px; background-color: #0E1117;">
-            <h1 style="margin: 0; color: #FFFFFF; font-size: 28px;">🔬 PHÒNG THÍ NGHIỆM ẢO</h1>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
-    
-    lab_input = st.text_input(
-        "Ví dụ: Mô phỏng chuyển động ném ngang...",
-        placeholder="Ví dụ: Khảo sát đồ thị hàm số bậc 3...",
-        label_visibility="collapsed"
-    )
-    
-    st.button("⚙️ Khởi Chạy Mô Phỏng", type="primary")
-
-with tab2:
-    st.subheader("Trạm 2: Gia Sư Tương Tác")
-    st.write(f"Gia sư AI sẵn sàng đặt câu hỏi gợi mở môn **{subject} ({grade})**...")
-
-with tab3:
-    st.subheader("Trạm 3: Khảo Thí Tự Do")
-    st.write(f"Khu vực luyện tập và tự kiểm tra môn **{subject} ({grade})**...")
-
-with tab4:
-    st.subheader("Trạm 4: Nhật Ký Nghiên Cứu Khoa Học")
-    st.write("Theo dõi và ghi chép tiến độ dự án...")
-
-with tab5:
-    st.warning("🔒 Trạm Thống Kê & Đánh Giá bị khóa. Vui lòng đăng nhập ở Trạm 4 trước.")
+    with st.container():
+        st.markdown("""<div style="background: linear-gradient(145deg, #0f172a, #1e293b); border: 2px solid #0ea5e9; padding: 20px; border-radius: 15px 15px 0 0; text-align: center;"><h3 style="color: white; margin: 0;">🔬 PHÒNG THÍ NGHIỆM ẢO</h3></div>""", unsafe_allow_html=True)
+        lab_command = st.text_input("Lệnh mô phỏng:", placeholder="Ví dụ: Khảo sát hàm số bậc 3...", label_visibility="collapsed")
+        
+        if st.button("✨ Khởi chạy Phòng Lab") and lab_command.strip():
+            with st.spinner("Phòng Lab đang dựng mô hình..."):
+                lab_prompt = f"""Môn học: {subject}. Khối: {grade_num}. Ngữ cảnh: {st.session_state.get("current_lesson", "")}. Yêu cầu: "{lab_command}"
+                CHỈ XUẤT 1 KHỐI JSON (KHÔNG BỌC TICK ```). 
+                Dùng {{"type": "func_3", "a":.., "b":.., "c":.., "d":..}} cho hàm bậc 3. Dùng "func_1_1" hoặc "func_2_1" tương ứng. Dùng "dynamic_code" với `go.Figure()` cho vật lý. Dùng "mermaid" cho Sinh/Hóa.
+                """
+                try:
+                    raw_json = call_gemini_with_fallback(lab_prompt, json_mode=True)
+                    json_match = re.search(r'\{.*\}', raw_json.strip(), re.DOTALL)
+                    if json_match: st.session_state.lab_data = json.loads(json_match.group(0))
+                    else: st.session_state.lab_data = None
+                except Exception as e: st.error(f"Lỗi: {e}")
+        
+        if st.session_state.get("lab_data"):
+            st.success("✨ Khởi tạo thành công!")
+st.info(f"💡 {st.session_state.lab_data.get('explanation', '')}")
+            if st.session_state.lab_data.get("type") == "dynamic_code": render_dynamic_python_lab(st.session_state.lab_data.get("python_code", ""))
+            else: render_smart_lab(st.session_state.lab_data)
