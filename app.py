@@ -8,27 +8,22 @@ st.set_page_config(
     layout="wide"
 )
 
-# HÀM LỌC SẠCH DỨT ĐIỂM SUY LUẬN VÀ LỖI HỆ THỐNG CỦA AI
+# HÀM LỌC SẠCH VÀ CHẶN DỨT ĐIỂM CÁC DÒNG RÁC
 def clean_ai_response(text: str) -> str:
     if not text:
         return ""
     
-    # Cắt bỏ toàn bộ phần suy luận hoặc tự check nếu AI lỡ tuôn ra
+    # Cắt bỏ nếu có dấu hiệu rác ở đầu
     lower_text = text.lower()
-    for keyword in ["check:", "refining", "let's write", "note:", "thought:"]:
+    for keyword in ["role:", "language:", "constraint:", "check:", "refining", "let's write"]:
         idx = lower_text.find(keyword)
         if idx != -1:
-            text = text[:idx]
+            text = text[idx + len(keyword):] # Cắt bỏ phần rác phía trước
             lower_text = text.lower()
 
-    # Các cụm từ khóa rác hệ thống cần loại bỏ
-    forbidden_system_phrases = [
-        "is everything in vietnamese", 
-        "is there any english", 
-        "the structure is followed", 
-        "refining the", 
-        "final polish", 
-        "let's write"
+    forbidden_phrases = [
+        "role:", "language:", "constraint:", "standard vietnamese", 
+        "no english", "internal monologue", "textbook series"
     ]
     
     lines = text.split('\n')
@@ -37,9 +32,9 @@ def clean_ai_response(text: str) -> str:
     for line in lines:
         line_str = line.strip()
         line_lower = line_str.lower()
-        is_system_thought = any(phrase in line_lower for phrase in forbidden_system_phrases)
+        is_bad = any(phrase in line_lower for phrase in forbidden_phrases)
         
-        if not is_system_thought:
+        if not is_bad and line_str:
             filtered_lines.append(line)
             
     return '\n'.join(filtered_lines).strip()
@@ -49,7 +44,6 @@ def clean_ai_response(text: str) -> str:
 with st.sidebar:
     st.header("⚙️ THIẾT LẬP HỌC TẬP")
     
-    # Mã QR
     with st.expander("📲 Quét mã QR vào ứng dụng bằng điện thoại"):
         st.write("Dùng máy ảnh điện thoại để quét mã bên dưới để truy cập nhanh:")
         app_url = "https://du-an-khoa-hoc-ki-thuat-2026.streamlit.app/"
@@ -58,14 +52,10 @@ with st.sidebar:
         st.markdown(f"🔗 **Hoặc nhấn vào đường dẫn:** [{app_url}]({app_url})")
     
     st.markdown("---")
-    
-    # THÔNG TIN HỌC SINH
     st.subheader("👨‍🎓 THÔNG TIN HỌC SINH")
     name = st.text_input("Họ và tên em (Không bắt buộc):", placeholder="Ví dụ: Nguyễn Văn A")
     
     st.markdown("---")
-    
-    # ĐƯỜNG TRUYỀN AI CÁ NHÂN
     st.subheader("🔑 ĐƯỜNG TRUYỀN AI CÁ NHÂN")
     
     st.link_button(
@@ -89,7 +79,6 @@ with st.sidebar:
         
     st.markdown("<br>", unsafe_allow_html=True)
     
-    # CHỌN KHỐI LỚP & MÔN HỌC
     st.markdown("🎯 **Chọn khối lớp:**")
     grade = st.selectbox(
         "Chọn khối lớp",
@@ -107,8 +96,6 @@ with st.sidebar:
     )
     
     st.markdown("---")
-    
-    # BÁO LỖI & GÓP Ý
     with st.expander("🛠️ Báo lỗi ứng dụng & Góp ý"):
         issue_type = st.selectbox(
             "Loại vấn đề gặp phải:",
@@ -150,7 +137,6 @@ with col_b3:
 
 st.markdown("<br>", unsafe_allow_html=True)
 
-# 4. Hệ thống Trạm
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "💡 Trạm 1: Học Tập & Phòng Thí Nghiệm",
     "✍️ Trạm 2: Gia Sư Tương Tác",
@@ -181,75 +167,59 @@ with tab1:
             with st.spinner(f"⏳ AI đang phân tích dữ liệu chuẩn SGK 'Kết Nối Tri Thức Với Cuộc Sống' cho bài: **{lesson_input}**..."):
                 genai.configure(api_key=api_key_to_use)
                 
-                # Tìm danh sách model khả dụng
-                available_models = []
-                try:
-                    for m in genai.list_models():
-                        if 'generateContent' in m.supported_generation_methods:
-                            available_models.append(m.name)
-                except Exception:
-                    pass
+                available_models = [
+                    "gemini-2.5-flash",
+                    "gemini-2.0-flash",
+                    "gemini-1.5-flash",
+                    "models/gemini-2.5-flash",
+                    "models/gemini-2.0-flash",
+                    "models/gemini-1.5-flash"
+                ]
                 
-                if not available_models:
-                    available_models = [
-                        "gemini-2.5-flash",
-                        "gemini-2.0-flash",
-                        "gemini-1.5-flash",
-                        "models/gemini-2.5-flash",
-                        "models/gemini-2.0-flash",
-                        "models/gemini-1.5-flash"
-                    ]
-                
-                # Gộp trực tiếp quy tắc lên đầu prompt để tránh lỗi system_instruction của SDK
+                # SỬ DỤNG PROMPT HOÀN TOÀN BẰNG TIẾNG VIỆT THUẦN TÚY ĐỂ TRIỆT TIÊU HOÀN TOÀN TÌNH TRẠNG NHẠI LỆNH TIẾNG ANH
                 full_prompt = f"""
-                [QUY TẮC BẮT BUỘC]:
-                - Bạn là giáo viên biên soạn tài liệu học tập theo bộ sách Kết Nối Tri Thức Với Cuộc Sống.
-                - Chỉ xuất ra nội dung bài học bằng tiếng Việt chuẩn xác.
-                - TUYỆT ĐỐI KHÔNG viết các câu suy luận nội tâm, không viết các đoạn kiểm tra hay nhại lại lệnh (Check:, Refining:, Let's write).
-                - Không dùng tiếng Anh dưới mọi hình thức trong phần phản hồi.
+Hãy đóng vai một giáo viên giỏi soạn nội dung học tập theo chương trình sách giáo khoa Kết Nối Tri Thức Với Cuộc Sống tại Việt Nam. 
+Hãy viết toàn bộ nội dung sau hoàn toàn bằng tiếng Việt chuẩn xác, tuyệt đối không dùng tiếng Anh, không giải thích dài dòng ngoài lề, không viết câu suy luận nội tâm:
 
-                [YÊU CẦU NỘI DUNG]:
-                - Môn học: {subject}
-                - Lớp: {grade}
-                - Tên bài: {lesson_input}
+Em hãy soạn nội dung kiến thức cho bài học: "{lesson_input}" thuộc môn {subject} ({grade}).
 
-                Hãy trình bày chính xác theo cấu trúc Tiếng Việt sau:
+Trình bày chính xác theo cấu trúc sau:
 
-                # 📌 I. KIẾN THỨC CỐT LÕI CẦN GHI NHỚ
-                (Trình bày chi tiết lý thuyết, khái niệm và công thức bằng tiếng Việt)
+# 📌 I. KIẾN THỨC CỐT LÕI CẦN GHI NHỚ
+(Trình bày chi tiết lý thuyết, khái niệm và công thức cốt lõi)
 
-                # ⚠️ II. CÁC LỖI SAI THƯỜNG GẶP KHI LÀM BÀI
-                (Liệt kê các lỗi sai phổ biến của học sinh bằng tiếng Việt)
+# ⚠️ II. CÁC LỖI SAI THƯỜNG GẶP KHI LÀM BÀI
+(Liệt kê các lỗi sai phổ biến học sinh hay mắc phải)
 
-                # ✍️ III. BÀI TẬP TƯƠNG TÁC & THỬ THÁCH
+# ✍️ III. BÀI TẬP TƯƠNG TÁC & THỬ THÁCH
 
-                ## 1. Dạng Trắc Nghiệm Tương Tác
-                **Câu 1:** (Đề bài trắc nghiệm)  
-                A. ...  
-                B. ...  
-                C. ...  
-                D. ...  
+## 1. Dạng Trắc Nghiệm Tương Tác
+**Câu 1:** (Đề bài câu hỏi trắc nghiệm)  
+A. ...  
+B. ...  
+C. ...  
+D. ...  
 
-                <details>
-                <summary>🔍 <b>Nhấp vào đây để xem hướng dẫn từng bước (Khi bí quá)</b></summary>
+<details>
+<summary>🔍 <b>Nhấp vào đây để xem hướng dẫn từng bước (Khi bí quá)</b></summary>
 
-                - **Bước 1:** ...  
-                - **Bước 2:** ...  
-                - **Gợi ý lựa chọn:** Áp dụng công thức để tìm đáp án đúng. Tuyệt đối không cho biết đáp án A, B, C hay D.
-                </details>
+- **Bước 1:** ...  
+- **Bước 2:** ...  
+- **Gợi ý lựa chọn:** Hướng dẫn cách phân tích để tìm đáp án đúng. Tuyệt đối không tiết lộ đáp án là A, B, C hay D.
+</details>
 
-                <br>
+<br>
 
-                ## 2. Dạng Tự Luận Trả Lời Ngắn
-                **Câu 2:** (Đề bài tự luận)  
+## 2. Dạng Tự Luận Trả Lời Ngắn
+**Câu 2:** (Đề bài tự luận)  
 
-                <details>
-                <summary>🔍 <b>Nhấp vào đây để xem hướng dẫn từng bước (Khi bí quá)</b></summary>
+<details>
+<summary>🔍 <b>Nhấp vào đây để xem hướng dẫn từng bước (Khi bí quá)</b></summary>
 
-                - **Gợi ý bước 1:** ...  
-                - **Gợi ý bước 2:** ...  
-                - **Thử thách học sinh:** Em hãy tính kết quả cuối cùng = ...?
-                </details>
+- **Gợi ý bước 1:** ...  
+- **Gợi ý bước 2:** ...  
+- **Thử thách học sinh:** Em hãy tính kết quả cuối cùng = ...?
+</details>
                 """
                 
                 generation_config = genai.types.GenerationConfig(
@@ -262,7 +232,6 @@ with tab1:
                 
                 for model_name in available_models:
                     try:
-                        # Khởi tạo model tiêu chuẩn không dùng system_instruction tham số để chống lỗi SDK
                         model = genai.GenerativeModel(model_name=model_name)
                         response = model.generate_content(
                             full_prompt,
@@ -285,7 +254,6 @@ with tab1:
 
     st.markdown("---")
     
-    # KHU VỰC PHÒNG THÍ NGHIỆM ẢO
     st.markdown(
         """
         <div style="border: 2px solid #1E88E5; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 15px; background-color: #0E1117;">
