@@ -65,7 +65,7 @@ with st.sidebar:
     grade = st.selectbox(
         "Chọn khối lớp",
         ["Lớp 6", "Lớp 7", "Lớp 8", "Lớp 9", "Lớp 10", "Lớp 11", "Lớp 12"],
-        index=6, # Mặc định chọn Lớp 12
+        index=5, # Mặc định chọn Lớp 11
         label_visibility="collapsed"
     )
     
@@ -126,7 +126,7 @@ col_b1, col_b2, col_b3, col_b4 = st.columns([1, 2, 2, 1])
 with col_b2:
     st.info("📚 Bộ sách: Kết Nối Tri Thức Với Cuộc Sống")
 with col_b3:
-    st.success("🎯 Chuẩn CT GDPT 2018 / Format 2025")
+    st.success("🎯 Chuẩn CT GDPT 2018 / Định dạng 2025")
 
 st.markdown("<br>", unsafe_allow_html=True)
 
@@ -139,17 +139,47 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📉 Trạm 5: Thống Kê & T-Test"
 ])
 
+# TRẠM 1: KẾT NỐI ĐỘNG VỚI MÔN HỌC & KHỐI LỚP TỪ SIDEBAR
 with tab1:
-    st.subheader("Trạm 1: Học Tập & Phòng Lab")
-    st.write("Nội dung học tập và phòng lab thực hành...")
+    # Tiêu đề tự động cập nhật theo môn học và lớp được chọn ở sidebar
+    st.markdown(f"## 📖 Tự học & Chiếm lĩnh kiến thức môn {subject} - {grade}")
+    
+    st.markdown("**📄 Nhập bài học cần chiếm lĩnh kiến thức:**")
+    lesson_input = st.text_input(
+        "Nhập bài học cần chiếm lĩnh kiến thức:",
+        placeholder="Ví dụ: Khảo sát hàm số, Hình chóp...",
+        label_visibility="collapsed"
+    )
+    
+    st.button("🧪 Soạn bài học chuẩn GDPT 2018", type="primary")
+    
+    st.markdown("---")
+    
+    # KHU VỰC PHÒNG THÍ NGHIỆM ẢO
+    st.markdown(
+        """
+        <div style="border: 2px solid #1E88E5; padding: 20px; border-radius: 10px; text-align: center; margin-bottom: 15px;">
+            <h2 style="margin: 0; color: #ffffff;">🔬 PHÒNG THÍ NGHIỆM ẢO</h2>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+    
+    lab_input = st.text_input(
+        "Ví dụ: Khảo sát hàm số bậc 3...",
+        placeholder="Ví dụ: Khảo sát hàm số bậc 3...",
+        label_visibility="collapsed"
+    )
+    
+    st.button("⚙️ Khởi chạy Phòng Lab", type="primary")
 
 with tab2:
     st.subheader("Trạm 2: Gia Sư Socratic")
-    st.write("Gia sư AI gợi mở câu hỏi theo phương pháp Socratic...")
+    st.write(f"Gia sư AI gợi mở câu hỏi môn **{subject} ({grade})**...")
 
 with tab3:
     st.subheader("Trạm 3: Khảo Thí Tự Do")
-    st.write("Khu vực ôn luyện và làm bài kiểm tra...")
+    st.write(f"Khu vực ôn luyện và làm bài kiểm tra môn **{subject} ({grade})**...")
 
 with tab4:
     st.subheader("Trạm 4: Nhật Ký Khoa Học Kỹ Thuật")
