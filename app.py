@@ -79,7 +79,7 @@ with st.sidebar:
     
     st.markdown("---")
     
-    # BÁO LỖI & GÓP Ý (ĐÃ THÊM ĐÁNH GIÁ SAO VÀ MÔ TẢ CHI TIẾT)
+    # BÁO LỖI & GÓP Ý
     with st.expander("🛠️ Báo lỗi ứng dụng & Góp ý"):
         st.markdown("**Loại vấn đề gặp phải:**")
         issue_type = st.selectbox(
@@ -95,7 +95,7 @@ with st.sidebar:
             label_visibility="collapsed"
         )
         
-        # Thanh đánh giá sao (Star rating)
+        # Thanh đánh giá sao
         rating = st.feedback("stars")
         
         st.markdown("**Mô tả chi tiết:**")
@@ -119,7 +119,7 @@ with st.sidebar:
 
 # 3. Khu vực chính (Main Content)
 st.markdown("<h1 style='text-align: center;'>🤖 GIA SƯ AI - HỆ SINH THÁI LỚP HỌC ĐẢO NGƯỢC</h1>", unsafe_allow_html=True)
-st.markdown("<p style='text-align: center; font-size: 18px;'>Trường THPT Tân Hiệp & Trung tâm Thiện Nhân • Đồng hành từ Lớp 6 đến Lớp 12</p>", unsafe_allow_html=True)
+st.markdown("<p style='text-align: center; font-size: 18px;'>Trường THPT Tân Hiệp</p>", unsafe_allow_html=True)
 
 # Badge thông tin
 col_b1, col_b2, col_b3, col_b4 = st.columns([1, 2, 2, 1])
