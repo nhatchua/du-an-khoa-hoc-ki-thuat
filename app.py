@@ -1,4 +1,5 @@
 import streamlit as st
+import google.generativeai as genai
 
 # 1. Cấu hình trang (Giao diện rộng)
 st.set_page_config(
@@ -15,16 +16,10 @@ with st.sidebar:
     with st.expander("📲 Quét mã QR vào app trên điện thoại"):
         st.write("Dùng camera điện thoại để quét mã bên dưới để truy cập nhanh:")
         
-        # Link web ứng dụng
         app_url = "https://du-an-khoa-hoc-ki-thuat-2026.streamlit.app/"
-        
-        # Tạo mã QR tự động từ link web
         qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={app_url}"
         
-        # Hiển thị ảnh mã QR
         st.image(qr_api_url, caption="Quét mã để mở trên điện thoại", width=200)
-        
-        # Hiển thị link bấm trực tiếp
         st.markdown(f"🔗 **Hoặc bấm vào link:** [{app_url}]({app_url})")
     
     st.markdown("---")
@@ -38,25 +33,25 @@ with st.sidebar:
     # ĐƯỜNG TRUYỀN AI CÁ NHÂN
     st.subheader("🔑 ĐƯỜNG TRUYỀN AI CÁ NHÂN")
     
-    # Nút bấm mở thẳng trang lấy API Key trên Google AI Studio
     st.link_button(
         "👉 Lấy Key riêng miễn phí (15s)", 
         "https://aistudio.google.com/app/apikey", 
         use_container_width=True
     )
     
-    # Ô nhập API Key
     user_api_key = st.text_input(
         "Dán mã API Key của em vào đây:", 
         type="password", 
         placeholder="AIzaSy..."
     )
     
-    # Thông báo trạng thái đường truyền
     if user_api_key:
         st.success("🟢 Đang dùng đường truyền AI Cá nhân")
+        api_key_to_use = user_api_key
     else:
         st.info("🔵 Đang dùng đường truyền chung của Trường")
+        # Lấy key mặc định từ st.secrets nếu người dùng chưa nhập key riêng
+        api_key_to_use = st.secrets.get("GEMINI_API_KEY", "")
         
     st.markdown("<br>", unsafe_allow_html=True)
     
@@ -95,7 +90,6 @@ with st.sidebar:
             label_visibility="collapsed"
         )
         
-        # Thanh đánh giá sao
         rating = st.feedback("stars")
         
         st.markdown("**Mô tả chi tiết:**")
@@ -139,20 +133,63 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📉 Trạm 5: Thống Kê & T-Test"
 ])
 
-# TRẠM 1: KẾT NỐI ĐỘNG VỚI MÔN HỌC & KHỐI LỚP TỪ SIDEBAR
+# TRẠM 1: TỰ HỌC & CHIẾM LĨNH KIẾN THỨC
 with tab1:
-    # Tiêu đề tự động cập nhật theo môn học và lớp được chọn ở sidebar
     st.markdown(f"## 📖 Tự học & Chiếm lĩnh kiến thức môn {subject} - {grade}")
     
     st.markdown("**📄 Nhập bài học cần chiếm lĩnh kiến thức:**")
     lesson_input = st.text_input(
         "Nhập bài học cần chiếm lĩnh kiến thức:",
-        placeholder="Ví dụ: Khảo sát hàm số, Hình chóp...",
+        placeholder="Ví dụ: Khảo sát hàm số, Hình chóp, Mạch điện xoay chiều...",
         label_visibility="collapsed"
     )
     
-    st.button("🧪 Soạn bài học chuẩn GDPT 2018", type="primary")
+    btn_soan_bai = st.button("🧪 Soạn bài học chuẩn GDPT 2018", type="primary")
     
+    # Xử lý khi bấm nút Soạn bài
+    if btn_soan_bai:
+        if not lesson_input.strip():
+            st.warning("⚠️ Vui lòng nhập tên bài học trước khi bấm soạn bài!")
+        elif not api_key_to_use:
+            st.error("🔑 Chưa phát hiện API Key! Vui lòng nhập API Key ở thanh bên (Sidebar) để kích hoạt AI.")
+        else:
+            with st.spinner(f"⏳ AI đang phân tích dữ liệu chuẩn Sách SGK 'Kết nối tri thức với cuộc sống' cho bài: **{lesson_input}**..."):
+                try:
+                    # Cấu hình Gemini API
+                    genai.configure(api_key=api_key_to_use)
+                    model = genai.GenerativeModel("gemini-2.5-flash")
+                    
+                    # System Prompt chống ảo giác & bám sát chuẩn SGK Kết Nối Tri Thức
+                    system_prompt = f"""
+                    Bạn là một Chuyên gia Giáo dục & Giáo viên Giỏi bậc THPT tại Việt Nam.
+                    Nhiệm vụ của bạn là soạn bài hướng dẫn tự học cho học sinh theo đúng chuẩn Chương trình GDPT 2018 và bộ sách SGK 'Kết nối tri thức với cuộc sống'.
+
+                    THÔNG TIN ĐẦU VÀO:
+                    - Môn học: {subject}
+                    - Khối lớp: {grade}
+                    - Tên bài học: {lesson_input}
+
+                    YÊU CẦU NỘI DUNG (NGHIÊM CẶT CHỐNG ẢO GIÁC - HALLUCINATION):
+                    1. CHÍNH XÁC ABSOLUTE: Mọi khái niệm, công thức, định lý, tên gọi phải chính xác tuyệt đối 100% theo chương trình SGK Kết nối tri thức với cuộc sống. Không tự bịa ra kiến thức chưa kiểm chứng.
+                    2. CẤU TRÚC BÀI HỌC Chuẩn GDPT 2018:
+                       - 📌 **I. MỤC TIÊU BÀI HỌC**: (Kiến thức, Năng lực, Phẩm chất)
+                       - 🎯 **II. KIẾN THỨC TRỌNG TÂM (SGK Kết nối tri thức)**: Tóm tắt lý thuyết cốt lõi, công thức quan trọng (trình bày công thức Toán/Lý/Hóa bằng LaTeX rõ ràng).
+                       - 💡 **III. VÍ DỤ MINH HỌA & VẬN DỤNG**: 2-3 ví dụ có lời giải chi tiết, rõ ràng từng bước.
+                       - ⚠️ **IV. CÁC LỖI SAI THƯỜNG GẶP**: Điểm học sinh hay bị nhầm lẫn khi làm bài.
+                       - ❓ **V. CÂU HỎI TỰ KIỂM TRA (Socratic)**: 3 câu hỏi trắc nghiệm hoặc tự luận ngắn để học sinh tự đánh giá mức độ hiểu bài.
+
+                    MÔI TRƯỜNG HIỂN THỊ: Trình bày bằng Markdown đẹp mắt, mạch lạc, dễ đọc.
+                    """
+                    
+                    response = model.generate_content(system_prompt)
+                    
+                    st.success(f"✅ Đã hoàn thành soạn bài học: **{lesson_input}** ({subject} - {grade})")
+                    st.markdown("---")
+                    st.markdown(response.text)
+                    
+                except Exception as e:
+                    st.error(f"❌ Có lỗi xảy ra khi kết nối AI: {str(e)}")
+
     st.markdown("---")
     
     # KHU VỰC PHÒNG THÍ NGHIỆM ẢO
@@ -167,7 +204,7 @@ with tab1:
     
     lab_input = st.text_input(
         "Ví dụ: Khảo sát hàm số bậc 3...",
-        placeholder="Ví dụ: Khảo sát hàm số bậc 3...",
+        placeholder="Ví dụ: Khảo sát hàm số bậc 3, Thí nghiệm đo gia tốc trọng trường...",
         label_visibility="collapsed"
     )
     
