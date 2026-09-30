@@ -89,7 +89,7 @@ def clean_ai_response(text: str) -> str:
 
 
 # ============================================================
-# 3. HÀM GỌI GEMINI — TỐI ƯU HÓA MODEL CHUẨN XÁC
+# 3. HÀM GỌI GEMINI — ƯU TIÊN MODEL CHUẨN XÁC
 # ============================================================
 def call_gemini(prompt: str, api_key: str) -> tuple:
     """
@@ -98,7 +98,7 @@ def call_gemini(prompt: str, api_key: str) -> tuple:
     """
     genai.configure(api_key=api_key)
 
-    # Danh sách model chuẩn được hỗ trợ rộng rãi
+    # Đưa gemini-3.8-flash lên đầu theo đúng yêu cầu từ thông báo lỗi
     model_priority = [
         "gemini-3.8-flash",
         "gemini-2.5-flash",
@@ -303,7 +303,7 @@ CẤU TRÚC ĐẦU RA (tuân thủ chính xác):
 # ⚠️ II. CÁC LỖI SAI THƯỜNG GẶP KHI LÀM BÀI
 [Liệt kê 4-6 lỗi sai bằng tiếng Việt. Mỗi lỗi 1-2 câu giải thích ngắn gọn.]
 
-# ✍️ III. BÀI TẬP TƯƠNG TÁC & THỬ THÁCH
+# ✍️️ III. BÀI TẬP TƯƠNG TÁC & THỬ THÁCH
 
 ## 1. Dạng Trắc Nghiệm Tương Tác
 
