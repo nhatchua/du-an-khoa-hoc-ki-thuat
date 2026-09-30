@@ -273,7 +273,7 @@ def render_sidebar():
         return grade, subject, api_key_to_use
 
 # ============================================================
-# 6. HIỂN THỊ NỘI DUNG VÀ TRẮC NGHIỆM TƯƠNG TÁC (AN TOÀN THEO THEME)
+# 6. HIỂN THỊ NỘI DUNG VÀ TRẮC NGHIỆM TƯƠNG TÁC (ĐÃ SỬA TRIỆT ĐỂ Ô TRỐNG)
 # ============================================================
 def render_interactive_quizzes(raw_text: str):
     parts = re.split(r"3\.\s*HỆ\s*THỐNG\s*CÂU\s*HỎI\s*TRẮC\s*NGHIỆM\s*ĐÁNH\s*GIÁ", raw_text, flags=re.IGNORECASE)
@@ -285,7 +285,6 @@ def render_interactive_quizzes(raw_text: str):
     theory_part = parts[0]
     quiz_part = parts[1]
 
-    # Làm nổi bật các phần tiêu đề lớn trong phần lý thuyết
     theory_part = re.sub(
         r"(1\.\s*KIẾN\s*THỨC\s*CỐT\s*LÕI\s*CẦN\s*GHI\s*NHỚ)",
         r"<div class='main-heading'>\1</div>",
@@ -297,17 +296,16 @@ def render_interactive_quizzes(raw_text: str):
         theory_part, flags=re.IGNORECASE
     )
 
-    # Sử dụng khung nội dung trong suốt đường viền để tự động thích ứng hoàn toàn với Streamlit Dark/Light Mode
     str_app.markdown(f"<div class='content-box'>{theory_part}</div>", unsafe_allow_html=True)
 
-    # Tiêu đề phần câu hỏi trắc nghiệm nổi bật
     str_app.markdown("<div class='main-heading'>3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ</div>", unsafe_allow_html=True)
     str_app.markdown("<p style='font-weight: 500; margin-bottom: 20px;'>Hãy tự lực suy nghĩ và chọn đáp án đúng nhất cho các câu hỏi dưới đây:</p>", unsafe_allow_html=True)
 
-    raw_questions = re.split(r"\[CÂU\s*HỎI\s*\d+\]", quiz_part)
+    # Sử dụng re.findall để bóc tách chính xác từng khối câu hỏi, tránh dính rác thừa ở đầu
+    question_blocks = re.findall(r"\[CÂU\s*HỎI\s*\d+\](.*?)(?=\[CÂU\s*HỎI|\Z)", quiz_part, re.DOTALL | re.IGNORECASE)
     
     q_index = 1
-    for q_block in raw_questions:
+    for q_block in question_blocks:
         if not q_block.strip():
             continue
         
@@ -426,8 +424,8 @@ def render_main_interface(grade, subject, api_key_to_use):
 # ============================================================
 def main():
     setup_page_config()
-    grade, subject, api_key_to_user = render_sidebar()
-    render_main_interface(grade, subject, api_key_to_user)
+    grade, subject, api_key_to_use = render_sidebar()
+    render_main_interface(grade, subject, api_key_to_use)
 
 if __name__ == "__main__":
     main()
