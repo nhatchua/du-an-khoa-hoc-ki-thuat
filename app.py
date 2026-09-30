@@ -39,20 +39,6 @@ def setup_page_config():
             box-shadow: 0 2px 8px rgba(0,0,0,0.03);
             line-height: 1.6;
         }
-
-        /* Khung chứa từng câu hỏi trắc nghiệm */
-        .quiz-box {
-            border: 2px solid rgba(128, 128, 128, 0.25);
-            padding: 20px;
-            border-radius: 12px;
-            margin-bottom: 22px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
-            transition: all 0.3s ease;
-        }
-        .quiz-box:hover {
-            border-color: #0d6efd;
-            box-shadow: 0 6px 12px rgba(13, 110, 253, 0.08);
-        }
         </style>
         
         <!-- Thư viện MathJax hỗ trợ render kí hiệu toán học chuẩn LaTeX -->
@@ -273,7 +259,7 @@ def render_sidebar():
         return grade, subject, api_key_to_use
 
 # ============================================================
-# 6. HIỂN THỊ NỘI DUNG VÀ TRẮC NGHIỆM TƯƠNG TÁC (ĐÃ SỬA TRIỆT ĐỂ Ô TRỐNG)
+# 6. HIỂN THỊ NỘI DUNG VÀ TRẮC NGHIỆM TƯƠNG TÁC
 # ============================================================
 def render_interactive_quizzes(raw_text: str):
     parts = re.split(r"3\.\s*HỆ\s*THỐNG\s*CÂU\s*HỎI\s*TRẮC\s*NGHIỆM\s*ĐÁNH\s*GIÁ", raw_text, flags=re.IGNORECASE)
@@ -301,7 +287,6 @@ def render_interactive_quizzes(raw_text: str):
     str_app.markdown("<div class='main-heading'>3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ</div>", unsafe_allow_html=True)
     str_app.markdown("<p style='font-weight: 500; margin-bottom: 20px;'>Hãy tự lực suy nghĩ và chọn đáp án đúng nhất cho các câu hỏi dưới đây:</p>", unsafe_allow_html=True)
 
-    # Sử dụng re.findall để bóc tách chính xác từng khối câu hỏi, tránh dính rác thừa ở đầu
     question_blocks = re.findall(r"\[CÂU\s*HỎI\s*\d+\](.*?)(?=\[CÂU\s*HỎI|\Z)", quiz_part, re.DOTALL | re.IGNORECASE)
     
     q_index = 1
@@ -331,33 +316,38 @@ def render_interactive_quizzes(raw_text: str):
         if not options or len(options) < 4:
             continue
 
-        str_app.markdown(f"<div class='quiz-box'>", unsafe_allow_html=True)
-        str_app.markdown(f"**Câu {q_index}:** {question_text.strip()}")
+        with str_app.container(border=True):
+            str_app.markdown(f"**Câu {q_index}:** {question_text.strip()}")
 
-        choice_key = f"q_choice_{q_index}"
-        option_labels = ["-- Chọn đáp án đúng --"] + options
-        
-        if choice_key not in str_app.session_state:
-            str_app.session_state[choice_key] = "-- Chọn đáp án đúng --"
+            choice_key = f"q_choice_{q_index}"
+            option_labels = ["-- Chọn đáp án đúng --"] + options
 
-        user_choice = str_app.selectbox(
-            f"Chọn đáp án cho câu {q_index}:",
-            options=option_labels,
-            key=choice_key,
-            label_visibility="collapsed"
-        )
+            user_choice = str_app.selectbox(
+                f"Chọn đáp án cho câu {q_index}:",
+                options=option_labels,
+                index=0,
+                key=choice_key,
+                label_visibility="collapsed"
+            )
 
-        if user_choice and user_choice != "-- Chọn đáp án đúng --":
-            selected_letter = user_choice[0].upper()
-            if selected_letter == correct_ans:
-                str_app.markdown(f"<p style='color: #28a745; font-weight: bold; margin-top: 10px;'>Chính xác! Bạn đã chọn đúng đáp án {correct_ans}.</p>", unsafe_allow_html=True)
-            else:
-                str_app.markdown(f"<p style='color: #dc3545; font-weight: bold; margin-top: 10px;'>Chưa chính xác. Hãy suy nghĩ kỹ lại hoặc xem gợi ý bên dưới.</p>", unsafe_allow_html=True)
+            if user_choice and user_choice != "-- Chọn đáp án đúng --":
+                selected_letter = user_choice[0].upper()
+                if selected_letter == correct_ans:
+                    str_app.markdown(
+                        f"<p style='color: #28a745; font-weight: bold; margin-top: 10px;'>"
+                        f"Chính xác! Bạn đã chọn đúng đáp án {correct_ans}.</p>",
+                        unsafe_allow_html=True
+                    )
+                else:
+                    str_app.markdown(
+                        f"<p style='color: #dc3545; font-weight: bold; margin-top: 10px;'>"
+                        f"Chưa chính xác. Hãy suy nghĩ kỹ lại hoặc xem gợi ý bên dưới.</p>",
+                        unsafe_allow_html=True
+                    )
 
-        with str_app.expander(f"Gợi ý tư duy cho câu {q_index} (Nhấp để xem khi quá bí)"):
-            str_app.info(hint_text)
+            with str_app.expander(f"Gợi ý tư duy cho câu {q_index} (Nhấp để xem khi quá bí)"):
+                str_app.info(hint_text)
 
-        str_app.markdown(f"</div>", unsafe_allow_html=True)
         q_index += 1
 
 # ============================================================
