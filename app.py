@@ -202,12 +202,13 @@ Cấu trúc mỗi câu trắc nghiệm bắt buộc phải tuân theo định d�
 ---
 [CÂU HỎI 1]
 Nội dung câu hỏi cụ thể (có chứa công thức LaTeX nếu cần)...
+HƯỚNG DẪN TƯ DUY: [Gợi ý thô, nhắc lại công thức gốc hoặc định lý nền tảng liên quan trực tiếp để học sinh tự nháp]
 A. Đáp án A
 B. Đáp án B
 C. Đáp án C
 D. Đáp án D
 ĐÁP ÁN ĐÚNG: [Chỉ ghi đúng một chữ cái A, B, C hoặc D]
-GỢI Ý TƯ DUY: [Gợi ý định hướng cách giải hoặc bản chất kiến thức giúp học sinh tự tư duy, tuyệt đối không tiết lộ trực tiếp đáp án]
+GỢI Ý GIẢI CHI TIẾT: [Hướng dẫn chi tiết cách giải]
 ---
 (Lặp lại đúng định dạng trên cho Câu hỏi 2 và Câu hỏi 3).
 """
@@ -301,7 +302,6 @@ def render_interactive_quizzes(raw_text: str):
     str_app.markdown("<div class='main-heading'>3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ</div>", unsafe_allow_html=True)
     str_app.markdown("<p style='font-weight: 500; margin-bottom: 20px;'>Hãy tự lực suy nghĩ và chọn đáp án đúng nhất cho các câu hỏi dưới đây:</p>", unsafe_allow_html=True)
 
-    # Sử dụng re.findall để bóc tách chính xác từng khối câu hỏi, tránh dính rác thừa ở đầu
     question_blocks = re.findall(r"\[CÂU\s*HỎI\s*\d+\](.*?)(?=\[CÂU\s*HỎI|\Z)", quiz_part, re.DOTALL | re.IGNORECASE)
     
     q_index = 1
@@ -309,14 +309,20 @@ def render_interactive_quizzes(raw_text: str):
         if not q_block.strip():
             continue
         
+        # Bóc tách hướng dẫn tư duy (thô)
+        thought_match = re.search(r"HƯỚNG\s*DẪN\s*TƯ\s*DUY:\s*(.*?)(?=\nA\.|\n[A-Da-d]\.|$)", q_block, re.DOTALL | re.IGNORECASE)
+        thought_text = thought_match.group(1).strip() if thought_match else ""
+
         ans_match = re.search(r"ĐÁP\s*ÁN\s*ĐÚNG:\s*([A-Da-d])", q_block, re.IGNORECASE)
         correct_ans = ans_match.group(1).strip().upper() if ans_match else "A"
 
-        hint_match = re.search(r"GỢI\s*Ý\s*TƯ\s*DUY:\s*(.*?)(?=\n-{2,}|\n\[|$)", q_block, re.DOTALL | re.IGNORECASE)
+        hint_match = re.search(r"GỢI\s*Ý\s*GIẢI\s*CHI\s*TIẾT:\s*(.*?)(?=\n-{2,}|\n\[|$)", q_block, re.DOTALL | re.IGNORECASE)
         hint_text = hint_match.group(1).strip() if hint_match else "Hãy đọc kỹ lại phần lý thuyết cốt lõi ở trên để tìm ra hướng giải quyết."
 
-        clean_q_block = re.sub(r"ĐÁP\s*ÁN\s*ĐÚNG:.*", "", q_block, flags=re.IGNORECASE)
-        clean_q_block = re.sub(r"GỢI\s*Ý\s*TƯ\s*DUY:.*", "", clean_q_block, flags=re.DOTALL | re.IGNORECASE)
+        # Làm sạch các thẻ phụ để lấy câu hỏi và đáp án
+        clean_q_block = re.sub(r"HƯỚNG\s*DẪN\s*TƯ\s*DUY:.*", "", q_block, flags=re.DOTALL | re.IGNORECASE)
+        clean_q_block = re.sub(r"ĐÁP\s*ÁN\s*ĐÚNG:.*", "", clean_q_block, flags=re.IGNORECASE)
+        clean_q_block = re.sub(r"GỢI\s*Ý\s*GIẢI\s*CHI\s*TIẾT:.*", "", clean_q_block, flags=re.DOTALL | re.IGNORECASE)
 
         lines = [line.strip() for line in clean_q_block.split('\n') if line.strip()]
         
@@ -334,32 +340,41 @@ def render_interactive_quizzes(raw_text: str):
         str_app.markdown(f"<div class='quiz-box'>", unsafe_allow_html=True)
         str_app.markdown(f"**Câu {q_index}:** {question_text.strip()}")
 
+        # Hiển thị phần Hướng dẫn tư duy ngay dưới câu hỏi (dạng thô/gợi ý kiến thức cũ)
+        if thought_text:
+            str_app.info(f"💡 **Hướng dẫn tư duy:** {thought_text}")
+
+        # Xử lý hiển thị selectbox với các tùy chọn đáp án (hỗ trợ render LaTeX bằng st.markdown thay vì selectbox thuần)
         choice_key = f"q_choice_{q_index}"
-        option_labels = ["-- Chọn đáp án đúng --"] + options
+        option_labels = ["-- Chọn đáp án đúng --"] + [opt[0] for opt in options] # Lưu ký tự A, B, C, D
         
         if choice_key not in str_app.session_state:
             str_app.session_state[choice_key] = "-- Chọn đáp án đúng --"
 
-        user_choice = str_app.selectbox(
+        # Hiển thị danh sách các đáp án đầy đủ chi tiết ngay bên dưới để người dùng dễ nhìn công thức LaTeX trước khi chọn
+        str_app.markdown("**Các lựa chọn:**")
+        for opt in options:
+            str_app.markdown(f"- {opt}")
+
+        selected_option = str_app.selectbox(
             f"Chọn đáp án cho câu {q_index}:",
             options=option_labels,
             key=choice_key,
-            label_visibility="collapsed"
+            format_func=lambda x: f"Đáp án: {x}" if x != "-- Chọn đáp án đúng --" else x
         )
 
-        if user_choice and user_choice != "-- Chọn đáp án đúng --":
-            selected_letter = user_choice[0].upper()
-            if selected_letter == correct_ans:
+        if selected_option and selected_option != "-- Chọn đáp án đúng --":
+            if selected_option == correct_ans:
                 str_app.markdown(f"<p style='color: #28a745; font-weight: bold; margin-top: 10px;'>Chính xác! Bạn đã chọn đúng đáp án {correct_ans}.</p>", unsafe_allow_html=True)
             else:
-                str_app.markdown(f"<p style='color: #dc3545; font-weight: bold; margin-top: 10px;'>Chưa chính xác. Hãy suy nghĩ kỹ lại hoặc xem gợi ý bên dưới.</p>", unsafe_allow_html=True)
+                str_app.markdown(f"<p style='color: #dc3545; font-weight: bold; margin-top: 10px;'>Chưa chính xác. Hãy xem kỹ lại phần gợi ý bên dưới.</p>", unsafe_allow_html=True)
 
-        with str_app.expander(f"Gợi ý tư duy cho câu {q_index} (Nhấp để xem khi quá bí)"):
-            str_app.info(hint_text)
+        with str_app.expander(f"Xem hướng dẫn giải chi tiết cho câu {q_index}"):
+            str_app.write(hint_text)
 
         str_app.markdown(f"</div>", unsafe_allow_html=True)
         q_index += 1
-
+        
 # ============================================================
 # 7. GIAO DIỆN CHÍNH VÀ LUỒNG XỬ LÝ TRẠM 1
 # ============================================================
