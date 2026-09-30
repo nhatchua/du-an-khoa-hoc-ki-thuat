@@ -82,18 +82,23 @@ def clean_ai_response(text: str) -> str:
     return result
 
 # ============================================================
-# 3. GỌI API GEMINI (HỖ TRỢ ĐA MODEL ĐỂ TRÁNH LỖI 404 & 429)
+# 3. GỌI API GEMINI (QUÉT TOÀN BỘ HỌ HÀNG FLASH ĐỂ TRÁNH LỖI 404)
 # ============================================================
 def call_gemini(prompt: str, api_key: str) -> tuple:
-    """Gọi Gemini với danh sách model dự phòng, tự động thử lại khi gặp lỗi."""
+    """Tự động quét toàn bộ danh sách họ hàng dòng Flash và Pro khả dụng."""
     genai.configure(api_key=api_key)
     
-    # Danh sách các model phổ biến hiện hành để quét dự phòng
+    # Danh sách toàn bộ các biến thể model Flash và Pro chính thống hiện nay
     model_candidates = [
         "gemini-2.5-flash",
         "gemini-2.0-flash",
+        "gemini-2.0-flash-exp",
         "gemini-1.5-flash",
-        "gemini-1.5-pro"
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-flash-8b",
+        "gemini-1.5-pro",
+        "gemini-1.5-pro-latest",
+        "gemini-pro"
     ]
 
     generation_config = genai.types.GenerationConfig(
@@ -117,11 +122,12 @@ def call_gemini(prompt: str, api_key: str) -> tuple:
             except Exception as err:
                 err_str = str(err)
                 last_error = err_str
+                # Nếu quá giới hạn lượt gọi (429), thử lại sau 2 giây
                 if "429" in err_str and i < retries - 1:
-                    time.sleep(3)
+                    time.sleep(2)
                     continue
-                # Nếu lỗi 404 (không tìm thấy model), thoát vòng lặp nhỏ để đổi sang model tiếp theo trong danh sách
-                if "404" in err_str:
+                # Nếu không tìm thấy model (404), ngay lập tức nhảy sang model tiếp theo trong danh sách
+                if "404" in err_str or "not found" in err_str.lower():
                     break
                 break
 
@@ -283,7 +289,7 @@ def render_main_interface(grade, subject, api_key_to_use):
                     if response_text:
                         final_text = clean_ai_response(response_text)
                         st.success(f"✅ Đã hoàn thành tổng hợp kiến thức bài: **{lesson_input}**")
-                        st.caption(f"🤖 Model: `{model_used}`")
+                        st.caption(f"🤖 Model đã kết nối thành công: `{model_used}`")
                         st.markdown("---")
                         st.markdown(final_text, unsafe_allow_html=True)
                     else:
