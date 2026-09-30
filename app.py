@@ -317,22 +317,27 @@ def render_interactive_quizzes(raw_text: str):
             continue
 
         with str_app.container(border=True):
+            # Hiển thị câu hỏi — markdown, MathJax render OK
             str_app.markdown(f"**Câu {q_index}:** {question_text.strip()}")
 
-            choice_key = f"q_choice_{q_index}"
-            option_labels = ["-- Chọn đáp án đúng --"] + options
+            # Hiển thị 4 đáp án — markdown, MathJax render OK
+            for opt in options:
+                str_app.markdown(f"{opt}")
 
-            user_choice = str_app.selectbox(
+            # Chỉ chọn A/B/C/D — không có placeholder là lựa chọn
+            choice_key = f"q_choice_{q_index}"
+            
+            user_choice = str_app.radio(
                 f"Chọn đáp án cho câu {q_index}:",
-                options=option_labels,
-                index=0,
+                options=["A", "B", "C", "D"],
+                index=None,
                 key=choice_key,
+                horizontal=True,
                 label_visibility="collapsed"
             )
 
-            if user_choice and user_choice != "-- Chọn đáp án đúng --":
-                selected_letter = user_choice[0].upper()
-                if selected_letter == correct_ans:
+            if user_choice:
+                if user_choice == correct_ans:
                     str_app.markdown(
                         f"<p style='color: #28a745; font-weight: bold; margin-top: 10px;'>"
                         f"Chính xác! Bạn đã chọn đúng đáp án {correct_ans}.</p>",
