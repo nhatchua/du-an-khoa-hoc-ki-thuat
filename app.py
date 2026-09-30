@@ -4,7 +4,7 @@ import re
 import time
 
 # ============================================================
-# 1. CẤU HÌNH GIAO DIỆN TRANG & CSS NỔI BẬT + MATHJAX (LATEX)
+# 1. CẤU HÌNH GIAO DIỆN TRANG & CSS ĐỒ GIA DIỆN SÁNG/TỐI (DARK/LIGHT MODE)
 # ============================================================
 def setup_page_config():
     str_app.set_page_config(
@@ -14,40 +14,40 @@ def setup_page_config():
     )
     str_app.markdown("""
         <style>
-        /* Tiêu đề chính cực kỳ nổi bật */
+        /* Tiêu đề chính cực kỳ nổi bật (Tương thích tự động sáng/tối) */
         .main-heading {
             background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
             color: white;
-            padding: 15px 25px;
+            padding: 14px 22px;
             border-radius: 10px;
             font-weight: 800;
-            font-size: 1.4rem;
+            font-size: 1.3rem;
             margin-top: 25px;
             margin-bottom: 20px;
             box-shadow: 0 4px 6px rgba(13, 110, 253, 0.2);
         }
-        /* Khung nội dung cốt lõi và lỗi sai */
+        
+        /* Khung nội dung cốt lõi: Tự động đổi màu nền và màu chữ theo Theme Sáng/Tối của Streamlit */
         .content-box {
-            background-color: #fdfdfe;
+            background-color: var(--secondary-background-color, #fdfdfe);
             border-left: 6px solid #0d6efd;
-            border-top: 1px solid #e9ecef;
-            border-right: 1px solid #e9ecef;
-            border-bottom: 1px solid #e9ecef;
+            border-top: 1px solid rgba(128, 128, 128, 0.2);
+            border-right: 1px solid rgba(128, 128, 128, 0.2);
+            border-bottom: 1px solid rgba(128, 128, 128, 0.2);
             padding: 25px;
             border-radius: 8px;
             margin-bottom: 25px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.03);
-            color: #212529;
-            font-size: 1.05rem;
             line-height: 1.6;
         }
-        /* Khung chứa từng câu hỏi trắc nghiệm */
+
+        /* Khung chứa từng câu hỏi trắc nghiệm: Hòa hợp với Dark/Light Mode chuẩn Streamlit */
         .quiz-box {
-            background-color: #ffffff;
-            border: 2px solid #e2e8f0;
-            padding: 22px;
+            background-color: var(--secondary-background-color, #ffffff);
+            border: 2px solid rgba(128, 128, 128, 0.25);
+            padding: 20px;
             border-radius: 12px;
-            margin-bottom: 25px;
+            margin-bottom: 22px;
             box-shadow: 0 4px 6px rgba(0,0,0,0.02);
             transition: all 0.3s ease;
         }
@@ -275,7 +275,7 @@ def render_sidebar():
         return grade, subject, api_key_to_use
 
 # ============================================================
-# 6. HIỂN THỊ NỘI DUNG VÀ TRẮC NGHIỆM TƯƠNG TÁC (GIỮ TRẠNG THÁI)
+# 6. HIỂN THỊ NỘI DUNG VÀ TRẮC NGHIỆM TƯƠNG TÁC (ĐÃ SỬA LỖI Ô THỪA)
 # ============================================================
 def render_interactive_quizzes(raw_text: str):
     parts = re.split(r"3\.\s*HỆ\s*THỐNG\s*CÂU\s*HỎI\s*TRẮC\s*NGHIỆM\s*ĐÁNH\s*GIÁ", raw_text, flags=re.IGNORECASE)
@@ -335,14 +335,13 @@ def render_interactive_quizzes(raw_text: str):
         if not options or len(options) < 4:
             continue
 
+        # Mở khung câu hỏi trắc nghiệm đã được chỉnh chuẩn, không bị dư ô trống
         str_app.markdown(f"<div class='quiz-box'>", unsafe_allow_html=True)
         str_app.markdown(f"**Câu {q_index}:** {question_text.strip()}")
 
         choice_key = f"q_choice_{q_index}"
-        
         option_labels = ["-- Chọn đáp án đúng --"] + options
         
-        # Lấy giá trị đã chọn từ session_state (tránh bị reset khi click)
         if choice_key not in str_app.session_state:
             str_app.session_state[choice_key] = "-- Chọn đáp án đúng --"
 
@@ -413,14 +412,12 @@ def render_main_interface(grade, subject, api_key_to_use):
 
                     if response_text:
                         final_text = clean_ai_response(response_text)
-                        # Lưu kết quả vào session_state để không bị mất khi tương tác
                         str_app.session_state["cached_lesson_result"] = final_text
                         str_app.session_state["cached_model_used"] = model_used
                         str_app.session_state["cached_lesson_name"] = lesson_input
                     else:
                         str_app.error(f"Không thể kết nối AI. Lỗi chi tiết: `{error}`")
 
-        # Hiển thị nội dung từ cache nếu đã có (giữ nguyên trạng thái khi click chọn đáp án)
         if "cached_lesson_result" in str_app.session_state:
             str_app.success(f"Đã hoàn thành tổng hợp kiến thức bài: **{str_app.session_state.get('cached_lesson_name', '')}**")
             str_app.caption(f"Model kết nối thành công: `{str_app.session_state.get('cached_model_used', '')}`")
