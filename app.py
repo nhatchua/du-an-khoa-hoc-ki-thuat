@@ -1,52 +1,72 @@
-import streamlit as st
+import streamlit as str_app
 import google.generativeai as genai
 import re
 import time
 
 # ============================================================
-# 1. CẤU HÌNH GIAO DIỆN TRANG
+# 1. CẤU HÌNH GIAO DIỆN TRANG & CSS NỔI BẬT + MATHJAX (LATEX)
 # ============================================================
 def setup_page_config():
-    st.set_page_config(
+    str_app.set_page_config(
         page_title="Gia Sư AI - Hệ Sinh Thái Lớp Học Đảo Ngược",
         page_icon="📚",
         layout="wide"
     )
-    # Tùy chỉnh CSS để làm nổi bật tiêu đề, hộp nội dung và hiệu ứng tương tác trắc nghiệm
-    st.markdown("""
+    str_app.markdown("""
         <style>
-        .main-title {
-            color: #0d6efd;
+        /* Tiêu đề chính cực kỳ nổi bật */
+        .main-heading {
+            background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
+            color: white;
+            padding: 15px 25px;
+            border-radius: 10px;
             font-weight: 800;
-            border-bottom: 3px solid #0d6efd;
-            padding-bottom: 10px;
-            margin-top: 20px;
+            font-size: 1.4rem;
+            margin-top: 25px;
             margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(13, 110, 253, 0.2);
         }
-        .sub-section {
-            background-color: #f8f9fa;
-            border-left: 5px solid #0d6efd;
-            padding: 20px;
-            border-radius: 5px;
-            margin-bottom: 20px;
+        /* Khung nội dung cốt lõi và lỗi sai */
+        .content-box {
+            background-color: #fdfdfe;
+            border-left: 6px solid #0d6efd;
+            border-top: 1px solid #e9ecef;
+            border-right: 1px solid #e9ecef;
+            border-bottom: 1px solid #e9ecef;
+            padding: 25px;
+            border-radius: 8px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.03);
             color: #212529;
+            font-size: 1.05rem;
+            line-height: 1.6;
         }
+        /* Khung chứa từng câu hỏi trắc nghiệm */
         .quiz-box {
             background-color: #ffffff;
-            border: 1px solid #dee2e6;
-            padding: 20px;
-            border-radius: 8px;
-            margin-bottom: 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            border: 2px solid #e2e8f0;
+            padding: 22px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.02);
+            transition: all 0.3s ease;
+        }
+        .quiz-box:hover {
+            border-color: #0d6efd;
+            box-shadow: 0 6px 12px rgba(13, 110, 253, 0.08);
         }
         </style>
+        
+        <!-- Thư viện MathJax hỗ trợ render kí hiệu toán học chuẩn LaTeX -->
+        <script type="text/javascript" async
+          src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
+        </script>
     """, unsafe_allow_html=True)
 
 # ============================================================
 # 2. XỬ LÝ VÀ LỌC SẠCH PHẢN HỒI TỪ AI
 # ============================================================
 def clean_ai_response(text: str) -> str:
-    """Lọc bỏ suy luận tiếng Anh, echo prompt, và rác đầu ra của AI."""
     if not text:
         return ""
 
@@ -156,7 +176,7 @@ def call_gemini(prompt: str, api_key: str) -> tuple:
     return None, "", last_error
 
 # ============================================================
-# 4. XÂY DỰNG PROMPT CHUẨN KẾT NỐI TRI THỨC MỚI NHẤT
+# 4. XÂY DỰNG PROMPT CHUẨN KẾT NỐI TRI THỨC + HỖ TRỢ LATEX
 # ============================================================
 def build_lesson_prompt(lesson_input: str, subject: str, grade: str) -> str:
     return f"""Bạn là giáo viên chuyên môn cao, soạn tài liệu theo chuẩn chương trình giáo dục phổ thông mới nhất bộ sách "Kết Nối Tri Thức Với Cuộc Sống".
@@ -166,12 +186,13 @@ NHIỆM VỤ: Soạn nội dung chi tiết bài học "{lesson_input}" môn {sub
 QUY TẮC BẮT BUỘC:
 1. TOÀN BỘ nội dung hoàn toàn bằng TIẾNG VIỆT chuẩn xác. Không chứa từ tiếng Anh, không suy luận nội tâm, không bản nháp.
 2. KHÔNG DÙNG DẤU #. Chỉ dùng định dạng đánh số thứ tự cho các phần lớn (1. KIẾN THỨC CỐT LÕI, 2. CÁC LỖI SAI THƯỜNG GẶP, 3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ).
-3. Kiến thức phải cực kỳ chính xác, khoa học, sư phạm theo đúng sách Kết Nối Tri Thức.
+3. ĐỐI VỚI CÔNG THỨC TOÁN HỌC/KÍ HIỆU KHOA HỌC: Bắt buộc sử dụng kí hiệu LaTeX đặt trong cặp dấu đô la (ví dụ: $x^2 + y^2 = R^2$, $\\frac{{a}}{{b}}$, $\\sqrt{{x}}$) để hiển thị chuẩn xác, đẹp mắt.
+4. Kiến thức phải cực kỳ chính xác, khoa học, sư phạm theo đúng sách Kết Nối Tri Thức.
 
 CẤU TRÚC ĐẦU RA BẮT BUỘC:
 
 1. KIẾN THỨC CỐT LÕI CẦN GHI NHỚ
-[Viết thành các đoạn văn chi tiết, rõ ràng, giải thích sâu sắc bản chất, định lý, công thức trọng tâm của bài học.]
+[Viết thành các đoạn văn chi tiết, rõ ràng, giải thích sâu sắc bản chất, định lý, công thức trọng tâm của bài học. Sử dụng LaTeX cho mọi công thức toán học.]
 
 2. CÁC LỖI SAI THƯỜNG GẶP KHI LÀM BÀI
 [Liệt kê từ 4 đến 5 lỗi sai học sinh hay mắc phải và hướng khắc phục chi tiết bằng tiếng Việt.]
@@ -182,7 +203,7 @@ CẤU TRÚC ĐẦU RA BẮT BUỘC:
 Cấu trúc mỗi câu trắc nghiệm bắt buộc phải tuân theo định dạng sau để hệ thống tự động nhận diện:
 ---
 [CÂU HỎI 1]
-Nội dung câu hỏi cụ thể...
+Nội dung câu hỏi cụ thể (có chứa công thức LaTeX nếu cần)...
 A. Đáp án A
 B. Đáp án B
 C. Đáp án C
@@ -197,83 +218,94 @@ GỢI Ý TƯ DUY: [Gợi ý định hướng cách giải hoặc bản chất ki
 # 5. GIAO DIỆN THANH BÊN (SIDEBAR)
 # ============================================================
 def render_sidebar():
-    with st.sidebar:
-        st.header("THIẾT LẬP HỌC TẬP")
+    with str_app.sidebar:
+        str_app.header("THIẾT LẬP HỌC TẬP")
 
-        with st.expander("Quét mã QR vào ứng dụng"):
+        with str_app.expander("Quét mã QR vào ứng dụng"):
             app_url = "https://du-an-khoa-hoc-ki-thuat-2026.streamlit.app/"
             qr_api_url = f"https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={app_url}"
-            st.image(qr_api_url, caption="Quét mã mở trên điện thoại", width=200)
-            st.markdown(f"🔗 **Đường dẫn:** [{app_url}]({app_url})")
+            str_app.image(qr_api_url, caption="Quét mã mở trên điện thoại", width=200)
+            str_app.markdown(f"🔗 **Đường dẫn:** [{app_url}]({app_url})")
 
-        st.markdown("---")
-        st.subheader("THÔNG TIN HỌC SINH")
-        name = st.text_input("Họ và tên:", placeholder="Ví dụ: Nguyễn Minh Nhật")
+        str_app.markdown("---")
+        str_app.subheader("THÔNG TIN HỌC SINH")
+        name = str_app.text_input("Họ và tên:", placeholder="Ví dụ: Nguyễn Minh Nhật")
 
-        st.markdown("---")
-        st.subheader("ĐƯỜNG TRUYỀN AI CÁ NHÂN")
-        st.link_button(
+        str_app.markdown("---")
+        str_app.subheader("ĐƯỜNG TRUYỀN AI CÁ NHÂN")
+        str_app.link_button(
             "Lấy Mã Miễn Phí (15 giây)",
             "https://aistudio.google.com/app/apikey",
             use_container_width=True
         )
 
-        user_api_key = st.text_input(
+        user_api_key = str_app.text_input(
             "Dán Mã Kết Nối (API Key):",
             type="password",
             placeholder="Nhập mã bí mật tại đây..."
         )
 
         if user_api_key:
-            st.success("Đang sử dụng đường truyền AI Cá nhân")
+            str_app.success("Đang sử dụng đường truyền AI Cá nhân")
             api_key_to_use = user_api_key
         else:
-            st.info("Đang sử dụng đường truyền chung")
+            str_app.info("Đang sử dụng đường truyền chung")
             try:
-                api_key_to_use = st.secrets.get("GEMINI_API_KEY", "")
+                api_key_to_use = str_app.secrets.get("GEMINI_API_KEY", "")
             except Exception:
                 api_key_to_use = ""
 
-        st.markdown("<br>", unsafe_allow_html=True)
+        str_app.markdown("<br>", unsafe_allow_html=True)
 
-        grade = st.selectbox(
+        grade = str_app.selectbox(
             "Chọn khối lớp",
             ["Lớp 6", "Lớp 7", "Lớp 8", "Lớp 9", "Lớp 10", "Lớp 11", "Lớp 12"],
             index=5
         )
 
-        subject = st.selectbox(
+        subject = str_app.selectbox(
             "Môn học cần hỗ trợ",
             ["Toán học", "Vật lý", "Hóa học", "Sinh học", "Tin học",
              "Ngữ văn", "Tiếng Anh", "Lịch sử & Địa lý"],
             index=0
         )
 
-        st.markdown("---")
-        st.info("Triết lý: Dưỡng thiện tâm - Ươm nhân tài • Dẫn dắt tư duy tự học!")
+        str_app.markdown("---")
+        str_app.info("Triết lý: Dưỡng thiện tâm - Ươm nhân tài • Dẫn dắt tư duy tự học!")
         return grade, subject, api_key_to_use
 
 # ============================================================
-# 6. XỬ LÝ VÀ HIỂN THỊ CÂU HỎI TRẮC NGHIỆM TƯƠNG TÁC
+# 6. HIỂN THỊ NỘI DUNG VÀ TRẮC NGHIỆM TƯƠNG TÁC (GIỮ TRẠNG THÁI)
 # ============================================================
 def render_interactive_quizzes(raw_text: str):
-    """Bóc tách phần câu hỏi trắc nghiệm từ AI và tạo giao diện tương tác màu sắc trực tiếp."""
-    # Tìm phần bắt đầu của câu hỏi trắc nghiệm
     parts = re.split(r"3\.\s*HỆ\s*THỐNG\s*CÂU\s*HỎI\s*TRẮC\s*NGHIỆM\s*ĐÁNH\s*GIÁ", raw_text, flags=re.IGNORECASE)
     
     if len(parts) < 2:
-        return # Không tìm thấy cấu trúc trắc nghiệm chuẩn
+        str_app.markdown(f"<div class='content-box'>{raw_text}</div>", unsafe_allow_html=True)
+        return
 
     theory_part = parts[0]
     quiz_part = parts[1]
 
-    # Hiển thị phần lý thuyết và lỗi thường gặp đã được làm sạch
-    st.markdown(theory_part)
+    # Làm nổi bật các phần tiêu đề lớn trong phần lý thuyết
+    theory_part = re.sub(
+        r"(1\.\s*KIẾN\s*THỨC\s*CỐT\s*LÕI\s*CẦN\s*GHI\s*NHỚ)",
+        r"<div class='main-heading'>\1</div>",
+        theory_part, flags=re.IGNORECASE
+    )
+    theory_part = re.sub(
+        r"(2\.\s*CÁC\s*LỖI\s*SAI\s*THƯỜNG\s*GẶP\s*KHI\s*LÀM\s*BÀI)",
+        r"<div class='main-heading'>\1</div>",
+        theory_part, flags=re.IGNORECASE
+    )
 
-    st.markdown("<h2 class='main-title'>3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ</h2>", unsafe_allow_html=True)
-    st.markdown("Hãy tự lực suy nghĩ và chọn đáp án đúng nhất cho các câu hỏi dưới đây:")
+    # Đưa lý thuyết và lỗi thường gặp vào khung nổi bật
+    str_app.markdown(f"<div class='content-box'>{theory_part}</div>", unsafe_allow_html=True)
 
-    # Tách các câu hỏi dựa trên pattern [CÂU HỎI x]
+    # Tiêu đề phần câu hỏi trắc nghiệm nổi bật
+    str_app.markdown("<div class='main-heading'>3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ</div>", unsafe_allow_html=True)
+    str_app.markdown("<p style='font-weight: 500; margin-bottom: 20px;'>Hãy tự lực suy nghĩ và chọn đáp án đúng nhất cho các câu hỏi dưới đây:</p>", unsafe_allow_html=True)
+
     raw_questions = re.split(r"\[CÂU\s*HỎI\s*\d+\]", quiz_part)
     
     q_index = 1
@@ -281,15 +313,12 @@ def render_interactive_quizzes(raw_text: str):
         if not q_block.strip():
             continue
         
-        # Trích xuất đáp án đúng
         ans_match = re.search(r"ĐÁP\s*ÁN\s*ĐÚNG:\s*([A-Da-d])", q_block, re.IGNORECASE)
         correct_ans = ans_match.group(1).strip().upper() if ans_match else "A"
 
-        # Trích xuất gợi ý
         hint_match = re.search(r"GỢI\s*Ý\s*TƯ\s*DUY:\s*(.*?)(?=\n-{2,}|\n\[|$)", q_block, re.DOTALL | re.IGNORECASE)
         hint_text = hint_match.group(1).strip() if hint_match else "Hãy đọc kỹ lại phần lý thuyết cốt lõi ở trên để tìm ra hướng giải quyết."
 
-        # Trích xuất nội dung câu hỏi và các lựa chọn
         clean_q_block = re.sub(r"ĐÁP\s*ÁN\s*ĐÚNG:.*", "", q_block, flags=re.IGNORECASE)
         clean_q_block = re.sub(r"GỢI\s*Ý\s*TƯ\s*DUY:.*", "", clean_q_block, flags=re.DOTALL | re.IGNORECASE)
 
@@ -306,57 +335,53 @@ def render_interactive_quizzes(raw_text: str):
         if not options or len(options) < 4:
             continue
 
-        st.markdown(f"<div class='quiz-box'>", unsafe_allow_html=True)
-        st.markdown(f"**Câu {q_index}:** {question_text.strip()}")
+        str_app.markdown(f"<div class='quiz-box'>", unsafe_allow_html=True)
+        str_app.markdown(f"**Câu {q_index}:** {question_text.strip()}")
 
-        # Tạo Radio Button cho học sinh chọn đáp án
         choice_key = f"q_choice_{q_index}"
         
-        # Chuẩn bị danh sách lựa chọn sạch sẽ
-        option_labels = []
-        option_map = {}
-        for opt in options:
-            opt_letter = opt[0].upper()
-            option_labels.append(opt)
-            option_map[opt_letter] = opt
+        option_labels = ["-- Chọn đáp án đúng --"] + options
+        
+        # Lấy giá trị đã chọn từ session_state (tránh bị reset khi click)
+        if choice_key not in str_app.session_state:
+            str_app.session_state[choice_key] = "-- Chọn đáp án đúng --"
 
-        user_choice = st.radio(
+        user_choice = str_app.selectbox(
             f"Chọn đáp án cho câu {q_index}:",
             options=option_labels,
             key=choice_key,
             label_visibility="collapsed"
         )
 
-        if user_choice:
+        if user_choice and user_choice != "-- Chọn đáp án đúng --":
             selected_letter = user_choice[0].upper()
             if selected_letter == correct_ans:
-                st.markdown(f"<p style='color: #198754; font-weight: bold; margin-top: 10px;'>Chính xác! Bạn đã chọn đúng đáp án {correct_ans}.</p>", unsafe_allow_html=True)
+                str_app.markdown(f"<p style='color: #198754; font-weight: bold; margin-top: 10px;'>Chính xác! Bạn đã chọn đúng đáp án {correct_ans}.</p>", unsafe_allow_html=True)
             else:
-                st.markdown(f"<p style='color: #dc3545; font-weight: bold; margin-top: 10px;'>Chưa chính xác. Hãy suy nghĩ kỹ lại hoặc xem gợi ý bên dưới.</p>", unsafe_allow_html=True)
+                str_app.markdown(f"<p style='color: #dc3545; font-weight: bold; margin-top: 10px;'>Chưa chính xác. Hãy suy nghĩ kỹ lại hoặc xem gợi ý bên dưới.</p>", unsafe_allow_html=True)
 
-        # Nút bấm xem gợi ý (giúp học sinh khi quá bí, tuyệt đối không lộ đáp án)
-        with st.expander(f"Gợi ý tư duy cho câu {q_index} (Nhấp để xem khi quá bí)"):
-            st.info(hint_text)
+        with str_app.expander(f"Gợi ý tư duy cho câu {q_index} (Nhấp để xem khi quá bí)"):
+            str_app.info(hint_text)
 
-        st.markdown(f"</div>", unsafe_allow_html=True)
+        str_app.markdown(f"</div>", unsafe_allow_html=True)
         q_index += 1
 
 # ============================================================
 # 7. GIAO DIỆN CHÍNH VÀ LUỒNG XỬ LÝ TRẠM 1
 # ============================================================
 def render_main_interface(grade, subject, api_key_to_use):
-    st.markdown(
+    str_app.markdown(
         "<h1 style='text-align: center; color: #0d6efd;'>"
         "GIA SƯ AI - HỆ SINH THÁI LỚP HỌC ĐẢO NGƯỢC</h1>",
         unsafe_allow_html=True
     )
-    st.markdown(
+    str_app.markdown(
         "<p style='text-align: center; font-size: 18px; font-weight: bold; color: #495057;'>"
         "Trường THPT Tân Hiệp</p>",
         unsafe_allow_html=True
     )
 
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    tab1, tab2, tab3, tab4, tab5 = str_app.tabs([
         "Học Tập & Phòng Thí Nghiệm",
         "Gia Sư Tương Tác",
         "Khảo Thí Tự Do",
@@ -365,37 +390,42 @@ def render_main_interface(grade, subject, api_key_to_use):
     ])
 
     with tab1:
-        st.markdown(f"<h2 class='main-title'>TỰ HỌC & CHIẾM LĨNH KIẾN THỨC: MÔN {subject.upper()} - {grade.upper()}</h2>", unsafe_allow_html=True)
-        st.markdown("### Nhập tên bài học em muốn tổng hợp:")
+        str_app.markdown(f"<div class='main-heading' style='text-align: center;'>TỰ HỌC & CHIẾM LĨNH KIẾN THỨC: MÔN {subject.upper()} - {grade.upper()}</div>", unsafe_allow_html=True)
+        str_app.markdown("### Nhập tên bài học em muốn tổng hợp:")
         
-        lesson_input = st.text_input(
+        lesson_input = str_app.text_input(
             "Nhập bài học cần chiếm lĩnh kiến thức:",
             placeholder="Ví dụ: Đồ thị hàm số bậc hai...",
             label_visibility="collapsed"
         )
 
-        btn_soan_bai = st.button("Tổng Hợp Kiến Thức Cốt Lõi", type="primary")
+        btn_soan_bai = str_app.button("Tổng Hợp Kiến Thức Cốt Lõi", type="primary")
 
         if btn_soan_bai:
             if not lesson_input.strip():
-                st.warning("Vui lòng nhập tên bài học trước khi bấm tổng hợp!")
+                str_app.warning("Vui lòng nhập tên bài học trước khi bấm tổng hợp!")
             elif not api_key_to_use:
-                st.error("Chưa phát hiện Mã Kết Nối! Vui lòng dán API Key ở thanh bên trái.")
+                str_app.error("Chưa phát hiện Mã Kết Nối! Vui lòng dán API Key ở thanh bên trái.")
             else:
-                with st.spinner(f"AI đang phân tích bài học: **{lesson_input}** theo chuẩn Kết Nối Tri Thức..."):
+                with str_app.spinner(f"AI đang phân tích bài học: **{lesson_input}** theo chuẩn Kết Nối Tri Thức..."):
                     full_prompt = build_lesson_prompt(lesson_input, subject, grade)
                     response_text, model_used, error = call_gemini(full_prompt, api_key_to_use)
 
                     if response_text:
                         final_text = clean_ai_response(response_text)
-                        st.success(f"Đã hoàn thành tổng hợp kiến thức bài: **{lesson_input}**")
-                        st.caption(f"Model kết nối thành công: `{model_used}`")
-                        st.markdown("---")
-                        
-                        # Hiển thị nội dung có phân tích trắc nghiệm tương tác màu sắc
-                        render_interactive_quizzes(final_text)
+                        # Lưu kết quả vào session_state để không bị mất khi tương tác
+                        str_app.session_state["cached_lesson_result"] = final_text
+                        str_app.session_state["cached_model_used"] = model_used
+                        str_app.session_state["cached_lesson_name"] = lesson_input
                     else:
-                        st.error(f"Không thể kết nối AI. Lỗi chi tiết: `{error}`")
+                        str_app.error(f"Không thể kết nối AI. Lỗi chi tiết: `{error}`")
+
+        # Hiển thị nội dung từ cache nếu đã có (giữ nguyên trạng thái khi click chọn đáp án)
+        if "cached_lesson_result" in str_app.session_state:
+            str_app.success(f"Đã hoàn thành tổng hợp kiến thức bài: **{str_app.session_state.get('cached_lesson_name', '')}**")
+            str_app.caption(f"Model kết nối thành công: `{str_app.session_state.get('cached_model_used', '')}`")
+            str_app.markdown("---")
+            render_interactive_quizzes(str_app.session_state["cached_lesson_result"])
 
 # ============================================================
 # 8. KHỞI CHẠY ỨNG DỤNG CHÍNH
