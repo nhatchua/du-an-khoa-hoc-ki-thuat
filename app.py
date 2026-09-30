@@ -54,10 +54,10 @@ def call_gemini_with_fallback(prompt, json_mode=False):
         api_key = st.secrets.get("GEMINI_API_KEY", "")
     genai.configure(api_key=api_key)
     
-    # Chỉ tập trung vào dòng Flash miễn phí, tốc độ cao và không bị giới hạn quota ngặt nghèo
+    # Cập nhật danh sách model mới nhất theo thông báo lỗi
     models = [
-        "gemini-2.5-flash",
-        "models/gemini-2.5-flash"
+        "gemini-3.8-flash",
+        "models/gemini-3.8-flash"
     ]
     
     config = genai.types.GenerationConfig(temperature=0.0)
