@@ -1,5 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
+import re
+import json
 
 # 1. Cấu hình trang
 st.set_page_config(
@@ -39,7 +41,6 @@ def clean_ai_response(text: str) -> str:
         line_stripped = line.strip()
         line_lower = line_stripped.lower()
         
-        # Kiểm tra xem dòng có chứa từ khóa nháp tiếng Anh không
         is_draft = any(pattern in line_lower for pattern in english_draft_patterns)
         
         if not is_draft:
@@ -47,6 +48,58 @@ def clean_ai_response(text: str) -> str:
             
     return '\n'.join(filtered_lines).strip()
 
+def call_gemini_with_fallback(prompt, json_mode=False):
+    api_key = st.session_state.get("api_key_to_use", "")
+    if not api_key:
+        api_key = st.secrets.get("GEMINI_API_KEY", "")
+    genai.configure(api_key=api_key)
+    
+    models = [
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "models/gemini-2.5-flash",
+        "models/gemini-2.0-flash"
+    ]
+    
+    config = genai.types.GenerationConfig(temperature=0.0)
+    if json_mode:
+        config = genai.types.GenerationConfig(temperature=0.0, response_mime_type="application/json")
+        
+    last_err = None
+    for m_name in models:
+        try:
+            model = genai.GenerativeModel(m_name)
+            res = model.generate_content(prompt, generation_config=config)
+            if res and res.text:
+                return res.text
+        except Exception as e:
+            last_err = e
+            continue
+    raise Exception(f"Không thể gọi AI. Lỗi: {last_err}")
+
+def parse_quiz_questions(text):
+    questions = []
+    # Logic giả lập tách câu hỏi đơn giản hoặc bóc tách từ text trả về
+    return questions
+
+def render_dynamic_python_lab(code):
+    try:
+        exec(code, globals())
+    except Exception as e:
+        st.error(f"Lỗi hiển thị Phòng Lab: {e}")
+
+def render_smart_lab(data):
+    st.write(data)
+
+# Khởi tạo session state
+if "quiz_states" not in st.session_state:
+    st.session_state.quiz_states = {}
+if "current_lesson" not in st.session_state:
+    st.session_state.current_lesson = ""
+if "parsed_quiz" not in st.session_state:
+    st.session_state.parsed_quiz = []
+if "lab_data" not in st.session_state:
+    st.session_state.lab_data = None
 
 # 2. Thanh bên (Sidebar)
 with st.sidebar:
@@ -80,10 +133,10 @@ with st.sidebar:
     
     if user_api_key:
         st.success("🟢 Đang sử dụng đường truyền AI Cá nhân")
-        api_key_to_use = user_api_key
+        st.session_state.api_key_to_use = user_api_key
     else:
         st.info("🔵 Đang sử dụng đường truyền chung của Trường")
-        api_key_to_use = st.secrets.get("GEMINI_API_KEY", "")
+        st.session_state.api_key_to_use = st.secrets.get("GEMINI_API_KEY", "")
         
     st.markdown("<br>", unsafe_allow_html=True)
     
@@ -94,6 +147,7 @@ with st.sidebar:
         index=5,
         label_visibility="collapsed"
     )
+    grade_num = grade.replace("Lớp ", "")
     
     st.markdown("📚 **Môn học cần hỗ trợ:**")
     subject = st.selectbox(
@@ -176,11 +230,13 @@ with tab1:
             (TỬ HUYỆT SƯ PHẠM: Ở PHẦN 3 NÀY, BẠN CHỈ ĐƯỢC CHO ĐỀ BÀI VÀ VẠCH RA CÁC BƯỚC GỢI Ý TƯ DUY. TUYỆT ĐỐI KHÔNG ĐƯỢC GIẢI CHI TIẾT HAY ĐƯA RA KẾT QUẢ CUỐI CÙNG! NẾU BẠN GIẢI SẴN RA ĐÁP ÁN LÀ BẠN ĐÃ PHÁ HOẠI TRIẾT LÝ SOCRATIC CỦA HỆ THỐNG!)
             """
             try:
-                res_text = call_gemini_with_fallback(study_prompt)
+                raw_res = call_gemini_with_fallback(study_prompt)
+                res_text = clean_ai_response(raw_res)
                 st.session_state.current_lesson = res_text
                 st.session_state.parsed_quiz = parse_quiz_questions(res_text)
                 st.session_state.quiz_states = {}
-            except Exception as e: st.error(f"Lỗi: {e}")
+            except Exception as e:
+                st.error(f"Lỗi: {e}")
 
     if st.session_state.get("current_lesson"):
         lesson_text = st.session_state.current_lesson
@@ -194,18 +250,24 @@ with tab1:
         if quiz_list:
             st.markdown("### 🎯 Phần 2: Trắc nghiệm khách quan Socratic")
             for idx, q in enumerate(quiz_list):
-st.info(f"**Câu {idx+1}:** `[{q['level']}]` {q['question']}")
+                st.info(f"**Câu {idx+1}:** `[{q['level']}]` {q['question']}")
                 
                 clean_opts_t1 = [str(opt).replace("\\infty", "∞").replace("\infty", "∞") for opt in q['options']]
                 user_choice = st.radio(f"Chọn đáp án câu {idx+1}:", clean_opts_t1, key=f"q_{idx}", label_visibility="collapsed")
                 if st.button(f"🔍 Kiểm tra câu {idx+1}", key=f"btn_{idx}"):
                     choice_letter = re.sub(r'[^A-D]', '', user_choice.strip()[:3]).upper()[:1]
-                    if choice_letter == q['correct']: st.session_state.quiz_states[idx] = ("correct", "🎉 Xuất sắc!")
-                    else: st.session_state.quiz_states[idx] = ("incorrect", f"💡 **Gợi ý:** {q['explain']}")
+                    if choice_letter == q['correct']: 
+                        st.session_state.quiz_states[idx] = ("correct", "🎉 Xuất sắc!")
+                    else: 
+                        st.session_state.quiz_states[idx] = ("incorrect", f"💡 **Gợi ý:** {q['explain']}")
+                
                 if idx in st.session_state.quiz_states:
                     status, msg = st.session_state.quiz_states[idx]
-                    if status == "correct": st.success(msg)
-                    else: st.warning("🤔 Chưa chính xác!"); st.info(msg)
+                    if status == "correct": 
+                        st.success(msg)
+                    else: 
+                        st.warning("🤔 Chưa chính xác!")
+                        st.info(msg)
         
         if len(part3_split) > 1 and part3_split[-1].strip():
             st.markdown("### ✍️ Phần 3: Bài tập tự luận & Hướng dẫn tư duy")
@@ -226,12 +288,32 @@ st.info(f"**Câu {idx+1}:** `[{q['level']}]` {q['question']}")
                 try:
                     raw_json = call_gemini_with_fallback(lab_prompt, json_mode=True)
                     json_match = re.search(r'\{.*\}', raw_json.strip(), re.DOTALL)
-                    if json_match: st.session_state.lab_data = json.loads(json_match.group(0))
-                    else: st.session_state.lab_data = None
-                except Exception as e: st.error(f"Lỗi: {e}")
+                    if json_match: 
+                        st.session_state.lab_data = json.loads(json_match.group(0))
+                    else: 
+                        st.session_state.lab_data = None
+                except Exception as e: 
+                    st.error(f"Lỗi: {e}")
         
         if st.session_state.get("lab_data"):
             st.success("✨ Khởi tạo thành công!")
-st.info(f"💡 {st.session_state.lab_data.get('explanation', '')}")
-            if st.session_state.lab_data.get("type") == "dynamic_code": render_dynamic_python_lab(st.session_state.lab_data.get("python_code", ""))
-            else: render_smart_lab(st.session_state.lab_data)
+            st.info(f"💡 {st.session_state.lab_data.get('explanation', '')}")
+            if st.session_state.lab_data.get("type") == "dynamic_code": 
+                render_dynamic_python_lab(st.session_state.lab_data.get("python_code", ""))
+            else: 
+                render_smart_lab(st.session_state.lab_data)
+
+with tab2:
+    st.subheader("Trạm 2: Gia Sư Tương Tác")
+    st.write(f"Gia sư AI sẵn sàng đặt câu hỏi gợi mở môn **{subject} ({grade})**...")
+
+with tab3:
+    st.subheader("Trạm 3: Khảo Thí Tự Do")
+    st.write(f"Khu vực luyện tập và tự kiểm tra môn **{subject} ({grade})**...")
+
+with tab4:
+    st.subheader("Trạm 4: Nhật Ký Nghiên Cứu Khoa Học")
+    st.write("Theo dõi và ghi chép tiến độ dự án...")
+
+with tab5:
+    st.warning("🔒 Trạm Thống Kê & Đánh Giá bị khóa. Vui lòng đăng nhập ở Trạm 4 trước.")
