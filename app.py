@@ -62,25 +62,25 @@ def setup_page_config():
     """, unsafe_allow_html=True)
 
 # ============================================================
-# 2. XỬ LÝ VÀ LỌC SẠCH PHẢN HỒI TỪ AI (ĐÃ BẢO VỆ PHẦN CÂU HỎI)
+# 2. XỬ LÝ VÀ LỌC SẠCH PHẢN HỒI TỪ AI
 # ============================================================
 def clean_ai_response(text: str) -> str:
     if not text:
         return ""
 
-    # Tách riêng phần lý thuyết để lọc, giữ nguyên hoàn toàn phần trắc nghiệm phía dưới
-    parts = re.split(r"(?:3\.)?\s*HỆ\s*THỐNG\s*CÂU\s*HỎI\s*TRẮC\s*NGHIỆM", text, flags=re.IGNORECASE)
-    theory_part = parts[0]
-    quiz_part = parts[1] if len(parts) > 1 else ""
-
-    # Lọc sạch phần lý thuyết
-    pattern = re.compile(r"(#{1,3}\s*)?📌?\s*1\.\s*KIẾN\s*THỨC\s*CỐT\s*LÕI", re.IGNORECASE | re.UNICODE)
-    match = pattern.search(theory_part)
+    pattern = re.compile(
+        r"(#{1,3}\s*)?📌?\s*1\.\s*KIẾN\s*THỨC\s*CỐT\s*LÕI",
+        re.IGNORECASE | re.UNICODE
+    )
+    match = pattern.search(text)
     if match:
-        theory_part = theory_part[match.start():]
+        text = text[match.start():]
 
-    lines = theory_part.split('\n')
+    text = re.sub(r'(#+ [^\n]*?)"\s*$', r'\1', text, flags=re.MULTILINE)
+
+    lines = text.split('\n')
     filtered = []
+
     draft_patterns = re.compile(
         r"^\s*[\*\-\s]*("
         r"note\s*:|section\s+[ivx]+|theory|concepts|formulas|"
@@ -93,22 +93,40 @@ def clean_ai_response(text: str) -> str:
         re.IGNORECASE
     )
 
+    english_paren = re.compile(r"\([A-Za-z][A-Za-z\s,;:\-]{4,}\)")
+
     for line in lines:
         stripped = line.strip()
         if not stripped:
             filtered.append(line)
             continue
+
         if draft_patterns.match(stripped):
             continue
+
+        if english_paren.search(stripped) and len(stripped) < 200:
+            cleaned = english_paren.sub("", stripped).rstrip(".,;: ")
+            if cleaned:
+                filtered.append(cleaned)
+            continue
+
+        if len(stripped) > 15:
+            has_vietnamese = bool(re.search(
+                r"[àáảãạăâđêôơưèéẻẽẹìíỉĩịòóỏõọùúủũụỳýỷỹỵ]",
+                stripped, re.IGNORECASE
+            ))
+            latin_ratio = sum(
+                c.isascii() and c.isalpha() for c in stripped
+            ) / max(len(stripped), 1)
+            if not has_vietnamese and latin_ratio > 0.5:
+                continue
+
         filtered.append(line)
 
-    cleaned_theory = '\n'.join(filtered).strip()
-    cleaned_theory = re.sub(r'\n{3,}', '\n\n', cleaned_theory)
+    result = '\n'.join(filtered).strip()
+    result = re.sub(r'\n{3,}', '\n\n', result)
+    return result
 
-    # Ghép lại nguyên vẹn phần trắc nghiệm phía sau để không bị mất câu hỏi
-    if quiz_part:
-        return cleaned_theory + "\n\n3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ\n" + quiz_part
-    return cleaned_theory
 # ============================================================
 # 3. GỌI API GEMINI (QUÉT TOÀN BỘ HỌ HÀNG FLASH MIỄN PHÍ)
 # ============================================================
@@ -158,34 +176,42 @@ def call_gemini(prompt: str, api_key: str) -> tuple:
 # ============================================================
 # 4. XÂY DỰNG PROMPT CHUẨN KẾT NỐI TRI THỨC + HỖ TRỢ LATEX
 # ============================================================
-def build_lesson_prompt(grade, subject, topic):
-    return f"""
-Bạn là một trợ lý AI giáo dục thông minh, chuyên gia sư phạm hàng đầu. Hãy soạn nội dung chi tiết cho môn {subject}, khối lớp {grade} với chủ đề: "{topic}".
+def build_lesson_prompt(lesson_input: str, subject: str, grade: str) -> str:
+    return f"""Bạn là giáo viên chuyên môn cao, soạn tài liệu theo chuẩn chương trình giáo dục phổ thông mới nhất bộ sách "Kết Nối Tri Thức Với Cuộc Sống".
 
-Yêu cầu định dạng cấu trúc chính xác bằng tiếng Việt, bắt buộc tuân theo các phần sau:
+NHIỆM VỤ: Soạn nội dung chi tiết bài học "{lesson_input}" môn {subject} lớp {grade}.
+
+QUY TẮC BẮT BUỘC:
+1. TOÀN BỘ nội dung hoàn toàn bằng TIẾNG VIỆT chuẩn xác. Không chứa từ tiếng Anh, không suy luận nội tâm, không bản nháp.
+2. KHÔNG DÙNG DẤU #. Chỉ dùng định dạng đánh số thứ tự cho các phần lớn (1. KIẾN THỨC CỐT LÕI, 2. CÁC LỖI SAI THƯỜNG GẶP, 3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ).
+3. ĐỐI VỚI CÔNG THỨC TOÁN HỌC/KÍ HIỆU KHOA HỌC: Bắt buộc sử dụng kí hiệu LaTeX đặt trong cặp dấu đô la (ví dụ: $x^2 + y^2 = R^2$, $\\frac{{a}}{{b}}$, $\\sqrt{{x}}$) để hiển thị chuẩn xác, đẹp mắt.
+4. Kiến thức phải cực kỳ chính xác, khoa học, sư phạm theo đúng sách Kết Nối Tri Thức.
+
+CẤU TRÚC ĐẦU RA BẮT BUỘC:
 
 1. KIẾN THỨC CỐT LÕI CẦN GHI NHỚ
-(Trình bày chi tiết các định nghĩa, công thức toán học/lý thuyết cốt lõi, định lý, ví dụ minh họa rõ ràng. Sử dụng ký hiệu LaTeX chuẩn cho công thức toán học, ví dụ: $x^2 + y^2 = r^2$).
+[Viết thành các đoạn văn chi tiết, rõ ràng, giải thích sâu sắc bản chất, định lý, công thức trọng tâm của bài học. Sử dụng LaTeX cho mọi công thức toán học.]
 
 2. CÁC LỖI SAI THƯỜNG GẶP KHI LÀM BÀI
-(Liệt kê các lỗi học sinh hay mắc phải và cách khắc phục).
+[Liệt kê từ 4 đến 5 lỗi sai học sinh hay mắc phải và hướng khắc phục chi tiết bằng tiếng Việt.]
 
 3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ
-(Tạo từ 3 đến 5 câu hỏi trắc nghiệm khách quan 4 lựa chọn A, B, C, D theo định dạng chuẩn bắt buộc sau cho mỗi câu):
+(Hãy tạo ra chính xác 3 câu hỏi trắc nghiệm khách quan 4 lựa chọn A, B, C, D kiểm tra từ mức độ nhận biết đến vận dụng của bài học này).
 
+Cấu trúc mỗi câu trắc nghiệm bắt buộc phải tuân theo định dạng sau để hệ thống tự động nhận diện:
+---
 [CÂU HỎI 1]
-[Nội dung câu hỏi, có thể chứa công thức LaTeX]
-HƯỚNG DẪN TƯ DUY: [Gợi ý tư duy thô hoặc hướng phân tích nhanh giúp học sinh tự suy nghĩ mà chưa lộ đáp án ngay]
-A. [Đáp án A]
-B. [Đáp án B]
-C. [Đáp án C]
-D. [Đáp án D]
-ĐÁP ÁN ĐÚNG: [A/B/C/D]
-GỢI Ý GIẢI CHI TIẾT: [Lời giải thích chi tiết tại sao chọn đáp án đó]
-
-[CÂU HỎI 2]
-...
+Nội dung câu hỏi cụ thể (có chứa công thức LaTeX nếu cần)...
+A. Đáp án A
+B. Đáp án B
+C. Đáp án C
+D. Đáp án D
+ĐÁP ÁN ĐÚNG: [Chỉ ghi đúng một chữ cái A, B, C hoặc D]
+GỢI Ý TƯ DUY: [Gợi ý định hướng cách giải hoặc bản chất kiến thức giúp học sinh tự tư duy, tuyệt đối không tiết lộ trực tiếp đáp án]
+---
+(Lặp lại đúng định dạng trên cho Câu hỏi 2 và Câu hỏi 3).
 """
+
 # ============================================================
 # 5. GIAO DIỆN THANH BÊN (SIDEBAR)
 # ============================================================
@@ -247,16 +273,16 @@ def render_sidebar():
         return grade, subject, api_key_to_use
 
 # ============================================================
-# 6. HIỂN THỊ NỘI DUNG VÀ TRẮC NGHIỆM TƯƠNG TÁC (ĐÃ FIX TỐI ƯU)
+# 6. HIỂN THỊ NỘI DUNG VÀ TRẮC NGHIỆM TƯƠNG TÁC (ĐÃ SỬA TRIỆT ĐỂ Ô TRỐNG)
 # ============================================================
 def render_interactive_quizzes(raw_text: str):
-    parts = re.split(r"(?:3\.)?\s*HỆ\s*THỐNG\s*CÂU\s*HỎI\s*TRẮC\s*NGHIỆM\s*ĐÁNH\s*GIÁ", raw_text, flags=re.IGNORECASE)
+    parts = re.split(r"3\.\s*HỆ\s*THỐNG\s*CÂU\s*HỎI\s*TRẮC\s*NGHIỆM\s*ĐÁNH\s*GIÁ", raw_text, flags=re.IGNORECASE)
     
     if len(parts) < 2:
         str_app.markdown(f"<div class='content-box'>{raw_text}</div>", unsafe_allow_html=True)
         return
 
-    theory_part = parts[0].strip()
+    theory_part = parts[0]
     quiz_part = parts[1]
 
     theory_part = re.sub(
@@ -270,32 +296,27 @@ def render_interactive_quizzes(raw_text: str):
         theory_part, flags=re.IGNORECASE
     )
 
-    if theory_part:
-        str_app.markdown(f"<div class='content-box'>{theory_part}</div>", unsafe_allow_html=True)
+    str_app.markdown(f"<div class='content-box'>{theory_part}</div>", unsafe_allow_html=True)
 
     str_app.markdown("<div class='main-heading'>3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ</div>", unsafe_allow_html=True)
     str_app.markdown("<p style='font-weight: 500; margin-bottom: 20px;'>Hãy tự lực suy nghĩ và chọn đáp án đúng nhất cho các câu hỏi dưới đây:</p>", unsafe_allow_html=True)
 
-    # Chia nhỏ câu hỏi linh hoạt theo thẻ [CÂU HỎI X] hoặc "Câu X"
-    question_blocks = re.split(r"(?=\[CÂU\s*HỎI\s*\d+\]|\bCâu\s*\d+[\.:])", quiz_part, flags=re.IGNORECASE)
-
+    # Sử dụng re.findall để bóc tách chính xác từng khối câu hỏi, tránh dính rác thừa ở đầu
+    question_blocks = re.findall(r"\[CÂU\s*HỎI\s*\d+\](.*?)(?=\[CÂU\s*HỎI|\Z)", quiz_part, re.DOTALL | re.IGNORECASE)
+    
     q_index = 1
     for q_block in question_blocks:
-        if not q_block.strip() or not re.search(r"[A-Da-d][\.\)]", q_block):
+        if not q_block.strip():
             continue
         
-        thought_match = re.search(r"HƯỚNG\s*DẪN\s*TƯ\s*DUY:\s*(.*?)(?=\nA\.|\n[A-Da-d]\.|\nĐÁP\s*ÁN|$)", q_block, re.DOTALL | re.IGNORECASE)
-        thought_text = thought_match.group(1).strip() if thought_match else ""
-
         ans_match = re.search(r"ĐÁP\s*ÁN\s*ĐÚNG:\s*([A-Da-d])", q_block, re.IGNORECASE)
         correct_ans = ans_match.group(1).strip().upper() if ans_match else "A"
 
-        hint_match = re.search(r"(?:GỢI\s*Ý\s*GIẢI\s*CHI\s*TIẾT|HƯỚNG\s*DẪN\s*GIẢI):\s*(.*?)(?=\n-{2,}|\n\[|$)", q_block, re.DOTALL | re.IGNORECASE)
+        hint_match = re.search(r"GỢI\s*Ý\s*TƯ\s*DUY:\s*(.*?)(?=\n-{2,}|\n\[|$)", q_block, re.DOTALL | re.IGNORECASE)
         hint_text = hint_match.group(1).strip() if hint_match else "Hãy đọc kỹ lại phần lý thuyết cốt lõi ở trên để tìm ra hướng giải quyết."
 
-        clean_q_block = re.sub(r"HƯỚNG\s*DẪN\s*TƯ\s*DUY:.*", "", q_block, flags=re.DOTALL | re.IGNORECASE)
-        clean_q_block = re.sub(r"ĐÁP\s*ÁN\s*ĐÚNG:.*", "", clean_q_block, flags=re.IGNORECASE)
-        clean_q_block = re.sub(r"(?:GỢI\s*Ý\s*GIẢI\s*CHI\s*TIẾT|HƯỚNG\s*DẪN\s*GIẢI):.*", "", clean_q_block, flags=re.IGNORECASE)
+        clean_q_block = re.sub(r"ĐÁP\s*ÁN\s*ĐÚNG:.*", "", q_block, flags=re.IGNORECASE)
+        clean_q_block = re.sub(r"GỢI\s*Ý\s*TƯ\s*DUY:.*", "", clean_q_block, flags=re.DOTALL | re.IGNORECASE)
 
         lines = [line.strip() for line in clean_q_block.split('\n') if line.strip()]
         
@@ -304,7 +325,7 @@ def render_interactive_quizzes(raw_text: str):
         for line in lines:
             if re.match(r"^[A-Da-d][\.\)]", line):
                 options.append(line)
-            elif not options and not line.startswith("[CÂU HỎI") and not line.startswith("Câu") and not "HỆ THỐNG" in line:
+            elif not options:
                 question_text += line + " "
 
         if not options or len(options) < 4:
@@ -313,37 +334,32 @@ def render_interactive_quizzes(raw_text: str):
         str_app.markdown(f"<div class='quiz-box'>", unsafe_allow_html=True)
         str_app.markdown(f"**Câu {q_index}:** {question_text.strip()}")
 
-        if thought_text:
-            str_app.info(f"💡 **Hướng dẫn tư duy:** {thought_text}")
-
-        str_app.markdown("**Các lựa chọn:**")
-        for opt in options:
-            str_app.markdown(f"- {opt}")
-
         choice_key = f"q_choice_{q_index}"
-        option_labels = ["-- Chọn đáp án đúng --"] + [opt[0] for opt in options]
+        option_labels = ["-- Chọn đáp án đúng --"] + options
         
         if choice_key not in str_app.session_state:
             str_app.session_state[choice_key] = "-- Chọn đáp án đúng --"
 
-        selected_option = str_app.selectbox(
+        user_choice = str_app.selectbox(
             f"Chọn đáp án cho câu {q_index}:",
             options=option_labels,
             key=choice_key,
-            format_func=lambda x: f"Đáp án: {x}" if x != "-- Chọn đáp án đúng --" else x
+            label_visibility="collapsed"
         )
 
-        if selected_option and selected_option != "-- Chọn đáp án đúng --":
-            if selected_option == correct_ans:
+        if user_choice and user_choice != "-- Chọn đáp án đúng --":
+            selected_letter = user_choice[0].upper()
+            if selected_letter == correct_ans:
                 str_app.markdown(f"<p style='color: #28a745; font-weight: bold; margin-top: 10px;'>Chính xác! Bạn đã chọn đúng đáp án {correct_ans}.</p>", unsafe_allow_html=True)
             else:
-                str_app.markdown(f"<p style='color: #dc3545; font-weight: bold; margin-top: 10px;'>Chưa chính xác. Hãy xem kỹ lại phần gợi ý bên dưới.</p>", unsafe_allow_html=True)
+                str_app.markdown(f"<p style='color: #dc3545; font-weight: bold; margin-top: 10px;'>Chưa chính xác. Hãy suy nghĩ kỹ lại hoặc xem gợi ý bên dưới.</p>", unsafe_allow_html=True)
 
-        with str_app.expander(f"Xem hướng dẫn giải chi tiết cho câu {q_index}"):
-            str_app.write(hint_text)
+        with str_app.expander(f"Gợi ý tư duy cho câu {q_index} (Nhấp để xem khi quá bí)"):
+            str_app.info(hint_text)
 
         str_app.markdown(f"</div>", unsafe_allow_html=True)
         q_index += 1
+
 # ============================================================
 # 7. GIAO DIỆN CHÍNH VÀ LUỒNG XỬ LÝ TRẠM 1
 # ============================================================
