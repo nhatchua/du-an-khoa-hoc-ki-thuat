@@ -277,8 +277,11 @@ def render_sidebar():
 # 6. HIỂN THỊ NỘI DUNG VÀ TRẮC NGHIỆM TƯƠNG TÁC (ĐÃ SỬA TRIỆT ĐỂ Ô TRỐNG)
 # ============================================================
 def render_interactive_quizzes(raw_text: str):
-    parts = re.split(r"3\.\s*HỆ\s*THỐNG\s*CÂU\s*HỎI\s*TRẮC\s*NGHIỆM\s*ĐÁNH\s*GIÁ", raw_text, flags=re.IGNORECASE)
-    
+    parts = re.split(
+        r"3\.\s*HỆ\s*THỐNG\s*CÂU\s*HỎI\s*TRẮC\s*NGHIỆM\s*ĐÁNH\s*GIÁ",
+        raw_text, flags=re.IGNORECASE
+    )
+
     if len(parts) < 2:
         str_app.markdown(f"<div class='content-box'>{raw_text}</div>", unsafe_allow_html=True)
         return
@@ -299,33 +302,64 @@ def render_interactive_quizzes(raw_text: str):
 
     str_app.markdown(f"<div class='content-box'>{theory_part}</div>", unsafe_allow_html=True)
 
-    str_app.markdown("<div class='main-heading'>3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ</div>", unsafe_allow_html=True)
-    str_app.markdown("<p style='font-weight: 500; margin-bottom: 20px;'>Hãy tự lực suy nghĩ và chọn đáp án đúng nhất cho các câu hỏi dưới đây:</p>", unsafe_allow_html=True)
+    str_app.markdown(
+        "<div class='main-heading'>3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ</div>",
+        unsafe_allow_html=True
+    )
+    str_app.markdown(
+        "<p style='font-weight: 500; margin-bottom: 20px;'>"
+        "Hãy tự lực suy nghĩ và chọn đáp án đúng nhất cho các câu hỏi dưới đây:</p>",
+        unsafe_allow_html=True
+    )
 
-    question_blocks = re.findall(r"\[CÂU\s*HỎI\s*\d+\](.*?)(?=\[CÂU\s*HỎI|\Z)", quiz_part, re.DOTALL | re.IGNORECASE)
-    
+    question_blocks = re.findall(
+        r"\[CÂU\s*HỎI\s*\d+\](.*?)(?=\[CÂU\s*HỎI|\Z)",
+        quiz_part, re.DOTALL | re.IGNORECASE
+    )
+
     q_index = 1
     for q_block in question_blocks:
         if not q_block.strip():
             continue
-        
-        # Bóc tách hướng dẫn tư duy (thô)
-        thought_match = re.search(r"HƯỚNG\s*DẪN\s*TƯ\s*DUY:\s*(.*?)(?=\nA\.|\n[A-Da-d]\.|$)", q_block, re.DOTALL | re.IGNORECASE)
+
+        # Bóc tách hướng dẫn tư duy
+        thought_match = re.search(
+            r"HƯỚNG\s*DẪN\s*TƯ\s*DUY:\s*(.*?)(?=\nA\.|\n[A-Da-d]\.|$)",
+            q_block, re.DOTALL | re.IGNORECASE
+        )
         thought_text = thought_match.group(1).strip() if thought_match else ""
 
-        ans_match = re.search(r"ĐÁP\s*ÁN\s*ĐÚNG:\s*([A-Da-d])", q_block, re.IGNORECASE)
+        # Bóc tách đáp án đúng
+        ans_match = re.search(
+            r"ĐÁP\s*ÁN\s*ĐÚNG:\s*([A-Da-d])",
+            q_block, re.IGNORECASE
+        )
         correct_ans = ans_match.group(1).strip().upper() if ans_match else "A"
 
-        hint_match = re.search(r"GỢI\s*Ý\s*GIẢI\s*CHI\s*TIẾT:\s*(.*?)(?=\n-{2,}|\n\[|$)", q_block, re.DOTALL | re.IGNORECASE)
-        hint_text = hint_match.group(1).strip() if hint_match else "Hãy đọc kỹ lại phần lý thuyết cốt lõi ở trên để tìm ra hướng giải quyết."
+        # Bóc tách gợi ý giải chi tiết
+        hint_match = re.search(
+            r"GỢI\s*Ý\s*GIẢI\s*CHI\s*TIẾT:\s*(.*?)(?=\n-{2,}|\n\[|$)",
+            q_block, re.DOTALL | re.IGNORECASE
+        )
+        hint_text = hint_match.group(1).strip() if hint_match else \
+            "Hãy đọc kỹ lại phần lý thuyết cốt lõi ở trên để tìm ra hướng giải quyết."
 
-        # Làm sạch các thẻ phụ để lấy câu hỏi và đáp án
-        clean_q_block = re.sub(r"HƯỚNG\s*DẪN\s*TƯ\s*DUY:.*", "", q_block, flags=re.DOTALL | re.IGNORECASE)
-        clean_q_block = re.sub(r"ĐÁP\s*ÁN\s*ĐÚNG:.*", "", clean_q_block, flags=re.IGNORECASE)
-        clean_q_block = re.sub(r"GỢI\s*Ý\s*GIẢI\s*CHI\s*TIẾT:.*", "", clean_q_block, flags=re.DOTALL | re.IGNORECASE)
+        # Làm sạch block để lấy câu hỏi và đáp án
+        clean_q_block = re.sub(
+            r"HƯỚNG\s*DẪN\s*TƯ\s*DUY:.*", "", q_block,
+            flags=re.DOTALL | re.IGNORECASE
+        )
+        clean_q_block = re.sub(
+            r"ĐÁP\s*ÁN\s*ĐÚNG:.*", "", clean_q_block,
+            flags=re.IGNORECASE
+        )
+        clean_q_block = re.sub(
+            r"GỢI\s*Ý\s*GIẢI\s*CHI\s*TIẾT:.*", "", clean_q_block,
+            flags=re.DOTALL | re.IGNORECASE
+        )
 
         lines = [line.strip() for line in clean_q_block.split('\n') if line.strip()]
-        
+
         question_text = ""
         options = []
         for line in lines:
@@ -337,44 +371,51 @@ def render_interactive_quizzes(raw_text: str):
         if not options or len(options) < 4:
             continue
 
-        str_app.markdown(f"<div class='quiz-box'>", unsafe_allow_html=True)
-        str_app.markdown(f"**Câu {q_index}:** {question_text.strip()}")
+        # ✅ DÙNG CONTAINER THAY VÌ DIV RỜI RẠC
+        with str_app.container(border=True):
+            str_app.markdown(f"### Câu {q_index}: {question_text.strip()}")
 
-        # Hiển thị phần Hướng dẫn tư duy ngay dưới câu hỏi (dạng thô/gợi ý kiến thức cũ)
-        if thought_text:
-            str_app.info(f"💡 **Hướng dẫn tư duy:** {thought_text}")
+            # Hiển thị Hướng dẫn tư duy
+            if thought_text:
+                str_app.info(f"💡 **Hướng dẫn tư duy:** {thought_text}")
 
-        # Xử lý hiển thị selectbox với các tùy chọn đáp án (hỗ trợ render LaTeX bằng st.markdown thay vì selectbox thuần)
-        choice_key = f"q_choice_{q_index}"
-        option_labels = ["-- Chọn đáp án đúng --"] + [opt[0] for opt in options] # Lưu ký tự A, B, C, D
-        
-        if choice_key not in str_app.session_state:
-            str_app.session_state[choice_key] = "-- Chọn đáp án đúng --"
+            # ✅ HIỂN THỊ CÁC LỰA CHỌN VỚI LATEX ĐẸP (markdown render LaTeX)
+            str_app.markdown("**Các lựa chọn:**")
+            for opt in options:
+                str_app.markdown(f"- {opt}")
 
-        # Hiển thị danh sách các đáp án đầy đủ chi tiết ngay bên dưới để người dùng dễ nhìn công thức LaTeX trước khi chọn
-        str_app.markdown("**Các lựa chọn:**")
-        for opt in options:
-            str_app.markdown(f"- {opt}")
+            # ✅ DÙNG RADIO THAY VÌ SELECTBOX ĐỂ TRÁNH LỖI LATEX
+            # Radio chỉ hiển thị ký tự A/B/C/D, còn nội dung đầy đủ đã hiển thị phía trên
+            choice_key = f"q_choice_{q_index}"
+            option_keys = [opt[0].upper() for opt in options]
 
-        selected_option = str_app.selectbox(
-            f"Chọn đáp án cho câu {q_index}:",
-            options=option_labels,
-            key=choice_key,
-            format_func=lambda x: f"Đáp án: {x}" if x != "-- Chọn đáp án đúng --" else x
-        )
+            selected_option = str_app.radio(
+                f"Chọn đáp án cho câu {q_index}:",
+                options=option_keys,
+                key=choice_key,
+                index=None,  # Không chọn sẵn đáp án nào
+                horizontal=True
+            )
 
-        if selected_option and selected_option != "-- Chọn đáp án đúng --":
-            if selected_option == correct_ans:
-                str_app.markdown(f"<p style='color: #28a745; font-weight: bold; margin-top: 10px;'>Chính xác! Bạn đã chọn đúng đáp án {correct_ans}.</p>", unsafe_allow_html=True)
-            else:
-                str_app.markdown(f"<p style='color: #dc3545; font-weight: bold; margin-top: 10px;'>Chưa chính xác. Hãy xem kỹ lại phần gợi ý bên dưới.</p>", unsafe_allow_html=True)
+            # Kiểm tra đáp án
+            if selected_option is not None:
+                if selected_option == correct_ans:
+                    str_app.markdown(
+                        f"<p style='color: #28a745; font-weight: bold; margin-top: 10px;'>"
+                        f"✅ Chính xác! Bạn đã chọn đúng đáp án {correct_ans}.</p>",
+                        unsafe_allow_html=True
+                    )
+                else:
+                    str_app.markdown(
+                        f"<p style='color: #dc3545; font-weight: bold; margin-top: 10px;'>"
+                        f"❌ Chưa chính xác. Hãy xem kỹ lại phần gợi ý bên dưới.</p>",
+                        unsafe_allow_html=True
+                    )
 
-        with str_app.expander(f"Xem hướng dẫn giải chi tiết cho câu {q_index}"):
-            str_app.write(hint_text)
+            with str_app.expander(f"Xem hướng dẫn giải chi tiết cho câu {q_index}"):
+                str_app.markdown(hint_text)
 
-        str_app.markdown(f"</div>", unsafe_allow_html=True)
         q_index += 1
-        
 # ============================================================
 # 7. GIAO DIỆN CHÍNH VÀ LUỒNG XỬ LÝ TRẠM 1
 # ============================================================
