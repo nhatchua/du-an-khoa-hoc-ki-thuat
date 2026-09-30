@@ -277,14 +277,19 @@ def render_sidebar():
 # 6. HIỂN THỊ NỘI DUNG VÀ TRẮC NGHIỆM TƯƠNG TÁC (ĐÃ SỬA TRIỆT ĐỂ Ô TRỐNG)
 # ============================================================
 def render_interactive_quizzes(raw_text: str):
-    parts = re.split(r"3\.\s*HỆ\s*THỐNG\s*CÂU\s*HỎI\s*TRẮC\s*NGHIỆM\s*ĐÁNH\s*GIÁ", raw_text, flags=re.IGNORECASE)
+    # Tìm kiếm phần bắt đầu từ câu hỏi trắc nghiệm bằng nhiều cách linh hoạt
+    parts = re.split(r"(?:3\.)?\s*HỆ\s*THỐNG\s*CÂU\s*HỎI\s*TRẮC\s*NGHIỆM\s*ĐÁNH\s*GIÁ", raw_text, flags=re.IGNORECASE)
     
     if len(parts) < 2:
-        str_app.markdown(f"<div class='content-box'>{raw_text}</div>", unsafe_allow_html=True)
-        return
+        # Nếu không tìm thấy tiêu đề, thử tách theo từ "CÂU HỎI 1" hoặc hiển thị toàn bộ nếu không có quiz
+        if "CÂU HỎI 1" in raw_text or "[CÂU HỎI" in raw_text:
+            parts = [raw_text, raw_text]
+        else:
+            str_app.markdown(f"<div class='content-box'>{raw_text}</div>", unsafe_allow_html=True)
+            return
 
     theory_part = parts[0]
-    quiz_part = parts[1]
+    quiz_part = parts[1] if len(parts) > 1 else raw_text
 
     theory_part = re.sub(
         r"(1\.\s*KIẾN\s*THỨC\s*CỐT\s*LÕI\s*CẦN\s*GHI\s*NHỚ)",
@@ -302,13 +307,14 @@ def render_interactive_quizzes(raw_text: str):
     str_app.markdown("<div class='main-heading'>3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ</div>", unsafe_allow_html=True)
     str_app.markdown("<p style='font-weight: 500; margin-bottom: 20px;'>Hãy tự lực suy nghĩ và chọn đáp án đúng nhất cho các câu hỏi dưới đây:</p>", unsafe_allow_html=True)
 
-    question_blocks = re.findall(r"(\[CÂU\s*HỎI\s*\d+\].*?)(?=\[CÂU\s*HỎI|\Z)", quiz_part, re.DOTALL | re.IGNORECASE)
-    if not question_blocks:
-        question_blocks = re.split(r"---", quiz_part)
-    
+    # Chia nhỏ các câu hỏi theo các thẻ [CÂU HỎI...] hoặc dấu phân cách ---
+    question_blocks = re.split(r"(?=\[CÂU\s*HỎI|\bCâu\s*\d+\s*:)", quiz_part, flags=re.IGNORECASE)
+    if len(question_blocks) <= 1:
+        question_blocks = quiz_part.split("---")
+
     q_index = 1
     for q_block in question_blocks:
-        if not q_block.strip() or "CÂU HỎI" not in q_block.upper() and "A." not in q_block:
+        if not q_block.strip() or ("A." not in q_block and "a." not in q_block):
             continue
         
         thought_match = re.search(r"HƯỚNG\s*DẪN\s*TƯ\s*DUY:\s*(.*?)(?=\nA\.|\n[A-Da-d]\.|\nĐÁP\s*ÁN|$)", q_block, re.DOTALL | re.IGNORECASE)
@@ -331,7 +337,7 @@ def render_interactive_quizzes(raw_text: str):
         for line in lines:
             if re.match(r"^[A-Da-d][\.\)]", line):
                 options.append(line)
-            elif not options and not line.startswith("[CÂU HỎI"):
+            elif not options and not line.startswith("[CÂU HỎI") and not line.startswith("Câu"):
                 question_text += line + " "
 
         if not options or len(options) < 4:
