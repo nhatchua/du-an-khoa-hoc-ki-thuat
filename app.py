@@ -54,11 +54,12 @@ def call_gemini_with_fallback(prompt, json_mode=False):
         api_key = st.secrets.get("GEMINI_API_KEY", "")
     genai.configure(api_key=api_key)
     
+    # Cập nhật danh sách model mới nhất
     models = [
         "gemini-2.5-flash",
-        "gemini-2.0-flash",
+        "gemini-2.5-pro",
         "models/gemini-2.5-flash",
-        "models/gemini-2.0-flash"
+        "models/gemini-2.5-pro"
     ]
     
     config = genai.types.GenerationConfig(temperature=0.0)
