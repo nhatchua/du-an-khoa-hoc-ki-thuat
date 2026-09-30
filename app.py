@@ -82,39 +82,50 @@ def clean_ai_response(text: str) -> str:
     return result
 
 # ============================================================
-# 3. GỌI API GEMINI (CÓ TÍCH HỢP RETRY TRÁNH LỖI 429)
+# 3. GỌI API GEMINI (HỖ TRỢ ĐA MODEL ĐỂ TRÁNH LỖI 404 & 429)
 # ============================================================
 def call_gemini(prompt: str, api_key: str) -> tuple:
-    """Gọi Gemini với model chuẩn gemini-1.5-flash, tự thử lại nếu quá hạn mức."""
+    """Gọi Gemini với danh sách model dự phòng, tự động thử lại khi gặp lỗi."""
     genai.configure(api_key=api_key)
-    model_name = "gemini-1.5-flash"
     
+    # Danh sách các model phổ biến hiện hành để quét dự phòng
+    model_candidates = [
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro"
+    ]
+
     generation_config = genai.types.GenerationConfig(
         temperature=0.0,
         top_p=0.85,
         max_output_tokens=8192,
     )
 
-    retries = 3
-    delay = 5
+    last_error = ""
+    for model_name in model_candidates:
+        retries = 2
+        for i in range(retries):
+            try:
+                model = genai.GenerativeModel(
+                    model_name=model_name,
+                    generation_config=generation_config,
+                )
+                response = model.generate_content(prompt)
+                if response and response.text:
+                    return response.text, model_name, ""
+            except Exception as err:
+                err_str = str(err)
+                last_error = err_str
+                if "429" in err_str and i < retries - 1:
+                    time.sleep(3)
+                    continue
+                # Nếu lỗi 404 (không tìm thấy model), thoát vòng lặp nhỏ để đổi sang model tiếp theo trong danh sách
+                if "404" in err_str:
+                    break
+                break
 
-    for i in range(retries):
-        try:
-            model = genai.GenerativeModel(
-                model_name=model_name,
-                generation_config=generation_config,
-            )
-            response = model.generate_content(prompt)
-            if response and response.text:
-                return response.text, model_name, ""
-        except Exception as err:
-            err_str = str(err)
-            if "429" in err_str and i < retries - 1:
-                time.sleep(delay)
-                continue
-            return None, "", err_str
-
-    return None, "", "Quá giới hạn số lần gọi (Rate limit exceeded)"
+    return None, "", last_error
 
 # ============================================================
 # 4. XÂY DỰNG PROMPT KHỐI KIẾN THỨC (DÙNG ĐÁNH SỐ, KHÔNG DÙNG DẤU #)
