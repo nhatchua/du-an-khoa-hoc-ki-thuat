@@ -89,20 +89,20 @@ def clean_ai_response(text: str) -> str:
 
 
 # ============================================================
-# 3. HÀM GỌI GEMINI — TỐI ƯU HÓA MODEL FLASH HIỆN HÀNH
+# 3. HÀM GỌI GEMINI — TỐI ƯU HÓA MODEL CHUẨN XÁC
 # ============================================================
 def call_gemini(prompt: str, api_key: str) -> tuple:
     """
-    Gọi Gemini với các model Flash hiện hành, loại bỏ các model cũ gây lỗi 404.
+    Gọi Gemini với các model chuẩn hiện hành để tránh lỗi 404.
     Trả về (text, model_used, error).
     """
     genai.configure(api_key=api_key)
 
-    # Danh sách model tối ưu, chỉ giữ các bản Flash chuẩn hiện tại
+    # Danh sách model chuẩn được hỗ trợ rộng rãi trên v1beta
     model_priority = [
-        "gemini-2.5-flash",
         "gemini-2.0-flash",
-        "gemini-1.5-flash",
+        "gemini-2.5-flash",
+        "gemini-flash",
     ]
 
     generation_config = genai.types.GenerationConfig(
