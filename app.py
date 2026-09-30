@@ -1,6 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 import re
+import time
 
 # ============================================================
 # 1. CẤU HÌNH GIAO DIỆN TRANG
@@ -22,7 +23,7 @@ def clean_ai_response(text: str) -> str:
 
     # Cắt bỏ phần rác trước tiêu đề chính
     pattern = re.compile(
-        r"(#{1,3}\s*)?📌?\s*I\.\s*KIẾN\s*THỨC\s*CỐT\s*LÕI",
+        r"(#{1,3}\s*)?📌?\s*1\.\s*KIẾN\s*THỨC\s*CỐT\s*LÕI",
         re.IGNORECASE | re.UNICODE
     )
     match = pattern.search(text)
@@ -81,12 +82,12 @@ def clean_ai_response(text: str) -> str:
     return result
 
 # ============================================================
-# 3. GỌI API GEMINI (MODEL CHUẨN XÁC)
+# 3. GỌI API GEMINI (CÓ TÍCH HỢP RETRY TRÁNH LỖI 429)
 # ============================================================
 def call_gemini(prompt: str, api_key: str) -> tuple:
-    """Gọi Gemini với model gemini-3.8-flash và trả về (text, model_used, error)."""
+    """Gọi Gemini với model chuẩn gemini-1.5-flash, tự thử lại nếu quá hạn mức."""
     genai.configure(api_key=api_key)
-    model_name = "gemini-3.8-flash"
+    model_name = "gemini-1.5-flash"
     
     generation_config = genai.types.GenerationConfig(
         temperature=0.0,
@@ -94,21 +95,29 @@ def call_gemini(prompt: str, api_key: str) -> tuple:
         max_output_tokens=8192,
     )
 
-    try:
-        model = genai.GenerativeModel(
-            model_name=model_name,
-            generation_config=generation_config,
-        )
-        response = model.generate_content(prompt)
-        if response and response.text:
-            return response.text, model_name, ""
-    except Exception as err:
-        return None, "", str(err)
+    retries = 3
+    delay = 5
 
-    return None, "", "Unknown error"
+    for i in range(retries):
+        try:
+            model = genai.GenerativeModel(
+                model_name=model_name,
+                generation_config=generation_config,
+            )
+            response = model.generate_content(prompt)
+            if response and response.text:
+                return response.text, model_name, ""
+        except Exception as err:
+            err_str = str(err)
+            if "429" in err_str and i < retries - 1:
+                time.sleep(delay)
+                continue
+            return None, "", err_str
+
+    return None, "", "Quá giới hạn số lần gọi (Rate limit exceeded)"
 
 # ============================================================
-# 4. XÂY DỰNG PROMPT KHỐI KIẾN THỨC (ĐÁNH SỐ THAY VÌ DÙNG DẤU #)
+# 4. XÂY DỰNG PROMPT KHỐI KIẾN THỨC (DÙNG ĐÁNH SỐ, KHÔNG DÙNG DẤU #)
 # ============================================================
 def build_lesson_prompt(lesson_input: str, subject: str, grade: str) -> str:
     return f"""Bạn là giáo viên Việt Nam soạn bài theo SGK "Kết Nối Tri Thức Với Cuộc Sống".
