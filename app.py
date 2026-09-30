@@ -4,7 +4,7 @@ import re
 import time
 
 # ============================================================
-# 1. CẤU HÌNH GIAO DIỆN TRANG & CSS ĐỒ GIA DIỆN SÁNG/TỐI (DARK/LIGHT MODE)
+# 1. CẤU HÌNH GIAO DIỆN TRANG & CSS TƯƠNG THÍCH CHUẨN SÁNG/TỐI
 # ============================================================
 def setup_page_config():
     str_app.set_page_config(
@@ -14,7 +14,7 @@ def setup_page_config():
     )
     str_app.markdown("""
         <style>
-        /* Tiêu đề chính cực kỳ nổi bật (Tương thích tự động sáng/tối) */
+        /* Tiêu đề chính cực kỳ nổi bật */
         .main-heading {
             background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
             color: white;
@@ -27,9 +27,8 @@ def setup_page_config():
             box-shadow: 0 4px 6px rgba(13, 110, 253, 0.2);
         }
         
-        /* Khung nội dung cốt lõi: Tự động đổi màu nền và màu chữ theo Theme Sáng/Tối của Streamlit */
+        /* Khung nội dung cốt lõi: Sử dụng cấu trúc màu sắc an toàn tương thích tốt mọi theme */
         .content-box {
-            background-color: var(--secondary-background-color, #fdfdfe);
             border-left: 6px solid #0d6efd;
             border-top: 1px solid rgba(128, 128, 128, 0.2);
             border-right: 1px solid rgba(128, 128, 128, 0.2);
@@ -41,9 +40,8 @@ def setup_page_config():
             line-height: 1.6;
         }
 
-        /* Khung chứa từng câu hỏi trắc nghiệm: Hòa hợp với Dark/Light Mode chuẩn Streamlit */
+        /* Khung chứa từng câu hỏi trắc nghiệm */
         .quiz-box {
-            background-color: var(--secondary-background-color, #ffffff);
             border: 2px solid rgba(128, 128, 128, 0.25);
             padding: 20px;
             border-radius: 12px;
@@ -275,7 +273,7 @@ def render_sidebar():
         return grade, subject, api_key_to_use
 
 # ============================================================
-# 6. HIỂN THỊ NỘI DUNG VÀ TRẮC NGHIỆM TƯƠNG TÁC (ĐÃ SỬA LỖI Ô THỪA)
+# 6. HIỂN THỊ NỘI DUNG VÀ TRẮC NGHIỆM TƯƠNG TÁC (AN TOÀN THEO THEME)
 # ============================================================
 def render_interactive_quizzes(raw_text: str):
     parts = re.split(r"3\.\s*HỆ\s*THỐNG\s*CÂU\s*HỎI\s*TRẮC\s*NGHIỆM\s*ĐÁNH\s*GIÁ", raw_text, flags=re.IGNORECASE)
@@ -299,7 +297,7 @@ def render_interactive_quizzes(raw_text: str):
         theory_part, flags=re.IGNORECASE
     )
 
-    # Đưa lý thuyết và lỗi thường gặp vào khung nổi bật
+    # Sử dụng khung nội dung trong suốt đường viền để tự động thích ứng hoàn toàn với Streamlit Dark/Light Mode
     str_app.markdown(f"<div class='content-box'>{theory_part}</div>", unsafe_allow_html=True)
 
     # Tiêu đề phần câu hỏi trắc nghiệm nổi bật
@@ -335,7 +333,6 @@ def render_interactive_quizzes(raw_text: str):
         if not options or len(options) < 4:
             continue
 
-        # Mở khung câu hỏi trắc nghiệm đã được chỉnh chuẩn, không bị dư ô trống
         str_app.markdown(f"<div class='quiz-box'>", unsafe_allow_html=True)
         str_app.markdown(f"**Câu {q_index}:** {question_text.strip()}")
 
@@ -355,7 +352,7 @@ def render_interactive_quizzes(raw_text: str):
         if user_choice and user_choice != "-- Chọn đáp án đúng --":
             selected_letter = user_choice[0].upper()
             if selected_letter == correct_ans:
-                str_app.markdown(f"<p style='color: #198754; font-weight: bold; margin-top: 10px;'>Chính xác! Bạn đã chọn đúng đáp án {correct_ans}.</p>", unsafe_allow_html=True)
+                str_app.markdown(f"<p style='color: #28a745; font-weight: bold; margin-top: 10px;'>Chính xác! Bạn đã chọn đúng đáp án {correct_ans}.</p>", unsafe_allow_html=True)
             else:
                 str_app.markdown(f"<p style='color: #dc3545; font-weight: bold; margin-top: 10px;'>Chưa chính xác. Hãy suy nghĩ kỹ lại hoặc xem gợi ý bên dưới.</p>", unsafe_allow_html=True)
 
@@ -375,7 +372,7 @@ def render_main_interface(grade, subject, api_key_to_use):
         unsafe_allow_html=True
     )
     str_app.markdown(
-        "<p style='text-align: center; font-size: 18px; font-weight: bold; color: #495057;'>"
+        "<p style='text-align: center; font-size: 18px; font-weight: bold;'>"
         "Trường THPT Tân Hiệp</p>",
         unsafe_allow_html=True
     )
@@ -429,8 +426,8 @@ def render_main_interface(grade, subject, api_key_to_use):
 # ============================================================
 def main():
     setup_page_config()
-    grade, subject, api_key_to_use = render_sidebar()
-    render_main_interface(grade, subject, api_key_to_use)
+    grade, subject, api_key_to_user = render_sidebar()
+    render_main_interface(grade, subject, api_key_to_user)
 
 if __name__ == "__main__":
     main()
