@@ -21,7 +21,6 @@ def clean_ai_response(text: str) -> str:
     if not text:
         return ""
 
-    # Cắt bỏ phần rác trước tiêu đề chính
     pattern = re.compile(
         r"(#{1,3}\s*)?📌?\s*1\.\s*KIẾN\s*THỨC\s*CỐT\s*LÕI",
         re.IGNORECASE | re.UNICODE
@@ -82,23 +81,22 @@ def clean_ai_response(text: str) -> str:
     return result
 
 # ============================================================
-# 3. GỌI API GEMINI (QUÉT TOÀN BỘ HỌ HÀNG FLASH ĐỂ TRÁNH LỖI 404)
+# 3. GỌI API GEMINI (CHỈ DÙNG CÁC PHIÊN BẢN FLASH MIỄN PHÍ)
 # ============================================================
 def call_gemini(prompt: str, api_key: str) -> tuple:
-    """Tự động quét toàn bộ danh sách họ hàng dòng Flash và Pro khả dụng."""
+    """Tự động quét các model dòng Flash miễn phí."""
     genai.configure(api_key=api_key)
     
-    # Danh sách toàn bộ các biến thể model Flash và Pro chính thống hiện nay
+    # Chỉ giữ lại các phiên bản Flash và Flash-Lite miễn phí trên Google AI Studio
     model_candidates = [
+        "gemini-3.8-flash",
+        "gemini-3.5-flash",
+        "gemini-3.1-flash-lite",
         "gemini-2.5-flash",
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-exp",
+        "gemini-2.5-flash-lite",
         "gemini-1.5-flash",
         "gemini-1.5-flash-latest",
-        "gemini-1.5-flash-8b",
-        "gemini-1.5-pro",
-        "gemini-1.5-pro-latest",
-        "gemini-pro"
+        "gemini-1.5-flash-8b"
     ]
 
     generation_config = genai.types.GenerationConfig(
@@ -122,11 +120,9 @@ def call_gemini(prompt: str, api_key: str) -> tuple:
             except Exception as err:
                 err_str = str(err)
                 last_error = err_str
-                # Nếu quá giới hạn lượt gọi (429), thử lại sau 2 giây
                 if "429" in err_str and i < retries - 1:
                     time.sleep(2)
                     continue
-                # Nếu không tìm thấy model (404), ngay lập tức nhảy sang model tiếp theo trong danh sách
                 if "404" in err_str or "not found" in err_str.lower():
                     break
                 break
@@ -134,7 +130,7 @@ def call_gemini(prompt: str, api_key: str) -> tuple:
     return None, "", last_error
 
 # ============================================================
-# 4. XÂY DỰNG PROMPT KHỐI KIẾN THỨC (DÙNG ĐÁNH SỐ, KHÔNG DÙNG DẤU #)
+# 4. XÂY DỰNG PROMPT KHỐI KIẾN THỨC
 # ============================================================
 def build_lesson_prompt(lesson_input: str, subject: str, grade: str) -> str:
     return f"""Bạn là giáo viên Việt Nam soạn bài theo SGK "Kết Nối Tri Thức Với Cuộc Sống".
@@ -289,7 +285,7 @@ def render_main_interface(grade, subject, api_key_to_use):
                     if response_text:
                         final_text = clean_ai_response(response_text)
                         st.success(f"✅ Đã hoàn thành tổng hợp kiến thức bài: **{lesson_input}**")
-                        st.caption(f"🤖 Model đã kết nối thành công: `{model_used}`")
+                        st.caption(f"🤖 Model Flash đã kết nối thành công: `{model_used}`")
                         st.markdown("---")
                         st.markdown(final_text, unsafe_allow_html=True)
                     else:
