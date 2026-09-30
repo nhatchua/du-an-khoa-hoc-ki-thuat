@@ -89,21 +89,20 @@ def clean_ai_response(text: str) -> str:
 
 
 # ============================================================
-# 3. HÀM GỌI GEMINI — CẬP NHẬT DANH SÁCH MODEL CHUẨN
+# 3. HÀM GỌI GEMINI — TỐI ƯU HÓA MODEL FLASH HIỆN HÀNH
 # ============================================================
 def call_gemini(prompt: str, api_key: str) -> tuple:
     """
-    Gọi Gemini với các model mới nhất, tự động chuyển đổi khi gặp lỗi.
+    Gọi Gemini với các model Flash hiện hành, loại bỏ các model cũ gây lỗi 404.
     Trả về (text, model_used, error).
     """
     genai.configure(api_key=api_key)
 
-    # Danh sách model chuẩn hiện hành được Google hỗ trợ
+    # Danh sách model tối ưu, chỉ giữ các bản Flash chuẩn hiện tại
     model_priority = [
         "gemini-2.5-flash",
         "gemini-2.0-flash",
         "gemini-1.5-flash",
-        "gemini-2.5-pro",
     ]
 
     generation_config = genai.types.GenerationConfig(
@@ -280,9 +279,6 @@ with tab1:
         else:
             with st.spinner(f"⏳ AI đang phân tích bài: **{lesson_input}**..."):
 
-                # ============================================
-                # PROMPT FEW-SHOT — CHỐNG ECHO PROMPT
-                # ============================================
                 full_prompt = f"""Bạn là giáo viên Việt Nam soạn bài theo SGK "Kết Nối Tri Thức Với Cuộc Sống".
 
 NHIỆM VỤ: Viết nội dung bài học "{lesson_input}" môn {subject} lớp {grade}.
@@ -392,7 +388,6 @@ BẮT ĐẦU VIẾT NGAY. KHÔNG viết lời dẫn. KHÔNG viết tiếng Anh.
                     st.markdown("---")
                     st.markdown(final_text, unsafe_allow_html=True)
 
-                    # --- Debug panel (có thể xóa khi deploy chính thức) ---
                     with st.expander("🐛 Debug: Raw AI Response (dành cho Admin)"):
                         st.code(response_text, language="markdown")
                 else:
