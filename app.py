@@ -98,11 +98,11 @@ def call_gemini(prompt: str, api_key: str) -> tuple:
     """
     genai.configure(api_key=api_key)
 
-    # Danh sách model chuẩn được hỗ trợ rộng rãi trên v1beta
+    # Danh sách model chuẩn được hỗ trợ rộng rãi
     model_priority = [
-        "gemini-2.0-flash",
+        "gemini-3.8-flash",
         "gemini-2.5-flash",
-        "gemini-flash",
+        "gemini-2.0-flash",
     ]
 
     generation_config = genai.types.GenerationConfig(
