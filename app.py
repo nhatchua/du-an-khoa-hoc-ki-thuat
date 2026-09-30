@@ -89,23 +89,21 @@ def clean_ai_response(text: str) -> str:
 
 
 # ============================================================
-# 3. HÀM GỌI GEMINI — HARD-CODE MODEL 2.0-FLASH
+# 3. HÀM GỌI GEMINI — CẬP NHẬT DANH SÁCH MODEL CHUẨN
 # ============================================================
 def call_gemini(prompt: str, api_key: str) -> tuple:
     """
-    Gọi Gemini 2.0 Flash (KHÔNG có thinking → không rác tiếng Anh).
-    Fallback sang 2.0-flash-lite nếu model chính lỗi.
+    Gọi Gemini với các model mới nhất, tự động chuyển đổi khi gặp lỗi.
     Trả về (text, model_used, error).
     """
     genai.configure(api_key=api_key)
 
-    # Ưu tiên 2.0-flash (không thinking). 2.5-flash để cuối vì có thinking.
+    # Danh sách model chuẩn hiện hành được Google hỗ trợ
     model_priority = [
-        "gemini-2.0-flash",
-        "gemini-2.0-flash-lite",
-        "gemini-2.0-flash-001",
-        "gemini-1.5-flash",
         "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-1.5-flash",
+        "gemini-2.5-pro",
     ]
 
     generation_config = genai.types.GenerationConfig(
