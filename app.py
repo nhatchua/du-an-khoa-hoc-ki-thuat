@@ -54,12 +54,12 @@ def call_gemini_with_fallback(prompt, json_mode=False):
         api_key = st.secrets.get("GEMINI_API_KEY", "")
     genai.configure(api_key=api_key)
     
-    # Cập nhật danh sách model mới nhất
+    # Cập nhật danh sách model theo khuyến nghị mới nhất từ Google
     models = [
         "gemini-2.5-flash",
-        "gemini-2.5-pro",
+        "gemini-3.1-pro-preview",
         "models/gemini-2.5-flash",
-        "models/gemini-2.5-pro"
+        "models/gemini-3.1-pro-preview"
     ]
     
     config = genai.types.GenerationConfig(temperature=0.0)
@@ -80,7 +80,6 @@ def call_gemini_with_fallback(prompt, json_mode=False):
 
 def parse_quiz_questions(text):
     questions = []
-    # Logic giả lập tách câu hỏi đơn giản hoặc bóc tách từ text trả về
     return questions
 
 def render_dynamic_python_lab(code):
