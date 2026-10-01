@@ -361,6 +361,95 @@ QUY TẮC CHỌN LOẠI ĐỒ THỊ:
 - ĐỒ THỊ 2D (matplotlib): hàm số, dao động, parabol, hypebol, phản ứng hóa học dạng đường, biểu đồ cột → đặt trong thẻ <PLOT_2D>...</PLOT_2D>
 - ĐỒ THỊ 3D (plotly): hệ trục Oxyz, hình học không gian, mặt phẳng, mặt cầu, vector 3 chiều, khối đa diện → đặt trong thẻ <PLOT_3D>...</PLOT_3D>
 
+=== PHONG CÁCH VẼ ĐỒ THỊ 2D THEO CHUẨN SGK VIỆT NAM (BẮT BUỘC TUÂN THEO) ===
+Đồ thị 2D phải giống hình vẽ trong SGK Toán/Lý/Hóa Việt Nam:
+- Trục Ox nằm ngang, trục Oy thẳng đứng, GIAO NHAU tại gốc O
+- Đầu trục Ox có MŨI TÊN chỉ sang phải, đầu trục Oy có MŨI TÊN chỉ lên trên
+- KHÔNG có khung viền hình chữ nhật quanh đồ thị
+- CÓ LƯỚI Ô VUÔNG mảnh, màu xám nhạt (alpha ~0.4), nét liền mảnh (linewidth ~0.5)
+  → Lưới phải tạo thành các ô vuông rõ ràng, giống vở ô ly hoặc giấy kẻ ô
+  → Dùng ax.grid(True, which='both', color='gray', linestyle='-', linewidth=0.5, alpha=0.4)
+  → Đặt ax.set_xticks() và ax.set_yticks() với khoảng cách đều nhau (ví dụ mỗi 1 đơn vị) để lưới vuông
+- Nhãn "O" ở gốc tọa độ, nhãn "x" ở đầu trục Ox, nhãn "y" ở đầu trục Oy
+- Vạch chia đơn vị rõ ràng trên cả 2 trục
+- Điểm đặc biệt (cực trị, giao điểm, đỉnh) phải:
+  + Đánh dấu bằng chấm tròn đỏ
+  + Kẻ NÉT ĐỨT (màu đỏ, mảnh) từ điểm xuống 2 trục
+  + Ghi tọa độ dạng "(x; y)" bên cạnh điểm
+- Đường cong chính vẽ màu xanh đậm, nét liền, đậm
+- Tiêu đề đặt phía dưới đồ thị, có tiền tố "Hình:" (ví dụ: "Hình 1. Đồ thị hàm số y = x² - 2x - 1")
+- Font chữ hỗ trợ tiếng Việt
+
+=== MẪU ĐỒ THỊ 2D CHUẨN SGK (có lưới ô vuông) ===
+<PLOT_2D>
+import matplotlib.pyplot as plt
+import numpy as np
+
+fig, ax = plt.subplots(figsize=(8, 6))
+
+# Vẽ đường cong hàm số
+x = np.linspace(-2, 4, 400)
+y = x**2 - 2*x - 1
+ax.plot(x, y, color='#1f4e9c', linewidth=2, label='y = x² - 2x - 1')
+
+# ==== TRỤC TỌA ĐỘ KIỂU SGK ====
+ax.spines['left'].set_position('zero')
+ax.spines['bottom'].set_position('zero')
+ax.spines['right'].set_color('none')
+ax.spines['top'].set_color('none')
+ax.spines['left'].set_linewidth(1.2)
+ax.spines['bottom'].set_linewidth(1.2)
+
+# Mũi tên ở đầu trục Ox và Oy
+ax.plot(1, 0, ">k", transform=ax.get_yaxis_transform(), clip_on=False, markersize=8)
+ax.plot(0, 1, "^k", transform=ax.get_xaxis_transform(), clip_on=False, markersize=8)
+
+# Nhãn O, x, y
+ax.text(-0.15, -0.3, 'O', fontsize=14, fontweight='bold')
+ax.text(4.15, -0.3, 'x', fontsize=14, fontweight='bold', style='italic')
+ax.text(-0.3, 5.5, 'y', fontsize=14, fontweight='bold', style='italic')
+
+# ==== LƯỚI Ô VUÔNG ====
+ax.set_xticks(np.arange(-3, 6, 1))
+ax.set_yticks(np.arange(-4, 7, 1))
+ax.grid(True, which='both', color='gray', linestyle='-', linewidth=0.5, alpha=0.4)
+ax.set_axisbelow(True)
+
+# Điểm cực trị (đỉnh parabol): x = 1, y = -2
+vertex_x, vertex_y = 1, -2
+
+# Nét đứt từ đỉnh xuống 2 trục
+ax.plot([vertex_x, vertex_x], [0, vertex_y], color='red', linestyle='--', linewidth=1.2)
+ax.plot([0, vertex_x], [vertex_y, vertex_y], color='red', linestyle='--', linewidth=1.2)
+
+# Chấm tròn đỏ tại đỉnh
+ax.plot(vertex_x, vertex_y, 'o', color='red', markersize=8, zorder=5)
+
+# Ghi tọa độ đỉnh
+ax.text(vertex_x + 0.15, vertex_y - 0.4, f'({vertex_x}; {vertex_y})',
+        fontsize=11, color='red', fontweight='bold')
+
+# Giao điểm với Ox
+x_roots = [1 - np.sqrt(2), 1 + np.sqrt(2)]
+for xr in x_roots:
+    ax.plot(xr, 0, 'o', color='green', markersize=6, zorder=5)
+    ax.text(xr + 0.1, 0.3, f'{xr:.2f}', fontsize=9, color='green')
+
+# Đặt giới hạn trục
+ax.set_xlim(-2.5, 4.5)
+ax.set_ylim(-3, 6)
+
+# Tick nhỏ
+ax.tick_params(axis='both', labelsize=10)
+
+# Tiêu đề dưới đồ thị
+plt.figtext(0.5, 0.02, 'Hình 1. Đồ thị hàm số y = x² - 2x - 1',
+            ha='center', fontsize=11, style='italic')
+
+plt.tight_layout(rect=[0, 0.05, 1, 1])
+fig.savefig("/tmp/lab_plot.png", dpi=120, bbox_inches="tight")
+</PLOT_2D>
+
 === PHONG CÁCH VẼ HÌNH KHÔNG GIAN 3D (BẮT BUỘC TUÂN THEO) ===
 Áp dụng đồng thời cả 3 yếu tố sau để hình vừa giống SGK, vừa đúng khi học sinh xoay:
 
@@ -377,39 +466,18 @@ d) ĐỈNH: hiển thị tên đỉnh (A, B, C, S...) bằng Scatter3d mode='tex
 
 e) HỆ TRỤC Oxyz (nếu cần): vẽ 3 mũi tên bằng Scatter3d mode='lines', màu đỏ (x), xanh lá (y), xanh dương (z).
 
-=== MẪU ĐỒ THỊ 2D (matplotlib) ===
-<PLOT_2D>
-import matplotlib.pyplot as plt
-import numpy as np
-
-fig, ax = plt.subplots(figsize=(8, 5))
-x = np.linspace(-10, 10, 400)
-y = x**2
-ax.plot(x, y, label="y = x^2", color="blue")
-ax.axhline(0, color="black", linewidth=0.5)
-ax.axvline(0, color="black", linewidth=0.5)
-ax.grid(True, alpha=0.3)
-ax.legend()
-ax.set_xlabel("x")
-ax.set_ylabel("y")
-ax.set_title("Đồ thị hàm số y = x^2")
-plt.tight_layout()
-fig.savefig("/tmp/lab_plot.png", dpi=100, bbox_inches="tight")
-</PLOT_2D>
-
 === MẪU ĐỒ THỊ 3D — HÌNH CHÓP S.ABC (theo phong cách SGK kết hợp mặt trong suốt) ===
 <PLOT_3D>
 import plotly.graph_objects as go
 
 fig = go.Figure()
 
-# Tọa độ các đỉnh
 S = [0, 0, 4]
 A = [3, 0, 0]
 B = [0, 4, 0]
 C = [-2, -2, 0]
 
-# Cạnh nhìn thấy (nét liền): AB, BC, CA, SA, SB
+# Cạnh nhìn thấy (nét liền)
 visible_edges = [(A, B), (B, C), (C, A), (S, A), (S, B)]
 for p1, p2 in visible_edges:
     fig.add_trace(go.Scatter3d(
@@ -417,7 +485,7 @@ for p1, p2 in visible_edges:
         mode='lines', line=dict(color='#1f77b4', width=6), showlegend=False
     ))
 
-# Cạnh bị khuất (nét đứt): SC
+# Cạnh bị khuất (nét đứt)
 hidden_edges = [(S, C)]
 for p1, p2 in hidden_edges:
     fig.add_trace(go.Scatter3d(
@@ -456,7 +524,6 @@ import plotly.graph_objects as go
 
 fig = go.Figure()
 
-# 3 trục Oxyz
 fig.add_trace(go.Scatter3d(x=[0, 5], y=[0, 0], z=[0, 0], mode='lines+text',
     line=dict(color='red', width=8), text=['', 'x'], textposition='top center',
     textfont=dict(size=14, color='red'), showlegend=False))
@@ -482,11 +549,14 @@ fig.update_layout(
 </PLOT_3D>
 
 LƯU Ý QUAN TRỌNG:
-- 2D: dùng matplotlib, KẾT THÚC bằng `fig.savefig("/tmp/lab_plot.png", dpi=100, bbox_inches="tight")`
+- 2D: PHẢI vẽ theo phong cách SGK (trục có mũi tên, lưới ô vuông mảnh, nét đứt đánh dấu điểm đặc biệt)
+- 2D: BẮT BUỘC đặt ax.set_xticks() và ax.set_yticks() với khoảng cách đều để lưới thành ô vuông
+- 2D: KẾT THÚC bằng `fig.savefig("/tmp/lab_plot.png", dpi=120, bbox_inches="tight")`
 - 3D: dùng plotly, KẾT THÚC bằng việc tạo biến `fig` (KHÔNG gọi `fig.show()`)
 - CHỈ dùng: matplotlib.pyplot, numpy, math, plotly.graph_objects, plotly.express
 - KHÔNG đọc file ngoài, KHÔNG gọi plt.show()
 - Nhãn trục, tiêu đề bằng tiếng Việt có dấu
+- Với 2D: LUÔN ghi tiêu đề dạng "Hình N. Mô tả ngắn" phía dưới đồ thị
 - Với 3D: LUÔN dùng go.Mesh3d với opacity thấp cho các mặt phẳng cần hiển thị
 - Nếu môn không cần đồ thị, bỏ qua phần 4 hoàn toàn."""
 
