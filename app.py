@@ -371,6 +371,20 @@ QUY TẮC CHỌN LOẠI ĐỒ THỊ:
 - 2D (matplotlib) → thẻ <PLOT_2D>...</PLOT_2D>
 - 3D (plotly) → thẻ <PLOT_3D>...</PLOT_3D>
 
+=== QUY TẮC KHAI BÁO HỆ SỐ ĐỂ TẠO THANH TRƯỢT (BẮT BUỘC VỚI 2D) ===
+Với đồ thị hàm số CÓ hệ số thay đổi được (ví dụ y = ax² + bx + c, y = ax + b, y = ax³ + bx² + cx + d, y = a/x, ...):
+- Ở ĐẦU code (dòng đầu tiên trong thẻ <PLOT_2D>), khai báo MỖI HỆ SỐ trên MỘT DÒNG RIÊNG BIỆT
+- Định dạng CHÍNH XÁC: tên_biến = giá_trị_số (có khoảng trắng quanh dấu =)
+- Ví dụ:
+  a = 1
+  b = -2
+  c = -1
+- Sau đó dùng các biến a, b, c để tính y
+- KHÔNG viết gộp: a, b, c = 1, -2, -1
+- KHÔNG viết dính: a=1 (thiếu khoảng trắng)
+- KHÔNG đặt comment trên cùng dòng với khai báo hệ số
+- Nếu hàm KHÔNG có hệ số (như y = sin(x), y = ln(x), y = eˣ) → KHÔNG khai báo biến hệ số, hệ thống sẽ bỏ qua sliders
+
 === STYLE 2D CHUẨN SGK VIỆT NAM (BẮT BUỘC) ===
 - Trục Ox ngang, Oy dọc, giao tại O; đầu trục có MŨI TÊN; KHÔNG khung viền
 - LƯỚI Ô VUÔNG mảnh xám nhạt (dùng ax.set_xticks/set_yticks với np.arange bước đều)
@@ -385,13 +399,10 @@ a) ĐIỂM CỰC TRỊ (đỉnh parabol, cực đại, cực tiểu):
    - Chấm tròn ĐỎ (#d62728), size 8
    - Nét đứt ĐỎ từ điểm xuống trục Ox và sang trục Oy
    - Ghi tọa độ "(x; y)" màu đỏ, in đậm
-   - Với parabol y = ax² + bx + c: đỉnh I(-b/2a; -Δ/4a)
-   - Với hàm bậc 3, bậc 4: tìm nghiệm của f'(x) = 0
 
 b) GIAO ĐIỂM VỚI TRỤC TUNG Oy (x = 0):
    - Tính y₀ = f(0)
    - Chấm tròn XANH LÁ ĐẬM (#2ca02c), size 8
-   - Nét đứt XANH từ điểm sang trục Oy
    - Ghi tọa độ "(0; y₀)" màu xanh, in đậm
    - LUÔN LUÔN có điểm này (trừ hàm không xác định tại x=0)
 
@@ -400,20 +411,22 @@ c) GIAO ĐIỂM VỚI TRỤC HOÀNH Ox (y = 0):
    - Với đa thức bậc ≤ 4: dùng np.roots([hệ số]) rồi lọc nghiệm thực
    - Với hàm khác: dùng np.linspace + đổi dấu để detect nghiệm gần đúng
    - Mỗi nghiệm x₀: CHẤM TRÒN XANH LÁ ĐẬM (#2ca02c), size 8
-   - Ghi tọa độ "(x₀; 0)" màu xanh, in đậm (làm tròn 2 chữ số thập phân nếu số vô tỉ)
-   - Nếu vô nghiệm: ghi chú trong phần mô tả text "Đồ thị không cắt trục Ox"
+   - Ghi tọa độ "(x₀; 0)" màu xanh, in đậm (làm tròn 2 chữ số thập phân)
+   - Nếu vô nghiệm: ghi chú trong phần mô tả text
 
 === MẪU 2D HOÀN CHỈNH (tuân theo đúng cấu trúc này) ===
 <PLOT_2D>
+a = 1
+b = -2
+c = -1
 import matplotlib.pyplot as plt
 import numpy as np
 
 fig, ax = plt.subplots(figsize=(8, 5.5))
 
 # Hàm số
-coeffs = [1, -2, -1]  # y = x² - 2x - 1
 x = np.linspace(-2, 4, 400)
-y = coeffs[0]*x**2 + coeffs[1]*x + coeffs[2]
+y = a*x**2 + b*x + c
 ax.plot(x, y, color='#1f4e9c', linewidth=2)
 
 # Trục tọa độ kiểu SGK
@@ -435,32 +448,35 @@ ax.set_yticks(np.arange(-4, 7, 1))
 ax.grid(True, which='both', color='gray', linestyle='-', linewidth=0.5, alpha=0.4)
 ax.set_axisbelow(True)
 
-# === (a) ĐIỂM CỰC TRỊ ===
-vx = -coeffs[1] / (2*coeffs[0])
-vy = coeffs[0]*vx**2 + coeffs[1]*vx + coeffs[2]
-ax.plot([vx, vx], [0, vy], color='#d62728', linestyle='--', linewidth=1.2)
-ax.plot([0, vx], [vy, vy], color='#d62728', linestyle='--', linewidth=1.2)
-ax.plot(vx, vy, 'o', color='#d62728', markersize=8, zorder=5)
-ax.text(vx + 0.15, vy - 0.4, "(" + str(round(vx,2)) + "; " + str(round(vy,2)) + ")",
-        fontsize=11, color='#d62728', fontweight='bold')
+# Điểm cực trị
+if a != 0:
+    vx = -b / (2*a)
+    vy = a*vx**2 + b*vx + c
+    ax.plot([vx, vx], [0, vy], color='#d62728', linestyle='--', linewidth=1.2)
+    ax.plot([0, vx], [vy, vy], color='#d62728', linestyle='--', linewidth=1.2)
+    ax.plot(vx, vy, 'o', color='#d62728', markersize=8, zorder=5)
+    ax.text(vx + 0.15, vy - 0.4, "(" + str(round(vx,2)) + "; " + str(round(vy,2)) + ")",
+            fontsize=11, color='#d62728', fontweight='bold')
 
-# === (b) GIAO ĐIỂM VỚI Oy (x=0) ===
-y_at_0 = coeffs[2]
-ax.plot(0, y_at_0, 'o', color='#2ca02c', markersize=8, zorder=5)
-ax.text(0.15, y_at_0 + 0.2, "(0; " + str(round(y_at_0,2)) + ")",
+# Giao Oy
+y0 = c
+ax.plot(0, y0, 'o', color='#2ca02c', markersize=8, zorder=5)
+ax.text(0.15, y0 + 0.2, "(0; " + str(round(y0,2)) + ")",
         fontsize=11, color='#2ca02c', fontweight='bold')
 
-# === (c) GIAO ĐIỂM VỚI Ox (y=0) ===
-roots = np.roots(coeffs)
-real_roots = [r.real for r in roots if abs(r.imag) < 1e-6]
-for xr in real_roots:
-    ax.plot(xr, 0, 'o', color='#2ca02c', markersize=8, zorder=5)
-    ax.text(xr + 0.1, 0.3, "(" + str(round(xr,2)) + "; 0)",
-            fontsize=11, color='#2ca02c', fontweight='bold')
+# Giao Ox
+if a != 0:
+    roots = np.roots([a, b, c])
+    for r in roots:
+        if abs(r.imag) < 1e-6:
+            xr = r.real
+            ax.plot(xr, 0, 'o', color='#2ca02c', markersize=8, zorder=5)
+            ax.text(xr + 0.1, 0.3, "(" + str(round(xr,2)) + "; 0)",
+                    fontsize=11, color='#2ca02c', fontweight='bold')
 
 ax.set_xlim(-2.5, 4.5)
 ax.set_ylim(-3, 6)
-plt.figtext(0.5, 0.02, 'Hình 1. Đồ thị hàm số y = x² - 2x - 1',
+plt.figtext(0.5, 0.02, 'Hình 1. Đồ thị hàm số y = ax² + bx + c',
             ha='center', fontsize=11, style='italic')
 plt.tight_layout(rect=[0, 0.05, 1, 1])
 </PLOT_2D>
@@ -504,34 +520,57 @@ fig.update_layout(
     margin=dict(l=0, r=0, t=40, b=0), height=520)
 </PLOT_3D>
 
-=== MẪU 3D — TRỤC Oxyz ===
-<PLOT_3D>
-import plotly.graph_objects as go
-
-fig = go.Figure()
-for vec, color, label in [((5,0,0),'red','x'), ((0,5,0),'green','y'), ((0,0,5),'blue','z')]:
-    fig.add_trace(go.Scatter3d(x=[0,vec[0]], y=[0,vec[1]], z=[0,vec[2]],
-        mode='lines+text', line=dict(color=color, width=8),
-        text=['', label], textposition='top center',
-        textfont=dict(size=14, color=color), showlegend=False))
-
-fig.add_trace(go.Scatter3d(x=[0], y=[0], z=[0], mode='text',
-    text=['O'], textfont=dict(size=14, color='black'), showlegend=False))
-
-fig.update_layout(
-    title='Hệ trục tọa độ Oxyz',
-    scene=dict(xaxis_title='x', yaxis_title='y', zaxis_title='z', aspectmode='cube'),
-    margin=dict(l=0, r=0, t=40, b=0), height=520)
-</PLOT_3D>
-
 LƯU Ý CUỐI:
 - 2D: dùng matplotlib, KHÔNG cần gọi savefig (hệ thống tự lưu)
+- 2D: BẮT BUỘC khai báo hệ số ở đầu code, mỗi biến một dòng
 - 2D: BẮT BUỘC đánh dấu ĐỦ 3 loại điểm: cực trị (đỏ), giao Oy (xanh), giao Ox (xanh)
 - 3D: dùng plotly, KHÔNG gọi fig.show(), KHÔNG set width (để tự co dãn)
 - CHỈ dùng: matplotlib.pyplot, numpy, math, plotly.graph_objects, plotly.express
 - Không đọc file ngoài"""
 
     return template.replace("__LAB_REQUEST__", lab_request).replace("__SUBJECT__", subject).replace("__GRADE__", grade)
+
+# ============================================================
+# 4B2. TRÍCH XUẤT HỆ SỐ TỪ CODE AI SINH
+# ============================================================
+def extract_coefficients(code_str: str) -> dict:
+    """
+    Trích xuất các hệ số dạng 'a = 1.5' ở đầu code.
+    Chỉ lấy dòng khớp chính xác: tên_biến = giá_trị_số (có thể có comment cuối).
+    Trả về dict {tên: giá_trị}.
+    """
+    coeffs = {}
+    pattern = re.compile(
+        r"^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(-?\d+(?:\.\d+)?)\s*(?:#.*)?$"
+    )
+    for line in code_str.split("\n"):
+        m = pattern.match(line.strip())
+        if m:
+            name = m.group(1)
+            # Bỏ qua các biến đặc biệt không phải hệ số
+            if name in ("dpi", "height", "width", "size", "n"):
+                continue
+            try:
+                coeffs[name] = float(m.group(2))
+            except ValueError:
+                continue
+    return coeffs
+
+
+# ============================================================
+# 4B3. THAY THẾ HỆ SỐ TRONG CODE
+# ============================================================
+def substitute_coefficients(code_str: str, coeff_values: dict) -> str:
+    """Thay giá trị hệ số trong code bằng giá trị mới từ slider."""
+    for name, value in coeff_values.items():
+        # Format gọn: bỏ .0 nếu là số nguyên
+        val_str = str(int(value)) if value == int(value) else str(round(value, 4))
+        pattern = re.compile(
+            rf"^(\s*{re.escape(name)}\s*=\s*)(-?\d+(?:\.\d+)?)(\s*(?:#.*)?)$",
+            re.MULTILINE
+        )
+        code_str = pattern.sub(rf"\g<1>{val_str}\g<3>", code_str)
+    return code_str
 
 # ============================================================
 # 4C. CHẠY CODE VẼ ĐỒ THỊ AN TOÀN
@@ -933,7 +972,7 @@ def render_main_interface(grade, subject, api_key_to_use):
 
         lab_request = str_app.text_input(
             "Nhập yêu cầu thí nghiệm:",
-            placeholder="Ví dụ: Đồ thị hàm số y = x² - 2x + 1... / Phản ứng H₂ + O₂... / Hình chóp S.ABC...",
+            placeholder="Ví dụ: Đồ thị hàm số y = ax² + bx + c... / Phản ứng H₂ + O₂... / Hình chóp S.ABC...",
             label_visibility="collapsed",
             key="lab_request_input"
         )
@@ -953,6 +992,8 @@ def render_main_interface(grade, subject, api_key_to_use):
                     if lab_response:
                         str_app.session_state["lab_result"] = lab_response
                         str_app.session_state["lab_request_name"] = lab_request
+                        # Tăng version → reset sliders cũ khi có lab mới
+                        str_app.session_state["lab_version"] = str_app.session_state.get("lab_version", 0) + 1
                     else:
                         str_app.error(f"Không thể kết nối AI. Lỗi chi tiết: `{lab_error}`")
 
@@ -975,18 +1016,55 @@ def render_main_interface(grade, subject, api_key_to_use):
 
             plot_code = None
             plot_label = ""
+            is_2d = False
             if plot_3d_match:
                 plot_code = plot_3d_match.group(1).strip()
                 plot_label = "#### 🌐 Đồ thị 3D tương tác (giữ chuột trái để xoay, cuộn để zoom)"
             elif plot_2d_match:
                 plot_code = plot_2d_match.group(1).strip()
                 plot_label = "#### 📈 Đồ thị minh họa"
+                is_2d = True
             elif plot_old_match:
                 plot_code = plot_old_match.group(1).strip()
                 plot_label = "#### 📈 Đồ thị minh họa"
+                is_2d = True
 
             if plot_code:
                 try:
+                    # ========== XỬ LÝ THANH TRƯỢT HỆ SỐ (chỉ với 2D) ==========
+                    if is_2d:
+                        coeffs = extract_coefficients(plot_code)
+
+                        if coeffs and 1 <= len(coeffs) <= 5:
+                            str_app.markdown("#### 🎛️ Điều chỉnh hệ số — kéo thanh trượt để xem đồ thị thay đổi")
+
+                            lab_id = str_app.session_state.get("lab_request_name", "lab")
+                            lab_version = str_app.session_state.get("lab_version", 0)
+
+                            user_coeffs = {}
+                            cols = str_app.columns(min(len(coeffs), 3))
+
+                            for idx, (name, init_val) in enumerate(coeffs.items()):
+                                slider_key = f"coeff_v{lab_version}_{lab_id}_{name}"
+
+                                # Xác định khoảng slider hợp lý
+                                min_v = min(-10.0, init_val - 5.0)
+                                max_v = max(10.0, init_val + 5.0)
+
+                                with cols[idx % min(len(coeffs), 3)]:
+                                    user_coeffs[name] = str_app.slider(
+                                        f"Hệ số {name}",
+                                        min_value=float(min_v),
+                                        max_value=float(max_v),
+                                        value=float(init_val),
+                                        step=0.1,
+                                        key=slider_key
+                                    )
+
+                            # Thay giá trị mới vào code
+                            plot_code = substitute_coefficients(plot_code, user_coeffs)
+
+                    # ========== CHẠY CODE VẼ ==========
                     kind, data = run_plot_code(plot_code)
                     if kind == "png" and data:
                         str_app.markdown(plot_label)
