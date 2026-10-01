@@ -375,50 +375,91 @@ QUY TẮC CHỌN LOẠI ĐỒ THỊ:
 - Trục Ox ngang, Oy dọc, giao tại O; đầu trục có MŨI TÊN; KHÔNG khung viền
 - LƯỚI Ô VUÔNG mảnh xám nhạt (dùng ax.set_xticks/set_yticks với np.arange bước đều)
 - Nhãn "O", "x", "y" đúng vị trí; vạch chia đơn vị rõ ràng
-- Điểm đặc biệt (cực trị, giao điểm): chấm đỏ + nét đứt đỏ xuống 2 trục + ghi tọa độ "(x; y)"
 - Đường cong xanh đậm #1f4e9c, nét liền, linewidth 2
 - Tiêu đề dưới đồ thị dạng "Hình N. Mô tả"
 
-=== MẪU 2D (tuân theo đúng cấu trúc này) ===
+=== ĐIỂM ĐẶC BIỆT PHẢI ĐÁNH DẤU (QUAN TRỌNG) ===
+Với hàm số y = f(x), BẮT BUỘC đánh dấu ĐẦY ĐỦ 3 loại điểm sau (nếu tồn tại):
+
+a) ĐIỂM CỰC TRỊ (đỉnh parabol, cực đại, cực tiểu):
+   - Chấm tròn ĐỎ (#d62728), size 8
+   - Nét đứt ĐỎ từ điểm xuống trục Ox và sang trục Oy
+   - Ghi tọa độ "(x; y)" màu đỏ, in đậm
+   - Với parabol y = ax² + bx + c: đỉnh I(-b/2a; -Δ/4a)
+   - Với hàm bậc 3, bậc 4: tìm nghiệm của f'(x) = 0
+
+b) GIAO ĐIỂM VỚI TRỤC TUNG Oy (x = 0):
+   - Tính y₀ = f(0)
+   - Chấm tròn XANH LÁ ĐẬM (#2ca02c), size 8
+   - Nét đứt XANH từ điểm sang trục Oy
+   - Ghi tọa độ "(0; y₀)" màu xanh, in đậm
+   - LUÔN LUÔN có điểm này (trừ hàm không xác định tại x=0)
+
+c) GIAO ĐIỂM VỚI TRỤC HOÀNH Ox (y = 0):
+   - Giải f(x) = 0 để tìm nghiệm thực
+   - Với đa thức bậc ≤ 4: dùng np.roots([hệ số]) rồi lọc nghiệm thực
+   - Với hàm khác: dùng np.linspace + đổi dấu để detect nghiệm gần đúng
+   - Mỗi nghiệm x₀: CHẤM TRÒN XANH LÁ ĐẬM (#2ca02c), size 8
+   - Ghi tọa độ "(x₀; 0)" màu xanh, in đậm (làm tròn 2 chữ số thập phân nếu số vô tỉ)
+   - Nếu vô nghiệm: ghi chú trong phần mô tả text "Đồ thị không cắt trục Ox"
+
+=== MẪU 2D HOÀN CHỈNH (tuân theo đúng cấu trúc này) ===
 <PLOT_2D>
 import matplotlib.pyplot as plt
 import numpy as np
 
 fig, ax = plt.subplots(figsize=(8, 5.5))
 
+# Hàm số
+coeffs = [1, -2, -1]  # y = x² - 2x - 1
 x = np.linspace(-2, 4, 400)
-y = x**2 - 2*x - 1
+y = coeffs[0]*x**2 + coeffs[1]*x + coeffs[2]
 ax.plot(x, y, color='#1f4e9c', linewidth=2)
 
+# Trục tọa độ kiểu SGK
 ax.spines['left'].set_position('zero')
 ax.spines['bottom'].set_position('zero')
 ax.spines['right'].set_color('none')
 ax.spines['top'].set_color('none')
 ax.spines['left'].set_linewidth(1.2)
 ax.spines['bottom'].set_linewidth(1.2)
-
 ax.plot(1, 0, ">k", transform=ax.get_yaxis_transform(), clip_on=False, markersize=8)
 ax.plot(0, 1, "^k", transform=ax.get_xaxis_transform(), clip_on=False, markersize=8)
-
 ax.text(-0.15, -0.3, 'O', fontsize=14, fontweight='bold')
 ax.text(4.15, -0.3, 'x', fontsize=14, fontweight='bold', style='italic')
 ax.text(-0.3, 5.5, 'y', fontsize=14, fontweight='bold', style='italic')
 
+# Lưới ô vuông
 ax.set_xticks(np.arange(-3, 6, 1))
 ax.set_yticks(np.arange(-4, 7, 1))
 ax.grid(True, which='both', color='gray', linestyle='-', linewidth=0.5, alpha=0.4)
 ax.set_axisbelow(True)
 
-vx, vy = 1, -2
-ax.plot([vx, vx], [0, vy], color='red', linestyle='--', linewidth=1.2)
-ax.plot([0, vx], [vy, vy], color='red', linestyle='--', linewidth=1.2)
-ax.plot(vx, vy, 'o', color='red', markersize=8, zorder=5)
-ax.text(vx + 0.15, vy - 0.4, "(" + str(vx) + "; " + str(vy) + ")",
-        fontsize=11, color='red', fontweight='bold')
+# === (a) ĐIỂM CỰC TRỊ ===
+vx = -coeffs[1] / (2*coeffs[0])
+vy = coeffs[0]*vx**2 + coeffs[1]*vx + coeffs[2]
+ax.plot([vx, vx], [0, vy], color='#d62728', linestyle='--', linewidth=1.2)
+ax.plot([0, vx], [vy, vy], color='#d62728', linestyle='--', linewidth=1.2)
+ax.plot(vx, vy, 'o', color='#d62728', markersize=8, zorder=5)
+ax.text(vx + 0.15, vy - 0.4, "(" + str(round(vx,2)) + "; " + str(round(vy,2)) + ")",
+        fontsize=11, color='#d62728', fontweight='bold')
+
+# === (b) GIAO ĐIỂM VỚI Oy (x=0) ===
+y_at_0 = coeffs[2]
+ax.plot(0, y_at_0, 'o', color='#2ca02c', markersize=8, zorder=5)
+ax.text(0.15, y_at_0 + 0.2, "(0; " + str(round(y_at_0,2)) + ")",
+        fontsize=11, color='#2ca02c', fontweight='bold')
+
+# === (c) GIAO ĐIỂM VỚI Ox (y=0) ===
+roots = np.roots(coeffs)
+real_roots = [r.real for r in roots if abs(r.imag) < 1e-6]
+for xr in real_roots:
+    ax.plot(xr, 0, 'o', color='#2ca02c', markersize=8, zorder=5)
+    ax.text(xr + 0.1, 0.3, "(" + str(round(xr,2)) + "; 0)",
+            fontsize=11, color='#2ca02c', fontweight='bold')
 
 ax.set_xlim(-2.5, 4.5)
 ax.set_ylim(-3, 6)
-
 plt.figtext(0.5, 0.02, 'Hình 1. Đồ thị hàm số y = x² - 2x - 1',
             ha='center', fontsize=11, style='italic')
 plt.tight_layout(rect=[0, 0.05, 1, 1])
@@ -485,6 +526,7 @@ fig.update_layout(
 
 LƯU Ý CUỐI:
 - 2D: dùng matplotlib, KHÔNG cần gọi savefig (hệ thống tự lưu)
+- 2D: BẮT BUỘC đánh dấu ĐỦ 3 loại điểm: cực trị (đỏ), giao Oy (xanh), giao Ox (xanh)
 - 3D: dùng plotly, KHÔNG gọi fig.show(), KHÔNG set width (để tự co dãn)
 - CHỈ dùng: matplotlib.pyplot, numpy, math, plotly.graph_objects, plotly.express
 - Không đọc file ngoài"""
