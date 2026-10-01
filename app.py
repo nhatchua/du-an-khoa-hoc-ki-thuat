@@ -76,6 +76,25 @@ def setup_page_config():
         .stTabs [data-baseweb="tab-list"] > button[aria-selected="true"] {
             background-color: rgba(13, 110, 253, 0.12) !important;
         }
+
+        /* ===== GIẢM FONT CHỮ TRONG KHUNG CÂU HỎI / ĐỀ BÀI ===== */
+        /* Áp dụng cho mọi nội dung nằm trong container có viền (border=True) */
+        [data-testid="stVerticalBlockBorderWrapper"] p {
+            font-size: 0.92rem !important;
+            line-height: 1.55 !important;
+            margin-bottom: 6px !important;
+        }
+        /* Tiêu đề "Câu X:" hoặc "Đề X" bên trong khung — nhỏ hơn mặc định 1 chút */
+        [data-testid="stVerticalBlockBorderWrapper"] h3 {
+            font-size: 1.05rem !important;
+            font-weight: 700 !important;
+            margin-bottom: 10px !important;
+        }
+        /* Radio A/B/C/D và expander bên trong khung cũng thu nhỏ tương ứng */
+        [data-testid="stVerticalBlockBorderWrapper"] .stRadio label,
+        [data-testid="stVerticalBlockBorderWrapper"] .stExpander summary {
+            font-size: 0.9rem !important;
+        }
         </style>
         
         <!-- Thư viện MathJax hỗ trợ render kí hiệu toán học chuẩn LaTeX -->
