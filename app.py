@@ -12,11 +12,31 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # ============================================================
+# CẤU HÌNH TOÀN CỤC MATPLOTLIB — HÌNH ĐẸP, MỊN, SẮC NÉT
+# ============================================================
+plt.rcParams.update({
+    "font.family": "DejaVu Sans",
+    "font.size": 11,
+    "axes.titlesize": 12,
+    "axes.labelsize": 11,
+    "xtick.labelsize": 10,
+    "ytick.labelsize": 10,
+    "figure.dpi": 130,
+    "savefig.dpi": 130,
+    "savefig.bbox": "tight",
+    "savefig.pad_inches": 0.15,
+    "lines.linewidth": 2,
+    "lines.antialiased": True,
+    "axes.linewidth": 1.2,
+    "axes.unicode_minus": False,
+    "grid.linewidth": 0.5,
+    "grid.alpha": 0.4,
+    "figure.autolayout": False,
+})
+
+# ============================================================
 # 0. PHÂN LOẠI MÔN HỌC THEO HÌNH THỨC ĐÁNH GIÁ
 # ============================================================
-# Môn tự luận → sinh đề luyện viết (không có đáp án)
-# Môn trắc nghiệm → sinh câu hỏi A/B/C/D
-# Muốn thêm/bớt môn tự luận → sửa set dưới đây
 ESSAY_SUBJECTS = {"Ngữ văn", "Lịch sử & Địa lý"}
 
 # ============================================================
@@ -43,7 +63,7 @@ def setup_page_config():
             box-shadow: 0 4px 6px rgba(13, 110, 253, 0.2);
         }
         
-        /* Khung nội dung cốt lõi: Sử dụng cấu trúc màu sắc an toàn tương thích tốt mọi theme */
+        /* Khung nội dung cốt lõi */
         .content-box {
             border-left: 6px solid #0d6efd;
             border-top: 1px solid rgba(128, 128, 128, 0.2);
@@ -56,15 +76,13 @@ def setup_page_config():
             line-height: 1.6;
         }
 
-        /* ===== DÀN ĐỀU 5 TAB TRẠM 1-5 ===== */
-        /* Khung chứa danh sách tab */
+        /* ===== DÀN ĐỀU 5 TAB ===== */
         .stTabs [data-baseweb="tab-list"] {
             display: flex !important;
             width: 100% !important;
             gap: 6px !important;
             justify-content: space-between !important;
         }
-        /* Từng tab riêng lẻ */
         .stTabs [data-baseweb="tab-list"] > button {
             flex: 1 1 0 !important;
             justify-content: center !important;
@@ -76,40 +94,36 @@ def setup_page_config():
             font-size: 0.9rem !important;
             transition: all 0.2s ease !important;
         }
-        /* Hover: nền xanh nhạt */
         .stTabs [data-baseweb="tab-list"] > button:hover {
             background-color: rgba(13, 110, 253, 0.08) !important;
         }
-        /* Tab đang chọn: nền xanh nhạt đậm hơn */
         .stTabs [data-baseweb="tab-list"] > button[aria-selected="true"] {
             background-color: rgba(13, 110, 253, 0.12) !important;
         }
 
-        /* ===== GIẢM FONT CHỮ TRONG KHUNG CÂU HỎI / ĐỀ BÀI ===== */
-        /* Áp dụng cho mọi nội dung nằm trong container có viền (border=True) */
+        /* ===== GIẢM FONT TRONG KHUNG CÂU HỎI / ĐỀ BÀI ===== */
         [data-testid="stVerticalBlockBorderWrapper"] p {
             font-size: 0.92rem !important;
             line-height: 1.55 !important;
             margin-bottom: 6px !important;
         }
-        /* Tiêu đề "Câu X:" hoặc "Đề X" bên trong khung — nhỏ hơn mặc định 1 chút */
         [data-testid="stVerticalBlockBorderWrapper"] h3 {
             font-size: 1.05rem !important;
             font-weight: 700 !important;
             margin-bottom: 10px !important;
         }
-        /* Radio A/B/C/D và expander bên trong khung cũng thu nhỏ tương ứng */
         [data-testid="stVerticalBlockBorderWrapper"] .stRadio label,
         [data-testid="stVerticalBlockBorderWrapper"] .stExpander summary {
             font-size: 0.9rem !important;
         }
         </style>
         
-        <!-- Thư viện MathJax hỗ trợ render kí hiệu toán học chuẩn LaTeX -->
+        <!-- Thư viện MathJax -->
         <script type="text/javascript" async
           src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
         </script>
     """, unsafe_allow_html=True)
+
 # ============================================================
 # 2. XỬ LÝ VÀ LỌC SẠCH PHẢN HỒI TỪ AI
 # ============================================================
@@ -177,7 +191,7 @@ def clean_ai_response(text: str) -> str:
     return result
 
 # ============================================================
-# 3. GỌI API GEMINI (QUÉT TOÀN BỘ HỌ HÀNG FLASH MIỄN PHÍ)
+# 3. GỌI API GEMINI
 # ============================================================
 def call_gemini(prompt: str, api_key: str) -> tuple:
     genai.configure(api_key=api_key)
@@ -226,11 +240,6 @@ def call_gemini(prompt: str, api_key: str) -> tuple:
 # 3B. GỌI API GEMINI — HỖ TRỢ ẢNH + SYSTEM INSTRUCTION
 # ============================================================
 def call_gemini_with_fallback(prompt, api_key: str, system_instruction: str = "") -> str:
-    """
-    Hỗ trợ prompt dạng str HOẶC list [text, PIL.Image].
-    Hỗ trợ system_instruction (dặn dò nhân vật AI).
-    Trả về chuỗi text phản hồi, hoặc chuỗi rỗng "" nếu lỗi toàn bộ.
-    """
     genai.configure(api_key=api_key)
     
     model_candidates = [
@@ -272,7 +281,7 @@ def call_gemini_with_fallback(prompt, api_key: str, system_instruction: str = ""
     return ""
 
 # ============================================================
-# 4. XÂY DỰNG PROMPT CHUẨN KẾT NỐI TRI THỨC + HỖ TRỢ LATEX
+# 4. XÂY DỰNG PROMPT BÀI HỌC
 # ============================================================
 def build_lesson_prompt(lesson_input: str, subject: str, grade: str) -> str:
     is_essay = subject in ESSAY_SUBJECTS
@@ -334,62 +343,53 @@ GỢI Ý TƯ DUY: [Gợi ý định hướng cách giải hoặc bản chất ki
 # 4B. XÂY DỰNG PROMPT PHÒNG THÍ NGHIỆM ẢO
 # ============================================================
 def build_virtual_lab_prompt(lab_request: str, subject: str, grade: str) -> str:
-    template = """Bạn là chuyên gia mô phỏng thí nghiệm giáo dục, phục vụ học sinh __GRADE__ môn __SUBJECT__ theo chương trình GDPT 2018 bộ sách "Kết Nối Tri Thức Với Cuộc Sống".
+    template = """Bạn là chuyên gia mô phỏng thí nghiệm giáo dục cho học sinh __GRADE__ môn __SUBJECT__ theo chương trình GDPT 2018 bộ sách "Kết Nối Tri Thức Với Cuộc Sống".
 
 YÊU CẦU CỦA HỌC SINH: __LAB_REQUEST__
 
 QUY TẮC BẮT BUỘC:
-1. TOÀN BỘ nội dung bằng TIẾNG VIỆT chuẩn xác, không suy luận nội tâm, không bản nháp.
-2. Sử dụng LaTeX đặt trong cặp dấu đô la cho mọi công thức (ví dụ: $v = v_0 + at$, $H_2SO_4$, $\\vec{AB} = (x, y, z)$).
+1. TOÀN BỘ nội dung bằng TIẾNG VIỆT, không suy luận nội tâm, không bản nháp.
+2. LaTeX đặt trong cặp dấu đô la cho mọi công thức (ví dụ: $v = v_0 + at$, $H_2SO_4$, $\\vec{AB} = (x, y, z)$).
 3. KHÔNG DÙNG DẤU #.
-4. Kiến thức phải cực kỳ chính xác theo chuẩn SGK Kết Nối Tri Thức.
+4. Code Python vẽ đồ thị PHẢI ngắn gọn, tối ưu, không viết dư thừa.
+5. KHÔNG set lại font, dpi, figsize (hệ thống đã cấu hình sẵn).
 
 CẤU TRÚC ĐẦU RA BẮT BUỘC:
 
 1. MÔ TẢ THÍ NGHIỆM / HIỆN TƯỢNG
-[Mô tả chi tiết thí nghiệm, hiện tượng, quá trình, dụng cụ (nếu có) — phù hợp với môn học.]
+[Mô tả chi tiết thí nghiệm, hiện tượng, quá trình, dụng cụ (nếu có).]
 
 2. NGUYÊN LÝ / PHƯƠNG TRÌNH / HIỆN TƯỢNG XẢY RA
-[Giải thích bản chất khoa học, phương trình phản ứng hóa học, phương trình chuyển động, định lý toán học... Sử dụng LaTeX đầy đủ.]
+[Giải thích bản chất khoa học, phương trình phản ứng, phương trình chuyển động, định lý... Dùng LaTeX đầy đủ.]
 
 3. KẾT QUẢ / QUAN SÁT ĐƯỢC
-[Mô tả kết quả, số liệu, hiện tượng quan sát được, kết luận rút ra.]
+[Mô tả kết quả, số liệu, hiện tượng, kết luận.]
 
-4. MÃ VẼ ĐỒ THỊ MINH HỌA (chỉ khi phù hợp — nếu không phù hợp, ghi rõ "Không cần vẽ đồ thị")
+4. MÃ VẼ ĐỒ THỊ (nếu không cần, ghi rõ "Không cần vẽ đồ thị")
 
 QUY TẮC CHỌN LOẠI ĐỒ THỊ:
-- ĐỒ THỊ 2D (matplotlib): hàm số, dao động, parabol, hypebol, phản ứng hóa học dạng đường, biểu đồ cột → đặt trong thẻ <PLOT_2D>...</PLOT_2D>
-- ĐỒ THỊ 3D (plotly): hệ trục Oxyz, hình học không gian, mặt phẳng, mặt cầu, vector 3 chiều, khối đa diện → đặt trong thẻ <PLOT_3D>...</PLOT_3D>
+- 2D (matplotlib) → thẻ <PLOT_2D>...</PLOT_2D>
+- 3D (plotly) → thẻ <PLOT_3D>...</PLOT_3D>
 
-=== PHONG CÁCH VẼ ĐỒ THỊ 2D THEO CHUẨN SGK VIỆT NAM (BẮT BUỘC TUÂN THEO) ===
-Đồ thị 2D phải giống hình vẽ trong SGK Toán/Lý/Hóa Việt Nam:
-- Trục Ox nằm ngang, trục Oy thẳng đứng, GIAO NHAU tại gốc O
-- Đầu trục Ox có MŨI TÊN chỉ sang phải, đầu trục Oy có MŨI TÊN chỉ lên trên
-- KHÔNG có khung viền hình chữ nhật quanh đồ thị
-- CÓ LƯỚI Ô VUÔNG mảnh, màu xám nhạt, nét liền mảnh
-- Nhãn "O" ở gốc tọa độ, nhãn "x" ở đầu trục Ox, nhãn "y" ở đầu trục Oy
-- Vạch chia đơn vị rõ ràng trên cả 2 trục
-- Điểm đặc biệt (cực trị, giao điểm, đỉnh) phải:
-  + Đánh dấu bằng chấm tròn đỏ
-  + Kẻ NÉT ĐỨT (màu đỏ, mảnh) từ điểm xuống 2 trục
-  + Ghi tọa độ dạng "(x; y)" bên cạnh điểm
-- Đường cong chính vẽ màu xanh đậm, nét liền, đậm
-- Tiêu đề đặt phía dưới đồ thị, có tiền tố "Hình:" (ví dụ: "Hình 1. Đồ thị hàm số y = x² - 2x - 1")
-- Font chữ hỗ trợ tiếng Việt
+=== STYLE 2D CHUẨN SGK VIỆT NAM (BẮT BUỘC) ===
+- Trục Ox ngang, Oy dọc, giao tại O; đầu trục có MŨI TÊN; KHÔNG khung viền
+- LƯỚI Ô VUÔNG mảnh xám nhạt (dùng ax.set_xticks/set_yticks với np.arange bước đều)
+- Nhãn "O", "x", "y" đúng vị trí; vạch chia đơn vị rõ ràng
+- Điểm đặc biệt (cực trị, giao điểm): chấm đỏ + nét đứt đỏ xuống 2 trục + ghi tọa độ "(x; y)"
+- Đường cong xanh đậm #1f4e9c, nét liền, linewidth 2
+- Tiêu đề dưới đồ thị dạng "Hình N. Mô tả"
 
-=== MẪU ĐỒ THỊ 2D CHUẨN SGK (có lưới ô vuông) ===
+=== MẪU 2D (tuân theo đúng cấu trúc này) ===
 <PLOT_2D>
 import matplotlib.pyplot as plt
 import numpy as np
 
-fig, ax = plt.subplots(figsize=(8, 6))
+fig, ax = plt.subplots(figsize=(8, 5.5))
 
-# Vẽ đường cong hàm số
 x = np.linspace(-2, 4, 400)
 y = x**2 - 2*x - 1
-ax.plot(x, y, color='#1f4e9c', linewidth=2, label='y = x² - 2x - 1')
+ax.plot(x, y, color='#1f4e9c', linewidth=2)
 
-# TRỤC TỌA ĐỘ KIỂU SGK
 ax.spines['left'].set_position('zero')
 ax.spines['bottom'].set_position('zero')
 ax.spines['right'].set_color('none')
@@ -397,155 +397,97 @@ ax.spines['top'].set_color('none')
 ax.spines['left'].set_linewidth(1.2)
 ax.spines['bottom'].set_linewidth(1.2)
 
-# Mũi tên ở đầu trục Ox và Oy
 ax.plot(1, 0, ">k", transform=ax.get_yaxis_transform(), clip_on=False, markersize=8)
 ax.plot(0, 1, "^k", transform=ax.get_xaxis_transform(), clip_on=False, markersize=8)
 
-# Nhãn O, x, y
 ax.text(-0.15, -0.3, 'O', fontsize=14, fontweight='bold')
 ax.text(4.15, -0.3, 'x', fontsize=14, fontweight='bold', style='italic')
 ax.text(-0.3, 5.5, 'y', fontsize=14, fontweight='bold', style='italic')
 
-# LƯỚI Ô VUÔNG
 ax.set_xticks(np.arange(-3, 6, 1))
 ax.set_yticks(np.arange(-4, 7, 1))
 ax.grid(True, which='both', color='gray', linestyle='-', linewidth=0.5, alpha=0.4)
 ax.set_axisbelow(True)
 
-# Điểm cực trị (đỉnh parabol)
-vertex_x, vertex_y = 1, -2
-
-# Nét đứt từ đỉnh xuống 2 trục
-ax.plot([vertex_x, vertex_x], [0, vertex_y], color='red', linestyle='--', linewidth=1.2)
-ax.plot([0, vertex_x], [vertex_y, vertex_y], color='red', linestyle='--', linewidth=1.2)
-
-# Chấm tròn đỏ tại đỉnh
-ax.plot(vertex_x, vertex_y, 'o', color='red', markersize=8, zorder=5)
-
-# Ghi tọa độ đỉnh
-label_text = "(" + str(vertex_x) + "; " + str(vertex_y) + ")"
-ax.text(vertex_x + 0.15, vertex_y - 0.4, label_text,
+vx, vy = 1, -2
+ax.plot([vx, vx], [0, vy], color='red', linestyle='--', linewidth=1.2)
+ax.plot([0, vx], [vy, vy], color='red', linestyle='--', linewidth=1.2)
+ax.plot(vx, vy, 'o', color='red', markersize=8, zorder=5)
+ax.text(vx + 0.15, vy - 0.4, "(" + str(vx) + "; " + str(vy) + ")",
         fontsize=11, color='red', fontweight='bold')
 
-# Đặt giới hạn trục
 ax.set_xlim(-2.5, 4.5)
 ax.set_ylim(-3, 6)
 
-# Tick nhỏ
-ax.tick_params(axis='both', labelsize=10)
-
-# Tiêu đề dưới đồ thị
 plt.figtext(0.5, 0.02, 'Hình 1. Đồ thị hàm số y = x² - 2x - 1',
             ha='center', fontsize=11, style='italic')
-
 plt.tight_layout(rect=[0, 0.05, 1, 1])
-fig.savefig("/tmp/lab_plot.png", dpi=120, bbox_inches="tight")
 </PLOT_2D>
 
-=== PHONG CÁCH VẼ HÌNH KHÔNG GIAN 3D (BẮT BUỘC TUÂN THEO) ===
-Áp dụng đồng thời cả 3 yếu tố sau để hình vừa giống SGK, vừa đúng khi học sinh xoay:
+Lưu ý: KHÔNG cần gọi fig.savefig() — hệ thống tự lưu.
 
-a) CẠNH NHÌN THẤY (nét liền): dùng line=dict(color='#1f77b4', width=6)
-   Áp dụng cho cạnh đáy, cạnh bên ở mặt trước (không bị che khuất).
+=== STYLE 3D (BẮT BUỘC) ===
+a) Cạnh nhìn thấy: line=dict(color='#1f77b4', width=6)
+b) Cạnh khuất: line=dict(color='#1f77b4', width=4, dash='dash')
+c) Mặt phẳng: go.Mesh3d với opacity=0.3, màu nhạt (lightblue, lightgray)
+d) Đỉnh: Scatter3d mode='text', font size 14, màu đen
+e) Trục Oxyz: 3 mũi tên Scatter3d mode='lines', đỏ (x), xanh lá (y), xanh dương (z)
+f) Layout BẮT BUỘC có: height=520, margin=dict(l=0,r=0,t=40,b=0), scene.aspectmode='cube'
 
-b) CẠNH BỊ KHUẤT (nét đứt): dùng line=dict(color='#1f77b4', width=4, dash='dash')
-   Áp dụng cho cạnh bị che khuất ở góc nhìn mặc định.
-
-c) MẶT PHẲNG (nếu có): vẽ dạng go.Mesh3d với opacity=0.25-0.35, màu nhạt.
-
-d) ĐỈNH: hiển thị tên đỉnh (A, B, C, S...) bằng Scatter3d mode='text', font size 14, màu đen.
-
-e) HỆ TRỤC Oxyz (nếu cần): vẽ 3 mũi tên bằng Scatter3d mode='lines', màu đỏ (x), xanh lá (y), xanh dương (z).
-
-=== MẪU ĐỒ THỊ 3D — HÌNH CHÓP S.ABC ===
+=== MẪU 3D — HÌNH CHÓP ===
 <PLOT_3D>
 import plotly.graph_objects as go
 
 fig = go.Figure()
+S, A, B, C = [0,0,4], [3,0,0], [0,4,0], [-2,-2,0]
 
-S = [0, 0, 4]
-A = [3, 0, 0]
-B = [0, 4, 0]
-C = [-2, -2, 0]
+for p1, p2 in [(A,B),(B,C),(C,A),(S,A),(S,B)]:
+    fig.add_trace(go.Scatter3d(x=[p1[0],p2[0]], y=[p1[1],p2[1]], z=[p1[2],p2[2]],
+        mode='lines', line=dict(color='#1f77b4', width=6), showlegend=False))
 
-visible_edges = [(A, B), (B, C), (C, A), (S, A), (S, B)]
-for p1, p2 in visible_edges:
-    fig.add_trace(go.Scatter3d(
-        x=[p1[0], p2[0]], y=[p1[1], p2[1]], z=[p1[2], p2[2]],
-        mode='lines', line=dict(color='#1f77b4', width=6), showlegend=False
-    ))
+for p1, p2 in [(S,C)]:
+    fig.add_trace(go.Scatter3d(x=[p1[0],p2[0]], y=[p1[1],p2[1]], z=[p1[2],p2[2]],
+        mode='lines', line=dict(color='#1f77b4', width=4, dash='dash'), showlegend=False))
 
-hidden_edges = [(S, C)]
-for p1, p2 in hidden_edges:
-    fig.add_trace(go.Scatter3d(
-        x=[p1[0], p2[0]], y=[p1[1], p2[1]], z=[p1[2], p2[2]],
-        mode='lines', line=dict(color='#1f77b4', width=4, dash='dash'), showlegend=False
-    ))
+fig.add_trace(go.Mesh3d(x=[A[0],B[0],C[0]], y=[A[1],B[1],C[1]], z=[A[2],B[2],C[2]],
+    color='lightblue', opacity=0.3, showlegend=False, hoverinfo='skip'))
 
-fig.add_trace(go.Mesh3d(
-    x=[A[0], B[0], C[0]], y=[A[1], B[1], C[1]], z=[A[2], B[2], C[2]],
-    color='lightblue', opacity=0.3, showlegend=False, hoverinfo='skip'
-))
-
-for name, p in [('S', S), ('A', A), ('B', B), ('C', C)]:
-    fig.add_trace(go.Scatter3d(
-        x=[p[0]], y=[p[1]], z=[p[2]], mode='text',
-        text=[name], textfont=dict(size=14, color='black'), showlegend=False
-    ))
+for name, p in [('S',S),('A',A),('B',B),('C',C)]:
+    fig.add_trace(go.Scatter3d(x=[p[0]], y=[p[1]], z=[p[2]], mode='text',
+        text=[name], textfont=dict(size=14, color='black'), showlegend=False))
 
 fig.update_layout(
     title='Hình chóp S.ABC',
-    scene=dict(
-        xaxis_title='x', yaxis_title='y', zaxis_title='z',
-        aspectmode='cube',
-        camera=dict(eye=dict(x=1.25, y=1.25, z=1.25))
-    ),
-    margin=dict(l=0, r=0, t=40, b=0),
-    height=600
-)
+    scene=dict(xaxis_title='x', yaxis_title='y', zaxis_title='z',
+        aspectmode='cube', camera=dict(eye=dict(x=1.25, y=1.25, z=1.25))),
+    margin=dict(l=0, r=0, t=40, b=0), height=520)
 </PLOT_3D>
 
-=== MẪU ĐỒ THỊ 3D — HỆ TRỤC Oxyz ===
+=== MẪU 3D — TRỤC Oxyz ===
 <PLOT_3D>
 import plotly.graph_objects as go
 
 fig = go.Figure()
-
-fig.add_trace(go.Scatter3d(x=[0, 5], y=[0, 0], z=[0, 0], mode='lines+text',
-    line=dict(color='red', width=8), text=['', 'x'], textposition='top center',
-    textfont=dict(size=14, color='red'), showlegend=False))
-fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 5], z=[0, 0], mode='lines+text',
-    line=dict(color='green', width=8), text=['', 'y'], textposition='top center',
-    textfont=dict(size=14, color='green'), showlegend=False))
-fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 0], z=[0, 5], mode='lines+text',
-    line=dict(color='blue', width=8), text=['', 'z'], textposition='top center',
-    textfont=dict(size=14, color='blue'), showlegend=False))
+for vec, color, label in [((5,0,0),'red','x'), ((0,5,0),'green','y'), ((0,0,5),'blue','z')]:
+    fig.add_trace(go.Scatter3d(x=[0,vec[0]], y=[0,vec[1]], z=[0,vec[2]],
+        mode='lines+text', line=dict(color=color, width=8),
+        text=['', label], textposition='top center',
+        textfont=dict(size=14, color=color), showlegend=False))
 
 fig.add_trace(go.Scatter3d(x=[0], y=[0], z=[0], mode='text',
     text=['O'], textfont=dict(size=14, color='black'), showlegend=False))
 
 fig.update_layout(
     title='Hệ trục tọa độ Oxyz',
-    scene=dict(
-        xaxis_title='x', yaxis_title='y', zaxis_title='z',
-        aspectmode='cube'
-    ),
-    margin=dict(l=0, r=0, t=40, b=0),
-    height=600
-)
+    scene=dict(xaxis_title='x', yaxis_title='y', zaxis_title='z', aspectmode='cube'),
+    margin=dict(l=0, r=0, t=40, b=0), height=520)
 </PLOT_3D>
 
-LƯU Ý QUAN TRỌNG:
-- 2D: PHẢI vẽ theo phong cách SGK (trục có mũi tên, lưới ô vuông mảnh, nét đứt đánh dấu điểm đặc biệt)
-- 2D: BẮT BUỘC đặt ax.set_xticks() và ax.set_yticks() với khoảng cách đều để lưới thành ô vuông
-- 2D: KẾT THÚC bằng fig.savefig("/tmp/lab_plot.png", dpi=120, bbox_inches="tight")
-- 3D: dùng plotly, KẾT THÚC bằng việc tạo biến fig (KHÔNG gọi fig.show())
+LƯU Ý CUỐI:
+- 2D: dùng matplotlib, KHÔNG cần gọi savefig (hệ thống tự lưu)
+- 3D: dùng plotly, KHÔNG gọi fig.show(), KHÔNG set width (để tự co dãn)
 - CHỈ dùng: matplotlib.pyplot, numpy, math, plotly.graph_objects, plotly.express
-- KHÔNG đọc file ngoài, KHÔNG gọi plt.show()
-- Nhãn trục, tiêu đề bằng tiếng Việt có dấu
-- Với 2D: LUÔN ghi tiêu đề dạng "Hình N. Mô tả ngắn" phía dưới đồ thị
-- Với 3D: LUÔN dùng go.Mesh3d với opacity thấp cho các mặt phẳng cần hiển thị
-- Nếu môn không cần đồ thị, bỏ qua phần 4 hoàn toàn."""
+- Không đọc file ngoài"""
 
     return template.replace("__LAB_REQUEST__", lab_request).replace("__SUBJECT__", subject).replace("__GRADE__", grade)
 
@@ -554,10 +496,10 @@ LƯU Ý QUAN TRỌNG:
 # ============================================================
 def run_plot_code(code_str: str):
     """
-    Chạy code vẽ đồ thị an toàn.
-    Trả về tuple (kind, data):
-      - ("png", "/tmp/lab_plot.png") nếu matplotlib
-      - ("plotly", fig_object) nếu plotly
+    Chạy code vẽ đồ thị an toàn với validation 3 lớp.
+    Trả về (kind, data):
+      - ("png", path) nếu matplotlib
+      - ("plotly", fig) nếu plotly
       - (None, None) nếu lỗi
     """
     import os
@@ -568,6 +510,24 @@ def run_plot_code(code_str: str):
             os.remove(plot_path)
         except Exception:
             pass
+
+    # ---- LỚP 1: Chặn từ khóa nguy hiểm ----
+    forbidden = [
+        "os.system", "subprocess", "shutil", "socket",
+        "open(", "eval(", "compile(",
+        "requests.", "urllib", "pathlib",
+    ]
+    code_lower = code_str.lower()
+    for kw in forbidden:
+        if kw.lower() in code_lower:
+            raise ValueError(f"Code chứa từ khóa không được phép: {kw}")
+
+    # ---- LỚP 2: Tự thêm savefig nếu AI quên ----
+    has_savefig = "savefig" in code_lower
+    has_plotly = "plotly" in code_lower or "go.figure" in code_lower
+
+    if not has_savefig and not has_plotly:
+        code_str = code_str.rstrip() + '\nfig.savefig("/tmp/lab_plot.png", dpi=130, bbox_inches="tight")'
 
     safe_builtins = {
         "range": range, "len": len, "min": min, "max": max,
@@ -582,7 +542,6 @@ def run_plot_code(code_str: str):
         "__import__": __import__,
     }
 
-    # Pre-import plotly (nếu có)
     try:
         import plotly.graph_objects as go
         import plotly.express as px
@@ -603,7 +562,7 @@ def run_plot_code(code_str: str):
     try:
         exec(code_str, namespace)
 
-        # Ưu tiên Plotly nếu fig có method to_plotly_json
+        # Ưu tiên Plotly
         fig_var = namespace.get("fig")
         if fig_var is not None and hasattr(fig_var, "to_plotly_json"):
             return ("plotly", fig_var)
@@ -611,22 +570,22 @@ def run_plot_code(code_str: str):
         # Fallback matplotlib: nếu chưa save, tự save
         if not os.path.exists(plot_path):
             try:
-                plt.savefig(plot_path, dpi=100, bbox_inches="tight")
+                plt.savefig(plot_path, dpi=130, bbox_inches="tight", pad_inches=0.15)
             except Exception:
                 pass
 
-        if os.path.exists(plot_path):
+        # ---- LỚP 3: Verify file output ----
+        if os.path.exists(plot_path) and os.path.getsize(plot_path) > 1000:
             return ("png", plot_path)
         return (None, None)
     finally:
         plt.close('all')
 
-
 # ============================================================
 # 4D. TRIGGER RENDER LẠI MATHJAX
 # ============================================================
 def trigger_mathjax():
-    """Buộc MathJax typeset lại nội dung — fix lỗi LaTeX thỉnh thoảng không render."""
+    """Buộc MathJax typeset lại nội dung."""
     import streamlit.components.v1 as components
     components.html("""
     <script>
@@ -834,7 +793,6 @@ def render_interactive_quizzes(raw_text: str, subject: str):
                 else:
                     str_app.session_state[checked_key] = True
 
-            # Chỉ hiển thị kết quả khi đã bấm "Kiểm tra kết quả"
             if str_app.session_state[checked_key] and user_choice:
                 if user_choice == correct_ans:
                     str_app.markdown(
@@ -858,7 +816,7 @@ def render_interactive_quizzes(raw_text: str, subject: str):
         q_index += 1
 
 # ============================================================
-# 7. GIAO DIỆN CHÍNH VÀ LUỒNG XỬ LÝ TRẠM 1
+# 7. GIAO DIỆN CHÍNH VÀ LUỒNG XỬ LÝ
 # ============================================================
 def render_main_interface(grade, subject, api_key_to_use):
     str_app.markdown(
@@ -959,7 +917,6 @@ def render_main_interface(grade, subject, api_key_to_use):
         if "lab_result" in str_app.session_state:
             raw_lab = str_app.session_state["lab_result"]
 
-            # Tách khối PLOT_2D / PLOT_3D / PLOT (fallback) ra khỏi phần mô tả
             plot_2d_match = re.search(r"<PLOT_2D>(.*?)</PLOT_2D>", raw_lab, re.DOTALL | re.IGNORECASE)
             plot_3d_match = re.search(r"<PLOT_3D>(.*?)</PLOT_3D>", raw_lab, re.DOTALL | re.IGNORECASE)
             plot_old_match = re.search(r"<PLOT>(.*?)</PLOT>", raw_lab, re.DOTALL | re.IGNORECASE)
@@ -968,14 +925,12 @@ def render_main_interface(grade, subject, api_key_to_use):
             text_part = re.sub(r"<PLOT_3D>.*?</PLOT_3D>", "", text_part, flags=re.DOTALL | re.IGNORECASE)
             text_part = re.sub(r"<PLOT>.*?</PLOT>", "", text_part, flags=re.DOTALL | re.IGNORECASE).strip()
 
-            # Hiển thị mô tả (dùng content-box)
             clean_text = clean_ai_response(text_part)
             str_app.markdown(
                 f"<div class='content-box'>{clean_text}</div>",
                 unsafe_allow_html=True
             )
 
-            # Xác định code plot và nhãn hiển thị
             plot_code = None
             plot_label = ""
             if plot_3d_match:
@@ -1002,7 +957,6 @@ def render_main_interface(grade, subject, api_key_to_use):
                 except Exception as plot_err:
                     str_app.warning(f"Không vẽ được đồ thị: `{plot_err}`")
 
-            # Buộc MathJax render lại sau khi thêm nội dung mới
             trigger_mathjax()
 
     # ==================== TAB 2 — GIA SƯ SOCRATIC ====================
@@ -1119,6 +1073,7 @@ Cuối bài chèn khối: <DIAGNOSTIC>{{"topic":"...","error_type":"...","evalua
                             str_app.session_state.socratic_messages.append({"role": "assistant", "content": rep_clean})
                     except Exception as e:
                         str_app.error(f"Lỗi phản hồi: {e}")
+
 # ============================================================
 # 8. KHỞI CHẠY ỨNG DỤNG CHÍNH
 # ============================================================
