@@ -334,13 +334,13 @@ GỢI Ý TƯ DUY: [Gợi ý định hướng cách giải hoặc bản chất ki
 # 4B. XÂY DỰNG PROMPT PHÒNG THÍ NGHIỆM ẢO
 # ============================================================
 def build_virtual_lab_prompt(lab_request: str, subject: str, grade: str) -> str:
-    return f"""Bạn là chuyên gia mô phỏng thí nghiệm giáo dục, phục vụ học sinh {grade} môn {subject} theo chương trình GDPT 2018 bộ sách "Kết Nối Tri Thức Với Cuộc Sống".
+    template = """Bạn là chuyên gia mô phỏng thí nghiệm giáo dục, phục vụ học sinh __GRADE__ môn __SUBJECT__ theo chương trình GDPT 2018 bộ sách "Kết Nối Tri Thức Với Cuộc Sống".
 
-YÊU CẦU CỦA HỌC SINH: {lab_request}
+YÊU CẦU CỦA HỌC SINH: __LAB_REQUEST__
 
 QUY TẮC BẮT BUỘC:
 1. TOÀN BỘ nội dung bằng TIẾNG VIỆT chuẩn xác, không suy luận nội tâm, không bản nháp.
-2. Sử dụng LaTeX đặt trong cặp dấu đô la cho mọi công thức (ví dụ: $v = v_0 + at$, $H_2SO_4$, $\\vec{{AB}} = (x, y, z)$).
+2. Sử dụng LaTeX đặt trong cặp dấu đô la cho mọi công thức (ví dụ: $v = v_0 + at$, $H_2SO_4$, $\\vec{AB} = (x, y, z)$).
 3. KHÔNG DÙNG DẤU #.
 4. Kiến thức phải cực kỳ chính xác theo chuẩn SGK Kết Nối Tri Thức.
 
@@ -366,10 +366,7 @@ QUY TẮC CHỌN LOẠI ĐỒ THỊ:
 - Trục Ox nằm ngang, trục Oy thẳng đứng, GIAO NHAU tại gốc O
 - Đầu trục Ox có MŨI TÊN chỉ sang phải, đầu trục Oy có MŨI TÊN chỉ lên trên
 - KHÔNG có khung viền hình chữ nhật quanh đồ thị
-- CÓ LƯỚI Ô VUÔNG mảnh, màu xám nhạt (alpha ~0.4), nét liền mảnh (linewidth ~0.5)
-  → Lưới phải tạo thành các ô vuông rõ ràng, giống vở ô ly hoặc giấy kẻ ô
-  → Dùng ax.grid(True, which='both', color='gray', linestyle='-', linewidth=0.5, alpha=0.4)
-  → Đặt ax.set_xticks() và ax.set_yticks() với khoảng cách đều nhau (ví dụ mỗi 1 đơn vị) để lưới vuông
+- CÓ LƯỚI Ô VUÔNG mảnh, màu xám nhạt, nét liền mảnh
 - Nhãn "O" ở gốc tọa độ, nhãn "x" ở đầu trục Ox, nhãn "y" ở đầu trục Oy
 - Vạch chia đơn vị rõ ràng trên cả 2 trục
 - Điểm đặc biệt (cực trị, giao điểm, đỉnh) phải:
@@ -392,7 +389,7 @@ x = np.linspace(-2, 4, 400)
 y = x**2 - 2*x - 1
 ax.plot(x, y, color='#1f4e9c', linewidth=2, label='y = x² - 2x - 1')
 
-# ==== TRỤC TỌA ĐỘ KIỂU SGK ====
+# TRỤC TỌA ĐỘ KIỂU SGK
 ax.spines['left'].set_position('zero')
 ax.spines['bottom'].set_position('zero')
 ax.spines['right'].set_color('none')
@@ -409,13 +406,13 @@ ax.text(-0.15, -0.3, 'O', fontsize=14, fontweight='bold')
 ax.text(4.15, -0.3, 'x', fontsize=14, fontweight='bold', style='italic')
 ax.text(-0.3, 5.5, 'y', fontsize=14, fontweight='bold', style='italic')
 
-# ==== LƯỚI Ô VUÔNG ====
+# LƯỚI Ô VUÔNG
 ax.set_xticks(np.arange(-3, 6, 1))
 ax.set_yticks(np.arange(-4, 7, 1))
 ax.grid(True, which='both', color='gray', linestyle='-', linewidth=0.5, alpha=0.4)
 ax.set_axisbelow(True)
 
-# Điểm cực trị (đỉnh parabol): x = 1, y = -2
+# Điểm cực trị (đỉnh parabol)
 vertex_x, vertex_y = 1, -2
 
 # Nét đứt từ đỉnh xuống 2 trục
@@ -426,14 +423,9 @@ ax.plot([0, vertex_x], [vertex_y, vertex_y], color='red', linestyle='--', linewi
 ax.plot(vertex_x, vertex_y, 'o', color='red', markersize=8, zorder=5)
 
 # Ghi tọa độ đỉnh
-ax.text(vertex_x + 0.15, vertex_y - 0.4, f'({vertex_x}; {vertex_y})',
+label_text = "(" + str(vertex_x) + "; " + str(vertex_y) + ")"
+ax.text(vertex_x + 0.15, vertex_y - 0.4, label_text,
         fontsize=11, color='red', fontweight='bold')
-
-# Giao điểm với Ox
-x_roots = [1 - np.sqrt(2), 1 + np.sqrt(2)]
-for xr in x_roots:
-    ax.plot(xr, 0, 'o', color='green', markersize=6, zorder=5)
-    ax.text(xr + 0.1, 0.3, f'{xr:.2f}', fontsize=9, color='green')
 
 # Đặt giới hạn trục
 ax.set_xlim(-2.5, 4.5)
@@ -457,16 +449,15 @@ a) CẠNH NHÌN THẤY (nét liền): dùng line=dict(color='#1f77b4', width=6)
    Áp dụng cho cạnh đáy, cạnh bên ở mặt trước (không bị che khuất).
 
 b) CẠNH BỊ KHUẤT (nét đứt): dùng line=dict(color='#1f77b4', width=4, dash='dash')
-   Áp dụng cho cạnh bị che khuất ở góc nhìn mặc định (camera của plotly mặc định: eye=(1.25, 1.25, 1.25)).
+   Áp dụng cho cạnh bị che khuất ở góc nhìn mặc định.
 
-c) MẶT PHẲNG (nếu có): vẽ dạng go.Mesh3d với opacity=0.25-0.35, màu nhạt (lightblue, lightgray)
-   để học sinh có thể xoay mà vẫn thấy mọi cạnh bên trong.
+c) MẶT PHẲNG (nếu có): vẽ dạng go.Mesh3d với opacity=0.25-0.35, màu nhạt.
 
 d) ĐỈNH: hiển thị tên đỉnh (A, B, C, S...) bằng Scatter3d mode='text', font size 14, màu đen.
 
 e) HỆ TRỤC Oxyz (nếu cần): vẽ 3 mũi tên bằng Scatter3d mode='lines', màu đỏ (x), xanh lá (y), xanh dương (z).
 
-=== MẪU ĐỒ THỊ 3D — HÌNH CHÓP S.ABC (theo phong cách SGK kết hợp mặt trong suốt) ===
+=== MẪU ĐỒ THỊ 3D — HÌNH CHÓP S.ABC ===
 <PLOT_3D>
 import plotly.graph_objects as go
 
@@ -477,7 +468,6 @@ A = [3, 0, 0]
 B = [0, 4, 0]
 C = [-2, -2, 0]
 
-# Cạnh nhìn thấy (nét liền)
 visible_edges = [(A, B), (B, C), (C, A), (S, A), (S, B)]
 for p1, p2 in visible_edges:
     fig.add_trace(go.Scatter3d(
@@ -485,7 +475,6 @@ for p1, p2 in visible_edges:
         mode='lines', line=dict(color='#1f77b4', width=6), showlegend=False
     ))
 
-# Cạnh bị khuất (nét đứt)
 hidden_edges = [(S, C)]
 for p1, p2 in hidden_edges:
     fig.add_trace(go.Scatter3d(
@@ -493,13 +482,11 @@ for p1, p2 in hidden_edges:
         mode='lines', line=dict(color='#1f77b4', width=4, dash='dash'), showlegend=False
     ))
 
-# Mặt đáy ABC bán trong suốt
 fig.add_trace(go.Mesh3d(
     x=[A[0], B[0], C[0]], y=[A[1], B[1], C[1]], z=[A[2], B[2], C[2]],
     color='lightblue', opacity=0.3, showlegend=False, hoverinfo='skip'
 ))
 
-# Nhãn đỉnh
 for name, p in [('S', S), ('A', A), ('B', B), ('C', C)]:
     fig.add_trace(go.Scatter3d(
         x=[p[0]], y=[p[1]], z=[p[2]], mode='text',
@@ -551,14 +538,16 @@ fig.update_layout(
 LƯU Ý QUAN TRỌNG:
 - 2D: PHẢI vẽ theo phong cách SGK (trục có mũi tên, lưới ô vuông mảnh, nét đứt đánh dấu điểm đặc biệt)
 - 2D: BẮT BUỘC đặt ax.set_xticks() và ax.set_yticks() với khoảng cách đều để lưới thành ô vuông
-- 2D: KẾT THÚC bằng `fig.savefig("/tmp/lab_plot.png", dpi=120, bbox_inches="tight")`
-- 3D: dùng plotly, KẾT THÚC bằng việc tạo biến `fig` (KHÔNG gọi `fig.show()`)
+- 2D: KẾT THÚC bằng fig.savefig("/tmp/lab_plot.png", dpi=120, bbox_inches="tight")
+- 3D: dùng plotly, KẾT THÚC bằng việc tạo biến fig (KHÔNG gọi fig.show())
 - CHỈ dùng: matplotlib.pyplot, numpy, math, plotly.graph_objects, plotly.express
 - KHÔNG đọc file ngoài, KHÔNG gọi plt.show()
 - Nhãn trục, tiêu đề bằng tiếng Việt có dấu
 - Với 2D: LUÔN ghi tiêu đề dạng "Hình N. Mô tả ngắn" phía dưới đồ thị
 - Với 3D: LUÔN dùng go.Mesh3d với opacity thấp cho các mặt phẳng cần hiển thị
 - Nếu môn không cần đồ thị, bỏ qua phần 4 hoàn toàn."""
+
+    return template.replace("__LAB_REQUEST__", lab_request).replace("__SUBJECT__", subject).replace("__GRADE__", grade)
 
 # ============================================================
 # 4C. CHẠY CODE VẼ ĐỒ THỊ AN TOÀN
