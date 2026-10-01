@@ -626,7 +626,7 @@ def render_main_interface(grade, subject, api_key_to_use):
                 else:
                     with str_app.spinner("Gia Sư AI đang đối chiếu chuẩn kiến thức GDPT 2018 (SGK KNTT)..."):
                         try:
-                            sys_prompt = f"""Bạn là 'Gia Sư AI' trường THPT Tân Hiệp & Trung tâm Thiện Nhân.
+                            sys_prompt = f"""Bạn là 'Gia Sư AI' của trường THPT Tân Hiệp.
 Đối tượng: Học sinh Lớp {grade_num}, môn {subject} (SGK Kết nối tri thức).
 Phương pháp: Vấn đáp Socratic.
 NGUYÊN TẮC: Tuyệt đối không giải hộ, khen ngợi bước đúng, đặt câu hỏi gợi mở bước sai.
