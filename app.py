@@ -4,6 +4,14 @@ import re
 import time
 
 # ============================================================
+# 0. PHÂN LOẠI MÔN HỌC THEO HÌNH THỨC ĐÁNH GIÁ
+# ============================================================
+# Môn tự luận → sinh đề luyện viết (không có đáp án)
+# Môn trắc nghiệm → sinh câu hỏi A/B/C/D
+# Muốn thêm/bớt môn tự luận → sửa set dưới đây
+ESSAY_SUBJECTS = {"Ngữ văn", "Lịch sử & Địa lý"}
+
+# ============================================================
 # 1. CẤU HÌNH GIAO DIỆN TRANG & CSS TƯƠNG THÍCH CHUẨN SÁNG/TỐI
 # ============================================================
 def setup_page_config():
@@ -191,13 +199,15 @@ def call_gemini(prompt: str, api_key: str) -> tuple:
 # 4. XÂY DỰNG PROMPT CHUẨN KẾT NỐI TRI THỨC + HỖ TRỢ LATEX
 # ============================================================
 def build_lesson_prompt(lesson_input: str, subject: str, grade: str) -> str:
-    return f"""Bạn là giáo viên chuyên môn cao, soạn tài liệu theo chuẩn chương trình giáo dục phổ thông mới nhất bộ sách "Kết Nối Tri Thức Với Cuộc Sống".
+    is_essay = subject in ESSAY_SUBJECTS
+
+    common_head = f"""Bạn là giáo viên chuyên môn cao, soạn tài liệu theo chuẩn chương trình giáo dục phổ thông mới nhất bộ sách "Kết Nối Tri Thức Với Cuộc Sống".
 
 NHIỆM VỤ: Soạn nội dung chi tiết bài học "{lesson_input}" môn {subject} lớp {grade}.
 
 QUY TẮC BẮT BUỘC:
 1. TOÀN BỘ nội dung hoàn toàn bằng TIẾNG VIỆT chuẩn xác. Không chứa từ tiếng Anh, không suy luận nội tâm, không bản nháp.
-2. KHÔNG DÙNG DẤU #. Chỉ dùng định dạng đánh số thứ tự cho các phần lớn (1. KIẾN THỨC CỐT LÕI, 2. CÁC LỖI SAI THƯỜNG GẶP, 3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ).
+2. KHÔNG DÙNG DẤU #. Chỉ dùng định dạng đánh số thứ tự cho các phần lớn.
 3. ĐỐI VỚI CÔNG THỨC TOÁN HỌC/KÍ HIỆU KHOA HỌC: Bắt buộc sử dụng kí hiệu LaTeX đặt trong cặp dấu đô la (ví dụ: $x^2 + y^2 = R^2$, $\\frac{{a}}{{b}}$, $\\sqrt{{x}}$) để hiển thị chuẩn xác, đẹp mắt.
 4. Kiến thức phải cực kỳ chính xác, khoa học, sư phạm theo đúng sách Kết Nối Tri Thức.
 
@@ -209,7 +219,24 @@ CẤU TRÚC ĐẦU RA BẮT BUỘC:
 2. CÁC LỖI SAI THƯỜNG GẶP KHI LÀM BÀI
 [Liệt kê từ 4 đến 5 lỗi sai học sinh hay mắc phải và hướng khắc phục chi tiết bằng tiếng Việt.]
 
-3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ
+"""
+
+    if is_essay:
+        tail = """3. HỆ THỐNG ĐỀ LUYỆN VIẾT
+(Hãy tạo ra chính xác 3 đề luyện viết theo cấu trúc đề kiểm tra/đề thi thật, độ khó tăng dần từ nhận biết đến vận dụng cao. KHÔNG đưa đáp án hay bài văn mẫu, chỉ đưa đề bài và gợi ý dàn ý.)
+
+Cấu trúc mỗi đề bắt buộc phải tuân theo định dạng sau để hệ thống tự động nhận diện:
+---
+[ĐỀ 1]
+Loại đề: [Ví dụ: Nghị luận văn học / Nghị luận xã hội / Phân tích nhân vật / Cảm nhận đoạn thơ...]
+Đề bài: [Nội dung đề bài đầy đủ, rõ ràng, giống đề kiểm tra thật — có thể trích dẫn ngữ liệu nếu cần]
+Yêu cầu: [Yêu cầu cụ thể về hình thức, dung lượng, thao tác lập luận...]
+Thang điểm: [Thang điểm tham khảo, ví dụ 2.0 / 3.0 / 5.0 điểm]
+GỢI Ý DÀN Ý: [Dàn ý gợi ý ngắn gọn theo các ý chính — chỉ để học sinh định hướng, KHÔNG viết thành bài văn hoàn chỉnh]
+---
+(Lặp lại đúng định dạng trên cho ĐỀ 2 và ĐỀ 3)."""
+    else:
+        tail = """3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ
 (Hãy tạo ra chính xác 3 câu hỏi trắc nghiệm khách quan 4 lựa chọn A, B, C, D kiểm tra từ mức độ nhận biết đến vận dụng của bài học này).
 
 Cấu trúc mỗi câu trắc nghiệm bắt buộc phải tuân theo định dạng sau để hệ thống tự động nhận diện:
@@ -223,9 +250,9 @@ D. Đáp án D
 ĐÁP ÁN ĐÚNG: [Chỉ ghi đúng một chữ cái A, B, C hoặc D]
 GỢI Ý TƯ DUY: [Gợi ý định hướng cách giải hoặc bản chất kiến thức giúp học sinh tự tư duy, tuyệt đối không tiết lộ trực tiếp đáp án]
 ---
-(Lặp lại đúng định dạng trên cho Câu hỏi 2 và Câu hỏi 3).
-"""
+(Lặp lại đúng định dạng trên cho Câu hỏi 2 và Câu hỏi 3)."""
 
+    return common_head + tail
 # ============================================================
 # 5. GIAO DIỆN THANH BÊN (SIDEBAR)
 # ============================================================
@@ -289,15 +316,26 @@ def render_sidebar():
 # ============================================================
 # 6. HIỂN THỊ NỘI DUNG VÀ TRẮC NGHIỆM TƯƠNG TÁC
 # ============================================================
-def render_interactive_quizzes(raw_text: str):
-    parts = re.split(r"3\.\s*HỆ\s*THỐNG\s*CÂU\s*HỎI\s*TRẮC\s*NGHIỆM\s*ĐÁNH\s*GIÁ", raw_text, flags=re.IGNORECASE)
-    
+def render_interactive_quizzes(raw_text: str, subject: str):
+    is_essay = subject in ESSAY_SUBJECTS
+
+    if is_essay:
+        section_regex = r"3\.\s*HỆ\s*THỐNG\s*ĐỀ\s*LUYỆN\s*VIẾT"
+        display_header = "3. HỆ THỐNG ĐỀ LUYỆN VIẾT"
+        sub_title = "Hãy tự lực viết vào tập. Không có đáp án mẫu — hãy viết bằng chính tư duy của em."
+    else:
+        section_regex = r"3\.\s*HỆ\s*THỐNG\s*CÂU\s*HỎI\s*TRẮC\s*NGHIỆM\s*ĐÁNH\s*GIÁ"
+        display_header = "3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ"
+        sub_title = "Hãy tự lực suy nghĩ và chọn đáp án đúng nhất cho các câu hỏi dưới đây:"
+
+    parts = re.split(section_regex, raw_text, flags=re.IGNORECASE)
+
     if len(parts) < 2:
         str_app.markdown(f"<div class='content-box'>{raw_text}</div>", unsafe_allow_html=True)
         return
 
     theory_part = parts[0]
-    quiz_part = parts[1]
+    exercise_part = parts[1]
 
     theory_part = re.sub(
         r"(1\.\s*KIẾN\s*THỨC\s*CỐT\s*LÕI\s*CẦN\s*GHI\s*NHỚ)",
@@ -311,17 +349,48 @@ def render_interactive_quizzes(raw_text: str):
     )
 
     str_app.markdown(f"<div class='content-box'>{theory_part}</div>", unsafe_allow_html=True)
+    str_app.markdown(f"<div class='main-heading'>{display_header}</div>", unsafe_allow_html=True)
+    str_app.markdown(f"<p style='font-weight: 500; margin-bottom: 20px;'>{sub_title}</p>", unsafe_allow_html=True)
 
-    str_app.markdown("<div class='main-heading'>3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ</div>", unsafe_allow_html=True)
-    str_app.markdown("<p style='font-weight: 500; margin-bottom: 20px;'>Hãy tự lực suy nghĩ và chọn đáp án đúng nhất cho các câu hỏi dưới đây:</p>", unsafe_allow_html=True)
+    # ==================== NHÁNH TỰ LUẬN ====================
+    if is_essay:
+        essay_blocks = re.findall(r"\[ĐỀ\s*\d+\](.*?)(?=\[ĐỀ\s*\d+\]|\Z)", exercise_part, re.DOTALL | re.IGNORECASE)
 
-    question_blocks = re.findall(r"\[CÂU\s*HỎI\s*\d+\](.*?)(?=\[CÂU\s*HỎI|\Z)", quiz_part, re.DOTALL | re.IGNORECASE)
-    
+        d_index = 1
+        for e_block in essay_blocks:
+            if not e_block.strip():
+                continue
+
+            e_block = e_block.strip()
+            e_block = re.sub(r"\n?-{2,}\s*$", "", e_block).strip()
+
+            hint_match = re.search(r"GỢI\s*Ý\s*DÀN\s*Ý\s*:\s*(.*)", e_block, re.DOTALL | re.IGNORECASE)
+            if hint_match:
+                main_content = e_block[:hint_match.start()].strip()
+                hint_content = hint_match.group(1).strip()
+            else:
+                main_content = e_block
+                hint_content = ""
+
+            with str_app.container(border=True):
+                str_app.markdown(f"### 📝 Đề {d_index}")
+                str_app.markdown(main_content)
+
+                if hint_content:
+                    with str_app.expander(f"Gợi ý dàn ý cho đề {d_index} (Nhấp để xem khi cần định hướng)"):
+                        str_app.info(hint_content)
+
+            d_index += 1
+        return
+
+    # ==================== NHÁNH TRẮC NGHIỆM ====================
+    question_blocks = re.findall(r"\[CÂU\s*HỎI\s*\d+\](.*?)(?=\[CÂU\s*HỎI|\Z)", exercise_part, re.DOTALL | re.IGNORECASE)
+
     q_index = 1
     for q_block in question_blocks:
         if not q_block.strip():
             continue
-        
+
         ans_match = re.search(r"ĐÁP\s*ÁN\s*ĐÚNG:\s*([A-Da-d])", q_block, re.IGNORECASE)
         correct_ans = ans_match.group(1).strip().upper() if ans_match else "A"
 
@@ -332,7 +401,7 @@ def render_interactive_quizzes(raw_text: str):
         clean_q_block = re.sub(r"GỢI\s*Ý\s*TƯ\s*DUY:.*", "", clean_q_block, flags=re.DOTALL | re.IGNORECASE)
 
         lines = [line.strip() for line in clean_q_block.split('\n') if line.strip()]
-        
+
         question_text = ""
         options = []
         for line in lines:
@@ -345,16 +414,13 @@ def render_interactive_quizzes(raw_text: str):
             continue
 
         with str_app.container(border=True):
-            # Hiển thị câu hỏi — markdown, MathJax render OK
             str_app.markdown(f"**Câu {q_index}:** {question_text.strip()}")
 
-            # Hiển thị 4 đáp án — markdown, MathJax render OK
             for opt in options:
                 str_app.markdown(f"{opt}")
 
-            # Chỉ chọn A/B/C/D — không có placeholder là lựa chọn
             choice_key = f"q_choice_{q_index}"
-            
+
             user_choice = str_app.radio(
                 f"Chọn đáp án cho câu {q_index}:",
                 options=["A", "B", "C", "D"],
@@ -440,7 +506,7 @@ def render_main_interface(grade, subject, api_key_to_use):
             str_app.success(f"Đã hoàn thành tổng hợp kiến thức bài: **{str_app.session_state.get('cached_lesson_name', '')}**")
             str_app.caption(f"Model kết nối thành công: `{str_app.session_state.get('cached_model_used', '')}`")
             str_app.markdown("---")
-            render_interactive_quizzes(str_app.session_state["cached_lesson_result"])
+            render_interactive_quizzes(str_app.session_state["cached_lesson_result"], subject)
 
 # ============================================================
 # 8. KHỞI CHẠY ỨNG DỤNG CHÍNH
