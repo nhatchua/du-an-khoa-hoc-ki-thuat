@@ -40,27 +40,33 @@ def setup_page_config():
             line-height: 1.6;
         }
 
-        /* ===== DÀN ĐỀU 5 TAB + HIỆU ỨNG HOVER ===== */
+        /* ===== DÀN ĐỀU 5 TAB TRẠM 1-5 ===== */
+        /* Khung chứa danh sách tab */
         .stTabs [data-baseweb="tab-list"] {
-            gap: 6px;
-            display: flex;
-            width: 100%;
+            display: flex !important;
+            width: 100% !important;
+            gap: 6px !important;
+            justify-content: space-between !important;
         }
-        .stTabs [data-baseweb="tab"] {
-            flex: 1 1 0;
-            justify-content: center;
-            text-align: center;
-            white-space: nowrap;
-            padding: 10px 12px;
-            border-radius: 8px 8px 0 0;
-            font-weight: 600;
-            transition: all 0.2s ease;
+        /* Từng tab riêng lẻ */
+        .stTabs [data-baseweb="tab-list"] > button {
+            flex: 1 1 0 !important;
+            justify-content: center !important;
+            text-align: center !important;
+            white-space: nowrap !important;
+            padding: 10px 8px !important;
+            border-radius: 8px 8px 0 0 !important;
+            font-weight: 600 !important;
+            font-size: 0.9rem !important;
+            transition: all 0.2s ease !important;
         }
-        .stTabs [data-baseweb="tab"]:hover {
-            background-color: rgba(13, 110, 253, 0.08);
+        /* Hover: nền xanh nhạt */
+        .stTabs [data-baseweb="tab-list"] > button:hover {
+            background-color: rgba(13, 110, 253, 0.08) !important;
         }
-        .stTabs [aria-selected="true"] {
-            background-color: rgba(13, 110, 253, 0.10);
+        /* Tab đang chọn: nền xanh nhạt đậm hơn */
+        .stTabs [data-baseweb="tab-list"] > button[aria-selected="true"] {
+            background-color: rgba(13, 110, 253, 0.12) !important;
         }
         </style>
         
