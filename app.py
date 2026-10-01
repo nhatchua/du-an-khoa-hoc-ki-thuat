@@ -39,6 +39,29 @@ def setup_page_config():
             box-shadow: 0 2px 8px rgba(0,0,0,0.03);
             line-height: 1.6;
         }
+
+        /* ===== DÀN ĐỀU 5 TAB + HIỆU ỨNG HOVER ===== */
+        .stTabs [data-baseweb="tab-list"] {
+            gap: 6px;
+            display: flex;
+            width: 100%;
+        }
+        .stTabs [data-baseweb="tab"] {
+            flex: 1 1 0;
+            justify-content: center;
+            text-align: center;
+            white-space: nowrap;
+            padding: 10px 12px;
+            border-radius: 8px 8px 0 0;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+        .stTabs [data-baseweb="tab"]:hover {
+            background-color: rgba(13, 110, 253, 0.08);
+        }
+        .stTabs [aria-selected="true"] {
+            background-color: rgba(13, 110, 253, 0.10);
+        }
         </style>
         
         <!-- Thư viện MathJax hỗ trợ render kí hiệu toán học chuẩn LaTeX -->
@@ -46,7 +69,6 @@ def setup_page_config():
           src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
         </script>
     """, unsafe_allow_html=True)
-
 # ============================================================
 # 2. XỬ LÝ VÀ LỌC SẠCH PHẢN HỒI TỪ AI
 # ============================================================
@@ -371,11 +393,11 @@ def render_main_interface(grade, subject, api_key_to_use):
     )
 
     tab1, tab2, tab3, tab4, tab5 = str_app.tabs([
-        "Học Tập & Phòng Thí Nghiệm",
-        "Gia Sư Tương Tác",
-        "Khảo Thí Tự Do",
-        "Nhật Ký Nghiên Cứu",
-        "Thống Kê & Đánh Giá"
+        "📚 Học Tập & Phòng Thí Nghiệm",
+        "💬 Gia Sư Tương Tác",
+        "📝 Khảo Thí Tự Do",
+        "📖 Nhật Ký Nghiên Cứu",
+        "📊 Thống Kê & Đánh Giá"
     ])
 
     with tab1:
