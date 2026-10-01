@@ -2,6 +2,10 @@ import streamlit as str_app
 import google.generativeai as genai
 import re
 import time
+import json
+import requests
+from datetime import datetime
+from PIL import Image
 
 # ============================================================
 # 0. PHÂN LOẠI MÔN HỌC THEO HÌNH THỨC ĐÁNH GIÁ
@@ -213,6 +217,55 @@ def call_gemini(prompt: str, api_key: str) -> tuple:
                 break
 
     return None, "", last_error
+
+# ============================================================
+# 3B. GỌI API GEMINI — HỖ TRỢ ẢNH + SYSTEM INSTRUCTION
+# ============================================================
+def call_gemini_with_fallback(prompt, api_key: str, system_instruction: str = "") -> str:
+    """
+    Hỗ trợ prompt dạng str HOẶC list [text, PIL.Image].
+    Hỗ trợ system_instruction (dặn dò nhân vật AI).
+    Trả về chuỗi text phản hồi, hoặc chuỗi rỗng "" nếu lỗi toàn bộ.
+    """
+    genai.configure(api_key=api_key)
+    
+    model_candidates = [
+        "gemini-3.5-flash",
+        "gemini-3.1-flash-lite",
+        "gemini-2.5-flash",
+        "gemini-2.5-flash-lite",
+        "gemini-1.5-flash",
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-flash-8b"
+    ]
+
+    generation_config = genai.types.GenerationConfig(
+        temperature=0.0,
+        top_p=0.85,
+        max_output_tokens=8192,
+    )
+
+    for model_name in model_candidates:
+        try:
+            kwargs = {
+                "model_name": model_name,
+                "generation_config": generation_config,
+            }
+            if system_instruction:
+                kwargs["system_instruction"] = system_instruction
+            
+            model = genai.GenerativeModel(**kwargs)
+            response = model.generate_content(prompt)
+            if response and response.text:
+                return response.text
+        except Exception as err:
+            err_str = str(err)
+            if "429" in err_str:
+                time.sleep(2)
+                continue
+            continue
+
+    return ""
 
 # ============================================================
 # 4. XÂY DỰNG PROMPT CHUẨN KẾT NỐI TRI THỨC + HỖ TRỢ LATEX
@@ -491,6 +544,7 @@ def render_main_interface(grade, subject, api_key_to_use):
         "📊 Thống Kê & Đánh Giá"
     ])
 
+    # ==================== TAB 1 ====================
     with tab1:
         str_app.markdown(f"<div class='main-heading' style='text-align: center;'>TỰ HỌC & CHIẾM LĨNH KIẾN THỨC: MÔN {subject.upper()} - {grade.upper()}</div>", unsafe_allow_html=True)
         str_app.markdown("### Nhập tên bài học em muốn tổng hợp:")
@@ -526,6 +580,127 @@ def render_main_interface(grade, subject, api_key_to_use):
             str_app.caption(f"Model kết nối thành công: `{str_app.session_state.get('cached_model_used', '')}`")
             str_app.markdown("---")
             render_interactive_quizzes(str_app.session_state["cached_lesson_result"], subject)
+
+    # ==================== TAB 2 — GIA SƯ SOCRATIC ====================
+    with tab2:
+        str_app.markdown("<br>", unsafe_allow_html=True)
+
+        # Khởi tạo session_state riêng cho tab2
+        if "socratic_messages" not in str_app.session_state:
+            str_app.session_state.socratic_messages = []
+        if "socratic_uploader_key" not in str_app.session_state:
+            str_app.session_state.socratic_uploader_key = 0
+        if "analytics_logs" not in str_app.session_state:
+            str_app.session_state.analytics_logs = []
+
+        # Bóc số lớp từ chuỗi "Lớp 11" → "11"
+        grade_num = grade.replace("Lớp ", "").strip()
+
+        # Webhook Google Sheet (mặc định tắt — bật bằng cách thêm SHEET_WEBHOOK vào secrets.toml)
+        try:
+            sheet_webhook_url = str_app.secrets.get("SHEET_WEBHOOK", "")
+        except Exception:
+            sheet_webhook_url = ""
+
+        str_app.subheader(f"💬 Gia Sư Socratic môn: {subject} - Lớp {grade_num}")
+        str_app.caption("Chụp ảnh bài làm của em gửi lên đây. Gia Sư AI sẽ chẩn đoán lỗi sai và gợi mở phương pháp để em tự hoàn thiện!")
+
+        if str_app.button("🔄 Làm bài mới / Xóa đối thoại cũ"):
+            str_app.session_state.socratic_messages = []
+            str_app.session_state.socratic_uploader_key += 1
+            str_app.rerun()
+
+        uploaded_file = str_app.file_uploader(
+            "📸 Tải ảnh bài làm của em (JPG, PNG)",
+            type=["jpg", "png", "jpeg"],
+            key=f"socratic_uploader_{str_app.session_state.socratic_uploader_key}"
+        )
+
+        if uploaded_file is not None:
+            image = Image.open(uploaded_file)
+            str_app.image(image, caption="Bài làm của em", use_container_width=True)
+
+            if str_app.button("🚀 Bắt đầu nhận xét bài làm"):
+                if not api_key_to_use:
+                    str_app.error("Chưa phát hiện Mã Kết Nối! Vui lòng dán API Key ở thanh bên trái.")
+                else:
+                    with str_app.spinner("Gia Sư AI đang đối chiếu chuẩn kiến thức GDPT 2018 (SGK KNTT)..."):
+                        try:
+                            sys_prompt = f"""Bạn là 'Gia Sư AI' trường THPT Tân Hiệp & Trung tâm Thiện Nhân.
+Đối tượng: Học sinh Lớp {grade_num}, môn {subject} (SGK Kết nối tri thức).
+Phương pháp: Vấn đáp Socratic.
+NGUYÊN TẮC: Tuyệt đối không giải hộ, khen ngợi bước đúng, đặt câu hỏi gợi mở bước sai.
+Cuối bài chèn khối: <DIAGNOSTIC>{{"topic":"...","error_type":"...","evaluation":"..."}}</DIAGNOSTIC>"""
+
+                            full_res = call_gemini_with_fallback(
+                                [f"Nhận xét bài làm môn {subject} Lớp {grade_num}:", image],
+                                api_key=api_key_to_use,
+                                system_instruction=sys_prompt
+                            )
+
+                            if not full_res:
+                                str_app.error("Không thể kết nối AI. Vui lòng thử lại sau.")
+                            else:
+                                student_fb = full_res.split("<DIAGNOSTIC>")[0].strip() if "<DIAGNOSTIC>" in full_res else full_res
+
+                                # Parse DIAGNOSTIC để ghi log analytics
+                                if "<DIAGNOSTIC>" in full_res:
+                                    try:
+                                        diag_raw = full_res.split("<DIAGNOSTIC>")[1].split("</DIAGNOSTIC>")[0].strip()
+                                        diag = json.loads(diag_raw)
+                                        entry = {
+                                            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                            "grade": grade,
+                                            "subject": subject,
+                                            "topic": diag.get("topic", "Chung"),
+                                            "error_type": diag.get("error_type", "Chưa rõ"),
+                                            "evaluation": diag.get("evaluation", "")
+                                        }
+                                        str_app.session_state.analytics_logs.append(entry)
+
+                                        if sheet_webhook_url:
+                                            try:
+                                                requests.post(sheet_webhook_url, json=entry, timeout=5)
+                                            except Exception:
+                                                pass
+                                    except Exception as parse_err:
+                                        str_app.warning(f"Không parse được DIAGNOSTIC: {parse_err}")
+
+                                str_app.session_state.socratic_messages = [
+                                    {"role": "user", "content": "*(Em đã nộp ảnh bài làm)*"},
+                                    {"role": "assistant", "content": student_fb}
+                                ]
+                                str_app.rerun()
+                        except Exception as e:
+                            str_app.error(f"Lỗi: {e}")
+
+        # Hiển thị lịch sử hội thoại
+        for m in str_app.session_state.get("socratic_messages", []):
+            with str_app.chat_message(m["role"]):
+                str_app.markdown(m["content"])
+
+        # Ô chat tiếp nối
+        if len(str_app.session_state.get("socratic_messages", [])) > 0:
+            if q := str_app.chat_input("Em muốn hỏi thêm điều gì về bài làm này?...", key="socratic_chat_input"):
+                str_app.session_state.socratic_messages.append({"role": "user", "content": q})
+                with str_app.chat_message("user"):
+                    str_app.markdown(q)
+                with str_app.chat_message("assistant"):
+                    try:
+                        history = str_app.session_state.socratic_messages[-4:]
+                        dialogue_context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in history])
+                        prompt_chat = f"Ngữ cảnh hội thoại trước:\n{dialogue_context}\n\nHọc sinh hỏi tiếp: {q}\nHãy tiếp tục phương pháp gợi mở Socratic, giải thích bình dân học vụ, không giải hộ:"
+
+                        rep = call_gemini_with_fallback(prompt_chat, api_key=api_key_to_use)
+                        rep_clean = rep.split("<DIAGNOSTIC>")[0].strip() if "<DIAGNOSTIC>" in rep else rep
+
+                        if not rep_clean:
+                            str_app.error("Không nhận được phản hồi. Vui lòng thử lại.")
+                        else:
+                            str_app.markdown(rep_clean)
+                            str_app.session_state.socratic_messages.append({"role": "assistant", "content": rep_clean})
+                    except Exception as e:
+                        str_app.error(f"Lỗi phản hồi: {e}")
 
 # ============================================================
 # 8. KHỞI CHẠY ỨNG DỤNG CHÍNH
