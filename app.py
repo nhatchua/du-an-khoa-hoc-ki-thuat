@@ -6,6 +6,10 @@ import json
 import requests
 from datetime import datetime
 from PIL import Image
+import matplotlib
+matplotlib.use("Agg")
+import matplotlib.pyplot as plt
+import numpy as np
 
 # ============================================================
 # 0. PHÂN LOẠI MÔN HỌC THEO HÌNH THỨC ĐÁNH GIÁ
@@ -325,6 +329,62 @@ GỢI Ý TƯ DUY: [Gợi ý định hướng cách giải hoặc bản chất ki
 (Lặp lại đúng định dạng trên cho Câu hỏi 2 và Câu hỏi 3)."""
 
     return common_head + tail
+
+# ============================================================
+# 4B. XÂY DỰNG PROMPT PHÒNG THÍ NGHIỆM ẢO
+# ============================================================
+def build_virtual_lab_prompt(lab_request: str, subject: str, grade: str) -> str:
+    return f"""Bạn là chuyên gia mô phỏng thí nghiệm giáo dục, phục vụ học sinh {grade} môn {subject} theo chương trình GDPT 2018 bộ sách "Kết Nối Tri Thức Với Cuộc Sống".
+
+YÊU CẦU CỦA HỌC SINH: {lab_request}
+
+QUY TẮC BẮT BUỘC:
+1. TOÀN BỘ nội dung bằng TIẾNG VIỆT chuẩn xác, không suy luận nội tâm, không bản nháp.
+2. Sử dụng LaTeX đặt trong cặp dấu đô la cho mọi công thức (ví dụ: $v = v_0 + at$, $H_2SO_4$, $\\int_0^1 x^2 dx$).
+3. KHÔNG DÙNG DẤU #.
+4. Kiến thức phải cực kỳ chính xác theo chuẩn SGK Kết Nối Tri Thức.
+
+CẤU TRÚC ĐẦU RA BẮT BUỘC:
+
+1. MÔ TẢ THÍ NGHIỆM / HIỆN TƯỢNG
+[Mô tả chi tiết thí nghiệm, hiện tượng, quá trình, dụng cụ (nếu có) — phù hợp với môn học.]
+
+2. NGUYÊN LÝ / PHƯƠNG TRÌNH / HIỆN TƯỢNG XẢY RA
+[Giải thích bản chất khoa học, phương trình phản ứng hóa học, phương trình chuyển động, định lý toán học... Sử dụng LaTeX đầy đủ.]
+
+3. KẾT QUẢ / QUAN SÁT ĐƯỢC
+[Mô tả kết quả, số liệu, hiện tượng quan sát được, kết luận rút ra.]
+
+4. MÃ VẼ ĐỒ THỊ MINH HỌA (chỉ khi phù hợp với môn Toán/Lý/Hóa — nếu không phù hợp, ghi rõ "Không cần vẽ đồ thị")
+Nếu cần vẽ, đặt code Python matplotlib trong cặp thẻ <PLOT> ... </PLOT> theo mẫu sau:
+
+<PLOT>
+import matplotlib.pyplot as plt
+import numpy as np
+
+fig, ax = plt.subplots(figsize=(8, 5))
+x = np.linspace(-10, 10, 400)
+y = x**2
+ax.plot(x, y, label="y = x^2")
+ax.axhline(0, color="black", linewidth=0.5)
+ax.axvline(0, color="black", linewidth=0.5)
+ax.grid(True, alpha=0.3)
+ax.legend()
+ax.set_xlabel("x")
+ax.set_ylabel("y")
+ax.set_title("Đồ thị hàm số y = x^2")
+plt.tight_layout()
+fig.savefig("/tmp/lab_plot.png", dpi=100, bbox_inches="tight")
+</PLOT>
+
+LƯU Ý QUAN TRỌNG VỀ CODE VẼ:
+- CHỈ dùng `matplotlib.pyplot`, `numpy`, `math`
+- KHÔNG dùng `plt.show()`, KHÔNG dùng `seaborn`, KHÔNG đọc file ngoài
+- BẮT BUỘC kết thúc bằng dòng: `fig.savefig("/tmp/lab_plot.png", dpi=100, bbox_inches="tight")`
+- CHỈ vẽ 1 figure duy nhất
+- Nhãn trục, tiêu đề bằng tiếng Việt có dấu
+- Nếu môn không cần đồ thị (Văn, Sử, Địa, Sinh mô tả), bỏ qua phần 4 hoàn toàn."""
+
 # ============================================================
 # 5. GIAO DIỆN THANH BÊN (SIDEBAR)
 # ============================================================
@@ -492,6 +552,10 @@ def render_interactive_quizzes(raw_text: str, subject: str):
                 str_app.markdown(f"{opt}")
 
             choice_key = f"q_choice_{q_index}"
+            checked_key = f"q_checked_{q_index}"
+
+            if checked_key not in str_app.session_state:
+                str_app.session_state[checked_key] = False
 
             user_choice = str_app.radio(
                 f"Chọn đáp án cho câu {q_index}:",
@@ -502,22 +566,38 @@ def render_interactive_quizzes(raw_text: str, subject: str):
                 label_visibility="collapsed"
             )
 
-            if user_choice:
+            btn_clicked = str_app.button(
+                "✅ Kiểm tra kết quả",
+                key=f"check_btn_{q_index}",
+                type="primary"
+            )
+
+            if btn_clicked:
+                if not user_choice:
+                    str_app.warning("Em chưa chọn đáp án. Hãy chọn A, B, C hoặc D trước khi kiểm tra!")
+                else:
+                    str_app.session_state[checked_key] = True
+
+            # Chỉ hiển thị kết quả khi đã bấm "Kiểm tra kết quả"
+            if str_app.session_state[checked_key] and user_choice:
                 if user_choice == correct_ans:
                     str_app.markdown(
-                        f"<p style='color: #28a745; font-weight: bold; margin-top: 10px;'>"
-                        f"Chính xác! Bạn đã chọn đúng đáp án {correct_ans}.</p>",
+                        "<p style='color: #28a745; font-weight: bold; margin-top: 10px;'>"
+                        "Chính xác! Em đã chọn đúng đáp án.</p>",
                         unsafe_allow_html=True
                     )
                 else:
                     str_app.markdown(
-                        f"<p style='color: #dc3545; font-weight: bold; margin-top: 10px;'>"
-                        f"Chưa chính xác. Hãy suy nghĩ kỹ lại hoặc xem gợi ý bên dưới.</p>",
+                        "<p style='color: #dc3545; font-weight: bold; margin-top: 10px;'>"
+                        "Chưa chính xác. Hãy xem gợi ý tư duy bên dưới để tự tìm ra lỗi sai.</p>",
                         unsafe_allow_html=True
                     )
 
-            with str_app.expander(f"Gợi ý tư duy cho câu {q_index} (Nhấp để xem khi quá bí)"):
-                str_app.info(hint_text)
+                with str_app.expander(f"💡 Gợi ý tư duy cho câu {q_index}", expanded=True):
+                    str_app.info(hint_text)
+            else:
+                with str_app.expander(f"Gợi ý tư duy cho câu {q_index} (Nhấp để xem khi quá bí)", expanded=False):
+                    str_app.info(hint_text)
 
         q_index += 1
 
@@ -552,10 +632,11 @@ def render_main_interface(grade, subject, api_key_to_use):
         lesson_input = str_app.text_input(
             "Nhập bài học cần chiếm lĩnh kiến thức:",
             placeholder="Ví dụ: Đồ thị hàm số bậc hai...",
-            label_visibility="collapsed"
+            label_visibility="collapsed",
+            key="lesson_input_tab1"
         )
 
-        btn_soan_bai = str_app.button("Tổng Hợp Kiến Thức Cốt Lõi", type="primary")
+        btn_soan_bai = str_app.button("Tổng Hợp Kiến Thức Cốt Lõi", type="primary", key="btn_soan_bai_tab1")
 
         if btn_soan_bai:
             if not lesson_input.strip():
@@ -581,11 +662,93 @@ def render_main_interface(grade, subject, api_key_to_use):
             str_app.markdown("---")
             render_interactive_quizzes(str_app.session_state["cached_lesson_result"], subject)
 
+        # ========== PHÒNG THÍ NGHIỆM ẢO ==========
+        str_app.markdown("---")
+        str_app.markdown(
+            "<div class='main-heading' style='text-align: center;'>"
+            "🔬 PHÒNG THÍ NGHIỆM ẢO THEO YÊU CẦU</div>",
+            unsafe_allow_html=True
+        )
+        str_app.markdown(
+            f"Hệ thống AI đang liên kết trực tiếp với môn **{subject} - {grade}**. "
+            "Hãy nhập yêu cầu mô phỏng thí nghiệm, hiện tượng, đồ thị hoặc quá trình em muốn quan sát:"
+        )
+
+        lab_request = str_app.text_input(
+            "Nhập yêu cầu thí nghiệm:",
+            placeholder="Ví dụ: Đồ thị hàm số y = x² - 2x + 1... / Phản ứng H₂ + O₂... / Chuyển động ném ngang...",
+            label_visibility="collapsed",
+            key="lab_request_input"
+        )
+
+        btn_lab = str_app.button("🚀 Khởi chạy Phòng Lab", type="primary", key="btn_run_lab")
+
+        if btn_lab:
+            if not lab_request.strip():
+                str_app.warning("Vui lòng nhập yêu cầu thí nghiệm trước khi khởi chạy!")
+            elif not api_key_to_use:
+                str_app.error("Chưa phát hiện Mã Kết Nối! Vui lòng dán API Key ở thanh bên trái.")
+            else:
+                with str_app.spinner(f"AI đang mô phỏng: **{lab_request}**..."):
+                    lab_prompt = build_virtual_lab_prompt(lab_request, subject, grade)
+                    lab_response, _, lab_error = call_gemini(lab_prompt, api_key_to_use)
+
+                    if lab_response:
+                        str_app.session_state["lab_result"] = lab_response
+                        str_app.session_state["lab_request_name"] = lab_request
+                    else:
+                        str_app.error(f"Không thể kết nối AI. Lỗi chi tiết: `{lab_error}`")
+
+        if "lab_result" in str_app.session_state:
+            raw_lab = str_app.session_state["lab_result"]
+
+            # Tách khối <PLOT>...</PLOT> ra khỏi phần mô tả
+            plot_match = re.search(r"<PLOT>(.*?)</PLOT>", raw_lab, re.DOTALL | re.IGNORECASE)
+            text_part = re.sub(r"<PLOT>.*?</PLOT>", "", raw_lab, flags=re.DOTALL | re.IGNORECASE).strip()
+
+            # Hiển thị mô tả (dùng content-box)
+            clean_text = clean_ai_response(text_part)
+            str_app.markdown(
+                f"<div class='content-box'>{clean_text}</div>",
+                unsafe_allow_html=True
+            )
+
+            # Nếu có code vẽ đồ thị → chạy trong sandbox
+            if plot_match:
+                code_to_run = plot_match.group(1).strip()
+                try:
+                    import os
+                    plot_path = "/tmp/lab_plot.png"
+                    if os.path.exists(plot_path):
+                        os.remove(plot_path)
+
+                    # Sandbox đơn giản: chỉ cho phép matplotlib, numpy, math
+                    allowed_namespace = {
+                        "plt": plt,
+                        "np": np,
+                        "math": __import__("math"),
+                        "__builtins__": {
+                            "range": range, "len": len, "min": min, "max": max,
+                            "abs": abs, "round": round, "sum": sum, "float": float,
+                            "int": int, "str": str, "list": list, "tuple": tuple,
+                            "dict": dict, "print": print, "enumerate": enumerate,
+                            "zip": zip, "map": map, "filter": filter,
+                        }
+                    }
+                    exec(code_to_run, allowed_namespace)
+
+                    if os.path.exists(plot_path):
+                        str_app.markdown("#### 📈 Đồ thị minh họa")
+                        str_app.image(plot_path, use_container_width=True)
+                    else:
+                        str_app.warning("AI đã sinh code vẽ nhưng không tạo được file ảnh.")
+                except Exception as plot_err:
+                    str_app.warning(f"Không vẽ được đồ thị: `{plot_err}`")
+
     # ==================== TAB 2 — GIA SƯ SOCRATIC ====================
     with tab2:
         str_app.markdown("<br>", unsafe_allow_html=True)
 
-        # Khởi tạo session_state riêng cho tab2
         if "socratic_messages" not in str_app.session_state:
             str_app.session_state.socratic_messages = []
         if "socratic_uploader_key" not in str_app.session_state:
@@ -593,10 +756,8 @@ def render_main_interface(grade, subject, api_key_to_use):
         if "analytics_logs" not in str_app.session_state:
             str_app.session_state.analytics_logs = []
 
-        # Bóc số lớp từ chuỗi "Lớp 11" → "11"
         grade_num = grade.replace("Lớp ", "").strip()
 
-        # Webhook Google Sheet (mặc định tắt — bật bằng cách thêm SHEET_WEBHOOK vào secrets.toml)
         try:
             sheet_webhook_url = str_app.secrets.get("SHEET_WEBHOOK", "")
         except Exception:
@@ -643,7 +804,6 @@ Cuối bài chèn khối: <DIAGNOSTIC>{{"topic":"...","error_type":"...","evalua
                             else:
                                 student_fb = full_res.split("<DIAGNOSTIC>")[0].strip() if "<DIAGNOSTIC>" in full_res else full_res
 
-                                # Parse DIAGNOSTIC để ghi log analytics
                                 if "<DIAGNOSTIC>" in full_res:
                                     try:
                                         diag_raw = full_res.split("<DIAGNOSTIC>")[1].split("</DIAGNOSTIC>")[0].strip()
@@ -674,12 +834,10 @@ Cuối bài chèn khối: <DIAGNOSTIC>{{"topic":"...","error_type":"...","evalua
                         except Exception as e:
                             str_app.error(f"Lỗi: {e}")
 
-        # Hiển thị lịch sử hội thoại
         for m in str_app.session_state.get("socratic_messages", []):
             with str_app.chat_message(m["role"]):
                 str_app.markdown(m["content"])
 
-        # Ô chat tiếp nối
         if len(str_app.session_state.get("socratic_messages", [])) > 0:
             if q := str_app.chat_input("Em muốn hỏi thêm điều gì về bài làm này?...", key="socratic_chat_input"):
                 str_app.session_state.socratic_messages.append({"role": "user", "content": q})
