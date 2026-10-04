@@ -164,6 +164,43 @@ def substitute_coefficients(code_str: str, coeff_values: dict) -> str:
         code_str = pattern.sub(rf"\g<1>{val_str}\g<3>", code_str)
     return code_str
 
+def _postprocess_figure(fig):
+    """
+    Chuẩn hóa mọi figure trước khi render:
+    - Bật grid 2 chiều, màu xám vừa đủ thấy
+    - Annotation: bắt buộc có nền trắng mờ + chữ đậm (không để trắng-trên-trắng)
+    """
+    try:
+        for ax_name in ("xaxis", "yaxis"):
+            ax = getattr(fig.layout, ax_name, None)
+            if ax is None:
+                continue
+            if ax.showgrid is False:
+                ax.showgrid = True
+            c = (ax.gridcolor or "").lower()
+            if not c or c in ("white", "#fff", "#ffffff", "rgba(0,0,0,0)"):
+                ax.gridcolor = "#f0f0f0"
+            if not ax.gridwidth:
+                ax.gridwidth = 0.5
+
+        if fig.layout.annotations:
+            for ann in fig.layout.annotations:
+                # Bỏ qua mũi tên (chỉ xử lý annotation chữ)
+                if not ann.text or ann.showarrow:
+                    continue
+                # Nền trắng mờ để chữ nổi trên mọi nền đồ thị
+                if not ann.bgcolor or ann.bgcolor in ("rgba(0,0,0,0)", "white"):
+                    ann.bgcolor = "rgba(255,255,255,0.85)"
+                # Chữ trắng → đổi thành đậm
+                if ann.font is None:
+                    ann.font = dict(color="#333")
+                else:
+                    fc = (ann.font.color or "").lower()
+                    if fc in ("white", "#fff", "#ffffff", ""):
+                        ann.font.color = "#333"
+    except Exception:
+        pass
+    return fig
 
 def run_plot_code(code_str: str):
     import os
@@ -213,6 +250,7 @@ def run_plot_code(code_str: str):
         exec(code_str, namespace)
         fig_var = namespace.get("fig")
         if fig_var is not None and hasattr(fig_var, "to_plotly_json"):
+            _postprocess_figure(fig_var)          # ← DÒNG THÊM DUY NHẤT
             return ("plotly", fig_var)
         if not os.path.exists(plot_path):
             try:
@@ -224,7 +262,6 @@ def run_plot_code(code_str: str):
         return (None, None)
     finally:
         plt.close('all')
-
 
 def call_gemini(prompt: str, api_key: str) -> tuple:
     genai.configure(api_key=api_key)
