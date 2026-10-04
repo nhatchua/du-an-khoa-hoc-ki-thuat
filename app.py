@@ -357,20 +357,14 @@ QUY TẮC BẮT BUỘC:
 Plotly KHÁC matplotlib. Các lỗi thường gặp PHẢI TRÁNH:
 
 1. Font bold: DÙNG `weight='bold'` (KHÔNG dùng `bold=True`)
-   ĐÚNG: font=dict(size=14, color='#333', weight='bold')
-   SAI:  font=dict(size=14, color='#333', bold=True)
 
 2. Title: DÙNG `title=dict(text='...', font=dict(...))` (KHÔNG dùng `title='...', title_font=dict(...)`)
-   ĐÚNG: title=dict(text='Đồ thị', x=0.5, font=dict(size=14, weight='bold'))
-   SAI:  title='Đồ thị', title_font=dict(bold=True)
 
 3. Marker: DÙNG `marker=dict(size=12, color='#d62728')` (KHÔNG dùng `marker_size=12`)
-   ĐÚNG: marker=dict(size=12, color='#d62728', line=dict(color='white', width=1.5))
-   SAI:  marker_size=12, marker_color='#d62728'
 
 4. Line: DÙNG `line=dict(color='#1f4e9c', width=3)` (KHÔNG dùng `line_color`, `line_width`)
 
-5. Annotation: DÙNG `showarrow=False` (KHÔNG dùng `show_arrow=False`, `arrow=False`)
+5. Annotation: DÙNG `showarrow=False` (KHÔNG dùng `show_arrow=False`)
 
 6. KHÔNG dùng `axref="paper"` hoặc `ayref="paper"` cho mũi tên annotation.
 
@@ -412,35 +406,37 @@ Ví dụ SAI: `coeffs = [1, -4, 3]` HOẶC `a, b, c = 1, -4, 3` HOẶC `a=1`
    y_range = [min(y) - y_pad, max(y) + y_pad]
 3. Mũi tên trục đặt ở cuối data range (không dùng paper coords).
 
-=== ⚠️ QUY TẮC ĐẶT TÊN ĐỒ THỊ VÀ TIỆM CẬN (BẮT BUỘC) ===
+=== ⚠️ QUY TẮC NHÃN KHÔNG DÍNH ĐỒ THỊ (CỰC KỲ QUAN TRỌNG) ===
+MỌI NHÃN (annotation cho điểm đặc biệt và tiệm cận) BẮT BUỘC PHẢI CÓ:
+- `bgcolor='rgba(255,255,255,0.9)'` — nền trắng mờ để tách khỏi đường cong
+- `borderwidth=1` + `bordercolor` cùng màu chữ
+- `borderpad=4` — padding trong khung
+- Khoảng cách nhãn với điểm TỐI THIỂU 35px (dùng xshift/yshift)
 
-A) TÊN ĐỒ THỊ — Đặt ở GÓC DƯỚI PHẢI (vùng paper 0.98, 0.02):
-   fig.add_annotation(
-       x=0.98, y=0.02, xref="paper", yref="paper",
-       text="<công thức tổng quát>",
-       showarrow=False,
-       xanchor='right', yanchor='bottom',
-       font=dict(size=13, color='#1f4e9c'),
-       bgcolor='rgba(255,255,255,0.85)',
-       bordercolor='#1f4e9c', borderwidth=1.5, borderpad=6
-   )
+Vị trí nhãn theo loại điểm:
+- ĐỈNH PARABOL: xshift=20, yshift=-40, xanchor='left', yanchor='top'
+- GIAO Oy: xshift=50, yshift=5, xanchor='left', yanchor='middle'
+- GIAO Ox: yshift=35, xanchor='center', yanchor='bottom'
+- TIỆM CẬN ĐỨNG: xshift=15, xanchor='left', yanchor='middle'
+- TIỆM CẬN NGANG: xshift=-10, yshift=15, xanchor='right', yanchor='bottom'
 
-   Quy tắc viết tên:
+=== ⚠️ QUY TẮC ĐẶT TÊN ĐỒ THỊ VÀ TIỆM CẬN ===
+A) TÊN ĐỒ THỊ — GÓC DƯỚI PHẢI (paper 0.98, 0.02), có bgcolor, border
    - Hàm bậc 2: "y = ax² + bx + c"
    - Hàm bậc 3: "y = ax³ + bx² + cx + d"
    - Hàm phân thức: "y = (ax + b)/(cx + d)"
-   → LUÔN ghi dạng TỔNG QUÁT (có a, b, c), KHÔNG ghi số cụ thể.
+   → LUÔN ghi dạng TỔNG QUÁT, KHÔNG ghi số cụ thể.
 
-B) TIỆM CẬN — Mỗi tiệm cận phải có NHÃN TÊN:
-   - Tiệm cận ĐỨNG x = a: đường dọc dash, nhãn "x = a" đặt gần đường
-   - Tiệm cận NGANG y = a: đường ngang dash, nhãn "y = a" ở đầu phải
-   - Tiệm cận XIÊN y = ax + b: đường chéo dash, nhãn "y = ax + b" ở đầu phải
+B) TIỆM CẬN — Mỗi tiệm cận phải có NHÃN TÊN có bgcolor trắng:
+   - Tiệm cận ĐỨNG x = a: nhãn "x = a" đặt bên phải đường
+   - Tiệm cận NGANG y = a: nhãn "y = a" ở đầu phải
+   - Tiệm cận XIÊN y = ax + b: nhãn "y = ax + b" ở đầu phải
 
 === STYLE 2D PLOTLY (BẮT BUỘC) ===
 - Lưới mịn màu #e0e0e0
 - Đường cong xanh đậm #1f4e9c, width 3
 - Nền trắng (plot_bgcolor='white')
-- Điểm đặc biệt: chấm tròn + nhãn tọa độ
+- Điểm đặc biệt: chấm tròn viền trắng + nhãn CÓ NỀN TRẮNG
 
 === MẪU 2D PLOTLY CHUẨN ===
 <PLOT_2D>
@@ -457,49 +453,56 @@ y = a*x**2 + b*x + c
 fig.add_trace(go.Scatter(x=x, y=y, mode='lines',
     line=dict(color='#1f4e9c', width=3), showlegend=False, hoverinfo='skip'))
 
-# Điểm cực trị
 if a != 0:
     vx = -b / (2*a)
     vy = a*vx**2 + b*vx + c
     fig.add_trace(go.Scatter(x=[vx], y=[vy], mode='markers',
-        marker=dict(color='#d62728', size=12, line=dict(color='white', width=1.5)),
+        marker=dict(color='#d62728', size=12, line=dict(color='white', width=2)),
         showlegend=False,
         hovertemplate='Đỉnh I(' + str(round(vx,2)) + '; ' + str(round(vy,2)) + ')<extra></extra>'))
     fig.add_annotation(x=vx, y=vy,
         text="I(" + str(round(vx,2)) + "; " + str(round(vy,2)) + ")",
-        showarrow=False, yshift=-25, font=dict(color='#d62728', size=12, weight='bold'))
+        showarrow=False, xshift=20, yshift=-40,
+        xanchor='left', yanchor='top',
+        font=dict(color='#d62728', size=12, weight='bold'),
+        bgcolor='rgba(255,255,255,0.9)',
+        bordercolor='#d62728', borderwidth=1, borderpad=4)
 
-# Giao Oy
 fig.add_trace(go.Scatter(x=[0], y=[c], mode='markers',
-    marker=dict(color='#2ca02c', size=10, line=dict(color='white', width=1.5)),
+    marker=dict(color='#2ca02c', size=10, line=dict(color='white', width=2)),
     showlegend=False,
     hovertemplate='(0; ' + str(round(c,2)) + ')<extra></extra>'))
 fig.add_annotation(x=0, y=c,
     text="(0; " + str(round(c,2)) + ")",
-    showarrow=False, xshift=35, font=dict(color='#2ca02c', size=12, weight='bold'))
+    showarrow=False, xshift=50, yshift=5,
+    xanchor='left', yanchor='middle',
+    font=dict(color='#2ca02c', size=12, weight='bold'),
+    bgcolor='rgba(255,255,255,0.9)',
+    bordercolor='#2ca02c', borderwidth=1, borderpad=4)
 
-# Giao Ox
 if a != 0:
     roots = np.roots([a, b, c])
     for r in roots:
         if abs(r.imag) < 1e-6:
             xr = r.real
             fig.add_trace(go.Scatter(x=[xr], y=[0], mode='markers',
-                marker=dict(color='#2ca02c', size=10, line=dict(color='white', width=1.5)),
+                marker=dict(color='#2ca02c', size=10, line=dict(color='white', width=2)),
                 showlegend=False,
                 hovertemplate='(' + str(round(xr,2)) + '; 0)<extra></extra>'))
             fig.add_annotation(x=xr, y=0,
                 text="(" + str(round(xr,2)) + "; 0)",
-                showarrow=False, yshift=20, font=dict(color='#2ca02c', size=11, weight='bold'))
+                showarrow=False, yshift=35,
+                xanchor='center', yanchor='bottom',
+                font=dict(color='#2ca02c', size=11, weight='bold'),
+                bgcolor='rgba(255,255,255,0.9)',
+                bordercolor='#2ca02c', borderwidth=1, borderpad=4)
 
-# TÍNH RANGE ĐỘNG
 x_range = [-1.8, 6.8]
 y_min_d = float(np.min(y))
 y_max_d = float(np.max(y))
 y_pad = (y_max_d - y_min_d) * 0.1 + 1
 y_range = [y_min_d - y_pad, y_max_d + y_pad]
 
-# MŨI TÊN TRỤC
 fig.add_annotation(
     x=x_range[1], y=0,
     ax=x_range[1] - 0.5, ay=0,
@@ -515,7 +518,6 @@ fig.add_annotation(
     arrowwidth=2.5, arrowcolor='#333'
 )
 
-# Nhãn O, x, y
 fig.add_annotation(x=0, y=0, text='O', showarrow=False,
     xshift=-14, yshift=-14, font=dict(size=15, color='#333'))
 fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
@@ -523,7 +525,6 @@ fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
 fig.add_annotation(x=0, y=y_range[1], text='y', showarrow=False,
     xshift=-18, yshift=-8, font=dict(size=15, color='#333'))
 
-# TÊN ĐỒ THỊ Ở GÓC DƯỚI PHẢI
 fig.add_annotation(
     x=0.98, y=0.02, xref="paper", yref="paper",
     text="y = ax² + bx + c",
@@ -535,7 +536,7 @@ fig.add_annotation(
 )
 
 fig.update_layout(
-    title=dict(text='Đồ thị hàm số bậc hai y = ax² + bx + c', x=0.5,
+    title=dict(text='Đồ thị hàm số bậc hai', x=0.5,
         font=dict(size=14, color='#333')),
     xaxis=dict(range=x_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
         showgrid=True, gridcolor='#e0e0e0', gridwidth=0.5,
@@ -570,7 +571,6 @@ fig.add_trace(go.Scatter(x=x, y=y, mode='lines',
 x_range = [-6, 6]
 y_range = [-10, 10]
 
-# TIỆM CẬN ĐỨNG x = -d/c
 if c != 0:
     x_tcd = -d / c
     fig.add_trace(go.Scatter(x=[x_tcd, x_tcd], y=y_range,
@@ -578,9 +578,12 @@ if c != 0:
         showlegend=False, hoverinfo='skip'))
     fig.add_annotation(x=x_tcd, y=y_range[1]*0.85,
         text="x = " + str(round(x_tcd, 2)),
-        showarrow=False, xshift=8, font=dict(color='#666', size=12))
+        showarrow=False, xshift=15,
+        xanchor='left', yanchor='middle',
+        font=dict(color='#666', size=12),
+        bgcolor='rgba(255,255,255,0.9)',
+        bordercolor='#999', borderwidth=1, borderpad=4)
 
-# TIỆM CẬN NGANG y = a/c
 if c != 0:
     y_tcn = a / c
     fig.add_trace(go.Scatter(x=x_range, y=[y_tcn, y_tcn],
@@ -588,9 +591,12 @@ if c != 0:
         showlegend=False, hoverinfo='skip'))
     fig.add_annotation(x=x_range[1]*0.95, y=y_tcn,
         text="y = " + str(round(y_tcn, 2)),
-        showarrow=False, yshift=8, xanchor='right', font=dict(color='#666', size=12))
+        showarrow=False, xshift=-10, yshift=15,
+        xanchor='right', yanchor='bottom',
+        font=dict(color='#666', size=12),
+        bgcolor='rgba(255,255,255,0.9)',
+        bordercolor='#999', borderwidth=1, borderpad=4)
 
-# Mũi tên trục
 fig.add_annotation(x=x_range[1], y=0, ax=x_range[1]-0.5, ay=0,
     xref="x", yref="y", axref="x", ayref="y",
     showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
@@ -598,7 +604,6 @@ fig.add_annotation(x=0, y=y_range[1], ax=0, ay=y_range[1]*0.92,
     xref="x", yref="y", axref="x", ayref="y",
     showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
 
-# Nhãn O, x, y
 fig.add_annotation(x=0, y=0, text='O', showarrow=False,
     xshift=-14, yshift=-14, font=dict(size=15, color='#333'))
 fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
@@ -606,7 +611,6 @@ fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
 fig.add_annotation(x=0, y=y_range[1], text='y', showarrow=False,
     xshift=-18, yshift=-8, font=dict(size=15, color='#333'))
 
-# TÊN ĐỒ THỊ GÓC DƯỚI PHẢI
 fig.add_annotation(
     x=0.98, y=0.02, xref="paper", yref="paper",
     text="y = (ax + b)/(cx + d)",
@@ -659,9 +663,10 @@ fig.update_layout(
 LƯU Ý CUỐI:
 - 2D: dùng PLOTLY
 - 2D: KHÔNG dùng `bold=True` — DÙNG `weight='bold'`
-- 2D: KHÔNG dùng `title_font=`, `marker_size=`, `line_color=`, `show_arrow=`
-- 2D: BẮT BUỘC đặt TÊN ĐỒ THỊ ở góc dưới phải (paper 0.98, 0.02)
-- 2D: Mỗi tiệm cận PHẢI có nhãn tên
+- 2D: MỌI NHÃN ĐIỂM PHẢI CÓ `bgcolor='rgba(255,255,255,0.9)'` + `borderwidth=1` + `borderpad=4`
+- 2D: Khoảng cách nhãn với điểm TỐI THIỂU 35px
+- 2D: BẮT BUỘC đặt TÊN ĐỒ THỊ ở góc dưới phải
+- 2D: Mỗi tiệm cận PHẢI có nhãn tên + nền trắng
 - KHÔNG gọi fig.show(), KHÔNG savefig"""
 
     return template.replace("__LAB_REQUEST__", lab_request).replace("__SUBJECT__", subject).replace("__GRADE__", grade)
@@ -1103,24 +1108,422 @@ def render_interactive_quizzes(raw_text: str, subject: str):
 # ============================================================
 # 7. GIAO DIỆN CHÍNH VÀ LUỒNG XỬ LÝ
 # ============================================================
-                            # ===== CÔNG THỨC ĐỘNG =====
-                            formula_parts = []
-                            if "a" in user_coeffs:
-                                formula_parts.append(f"{user_coeffs['a']:.1f}x²")
-                            if "b" in user_coeffs:
-                                formula_parts.append(f"({user_coeffs['b']:.1f})x")
-                            if "c" in user_coeffs:
-                                formula_parts.append(f"({user_coeffs['c']:.1f})")
+def render_main_interface(grade, subject, api_key_to_use):
+    str_app.markdown(
+        "<h1 style='text-align: center; color: #0d6efd;'>"
+        "GIA SƯ AI - HỆ SINH THÁI LỚP HỌC ĐẢO NGƯỢC</h1>",
+        unsafe_allow_html=True
+    )
+    str_app.markdown(
+        "<p style='text-align: center; font-size: 18px; font-weight: bold;'>"
+        "Trường THPT Tân Hiệp</p>",
+        unsafe_allow_html=True
+    )
 
-                            if formula_parts:
-                                formula_text = "y = " + " + ".join(formula_parts).replace("+ (-", "- (").replace("+ (-", "- (")
+    tab1, tab2, tab3, tab4, tab5 = str_app.tabs([
+        "📚 Học Tập & Phòng Thí Nghiệm",
+        "💬 Gia Sư Tương Tác",
+        "📝 Khảo Thí Tự Do",
+        "📖 Nhật Ký Nghiên Cứu",
+        "📊 Thống Kê & Đánh Giá"
+    ])
+
+    # ===== CONFIG KHÓA TƯƠNG TÁC KÉO CHO PLOTLY =====
+    PLOTLY_CONFIG = {
+        "scrollZoom": False,
+        "displayModeBar": True,
+        "displaylogo": False,
+        "modeBarButtonsToRemove": [
+            "pan2d", "select2d", "lasso2d", "zoom2d",
+            "autoScale2d", "toggleSpikelines",
+            "hoverCompareCartesian", "hoverClosestCartesian"
+        ],
+        "doubleClick": "reset",
+    }
+
+    # ===== HÀM FORMAT CÔNG THỨC NỘI BỘ =====
+    def _fmt_num(v, suffix=""):
+        """Format số: bỏ .0 nếu nguyên, bỏ 1 nếu có suffix."""
+        v_abs = abs(v)
+        if v_abs == 1 and suffix:
+            return suffix
+        if v_abs == int(v_abs):
+            return f"{int(v_abs)}{suffix}"
+        return f"{v_abs:.1f}{suffix}"
+
+    def _format_formula(coeffs_dict, code_str=""):
+        """Format công thức đẹp: bỏ ngoặc, gộp dấu, bỏ số 1 trước biến."""
+        is_frac = ("d" in coeffs_dict and "e" in coeffs_dict and "/" in code_str)
+
+        if is_frac:
+            num_parts = []
+            for name, suffix in [("a", "x²"), ("b", "x"), ("c", "")]:
+                if name not in coeffs_dict:
+                    continue
+                v = coeffs_dict[name]
+                v_str = _fmt_num(v, suffix)
+                if not num_parts:
+                    num_parts.append(f"-{v_str}" if v < 0 else v_str)
+                else:
+                    num_parts.append(f"- {v_str}" if v < 0 else f"+ {v_str}")
+            den_parts = []
+            for name, suffix in [("d", "x"), ("e", "")]:
+                if name not in coeffs_dict:
+                    continue
+                v = coeffs_dict[name]
+                v_str = _fmt_num(v, suffix)
+                if not den_parts:
+                    den_parts.append(f"-{v_str}" if v < 0 else v_str)
+                else:
+                    den_parts.append(f"- {v_str}" if v < 0 else f"+ {v_str}")
+            num_str = " ".join(num_parts) if num_parts else "0"
+            den_str = " ".join(den_parts) if den_parts else "1"
+            return f"y = ({num_str}) / ({den_str})"
+        else:
+            if "e" in coeffs_dict:
+                order = [("a", "x⁴"), ("b", "x³"), ("c", "x²"), ("d", "x"), ("e", "")]
+            elif "d" in coeffs_dict:
+                order = [("a", "x³"), ("b", "x²"), ("c", "x"), ("d", "")]
+            else:
+                order = [("a", "x²"), ("b", "x"), ("c", "")]
+            parts = []
+            for name, suffix in order:
+                if name not in coeffs_dict:
+                    continue
+                v = coeffs_dict[name]
+                v_str = _fmt_num(v, suffix)
+                if not parts:
+                    parts.append(f"-{v_str}" if v < 0 else v_str)
+                else:
+                    parts.append(f"- {v_str}" if v < 0 else f"+ {v_str}")
+            if not parts:
+                return "y = 0"
+            return "y = " + " ".join(parts)
+
+    # ==================== TAB 1 ====================
+    with tab1:
+        str_app.markdown(f"<div class='main-heading' style='text-align: center;'>TỰ HỌC & CHIẾM LĨNH KIẾN THỨC: MÔN {subject.upper()} - {grade.upper()}</div>", unsafe_allow_html=True)
+        str_app.markdown("### Nhập tên bài học em muốn tổng hợp:")
+
+        lesson_input = str_app.text_input(
+            "Nhập bài học cần chiếm lĩnh kiến thức:",
+            placeholder="Ví dụ: Đồ thị hàm số bậc hai...",
+            label_visibility="collapsed",
+            key="lesson_input_tab1"
+        )
+
+        btn_soan_bai = str_app.button("Tổng Hợp Kiến Thức Cốt Lõi", type="primary", key="btn_soan_bai_tab1")
+
+        if btn_soan_bai:
+            if not lesson_input.strip():
+                str_app.warning("Vui lòng nhập tên bài học trước khi bấm tổng hợp!")
+            elif not api_key_to_use:
+                str_app.error("Chưa phát hiện Mã Kết Nối! Vui lòng dán API Key ở thanh bên trái.")
+            else:
+                with str_app.spinner(f"AI đang phân tích bài học: **{lesson_input}** theo chuẩn Kết Nối Tri Thức..."):
+                    full_prompt = build_lesson_prompt(lesson_input, subject, grade)
+                    response_text, model_used, error = call_gemini(full_prompt, api_key_to_use)
+
+                    if response_text:
+                        final_text = clean_ai_response(response_text)
+                        str_app.session_state["cached_lesson_result"] = final_text
+                        str_app.session_state["cached_model_used"] = model_used
+                        str_app.session_state["cached_lesson_name"] = lesson_input
+                    else:
+                        str_app.error(f"Không thể kết nối AI. Lỗi chi tiết: `{error}`")
+
+        if "cached_lesson_result" in str_app.session_state:
+            str_app.success(f"Đã hoàn thành tổng hợp kiến thức bài: **{str_app.session_state.get('cached_lesson_name', '')}**")
+            str_app.caption(f"Model kết nối thành công: `{str_app.session_state.get('cached_model_used', '')}`")
+            str_app.markdown("---")
+            render_interactive_quizzes(str_app.session_state["cached_lesson_result"], subject)
+            trigger_mathjax()
+
+        # ========== PHÒNG THÍ NGHIỆM ẢO ==========
+        str_app.markdown("---")
+        str_app.markdown(
+            "<div class='main-heading' style='text-align: center;'>"
+            "🔬 PHÒNG THÍ NGHIỆM ẢO THEO YÊU CẦU</div>",
+            unsafe_allow_html=True
+        )
+        str_app.markdown(
+            f"Hệ thống AI đang liên kết trực tiếp với môn **{subject} - {grade}**. "
+            "Hãy nhập yêu cầu mô phỏng thí nghiệm, hiện tượng, đồ thị hoặc quá trình em muốn quan sát:"
+        )
+
+        lab_request = str_app.text_input(
+            "Nhập yêu cầu thí nghiệm:",
+            placeholder="Ví dụ: Đồ thị hàm số y = ax² + bx + c... / Phản ứng H₂ + O₂... / Hình chóp S.ABC...",
+            label_visibility="collapsed",
+            key="lab_request_input"
+        )
+
+        btn_lab = str_app.button("🚀 Khởi chạy Phòng Lab", type="primary", key="btn_run_lab")
+
+        if btn_lab:
+            if not lab_request.strip():
+                str_app.warning("Vui lòng nhập yêu cầu thí nghiệm trước khi khởi chạy!")
+            elif not api_key_to_use:
+                str_app.error("Chưa phát hiện Mã Kết Nối! Vui lòng dán API Key ở thanh bên trái.")
+            else:
+                with str_app.spinner(f"AI đang mô phỏng: **{lab_request}**..."):
+                    lab_prompt = build_virtual_lab_prompt(lab_request, subject, grade)
+                    lab_response, _, lab_error = call_gemini(lab_prompt, api_key_to_use)
+
+                    if lab_response:
+                        str_app.session_state["lab_result"] = lab_response
+                        str_app.session_state["lab_request_name"] = lab_request
+                        str_app.session_state["lab_version"] = str_app.session_state.get("lab_version", 0) + 1
+                    else:
+                        str_app.error(f"Không thể kết nối AI. Lỗi chi tiết: `{lab_error}`")
+
+        if "lab_result" in str_app.session_state:
+            raw_lab = str_app.session_state["lab_result"]
+
+            plot_2d_match = re.search(r"<PLOT_2D>(.*?)</PLOT_2D>", raw_lab, re.DOTALL | re.IGNORECASE)
+            plot_3d_match = re.search(r"<PLOT_3D>(.*?)</PLOT_3D>", raw_lab, re.DOTALL | re.IGNORECASE)
+            plot_old_match = re.search(r"<PLOT>(.*?)</PLOT>", raw_lab, re.DOTALL | re.IGNORECASE)
+
+            text_part = re.sub(r"<PLOT_2D>.*?</PLOT_2D>", "", raw_lab, flags=re.DOTALL | re.IGNORECASE)
+            text_part = re.sub(r"<PLOT_3D>.*?</PLOT_3D>", "", text_part, flags=re.DOTALL | re.IGNORECASE)
+            text_part = re.sub(r"<PLOT>.*?</PLOT>", "", text_part, flags=re.DOTALL | re.IGNORECASE).strip()
+
+            clean_text = clean_ai_response(text_part)
+            str_app.markdown(
+                f"<div class='content-box'>{clean_text}</div>",
+                unsafe_allow_html=True
+            )
+
+            plot_code = None
+            plot_label = ""
+            is_2d = False
+            if plot_3d_match:
+                plot_code = plot_3d_match.group(1).strip()
+                plot_label = "#### 🌐 Đồ thị 3D tương tác (giữ chuột trái để xoay, cuộn để zoom)"
+            elif plot_2d_match:
+                plot_code = plot_2d_match.group(1).strip()
+                plot_label = "#### 📈 Đồ thị minh họa"
+                is_2d = True
+            elif plot_old_match:
+                plot_code = plot_old_match.group(1).strip()
+                plot_label = "#### 📈 Đồ thị minh họa"
+                is_2d = True
+
+            if plot_code:
+                try:
+                    # ========== 2D CÓ HỆ SỐ → LAYOUT 2 CỘT ==========
+                    if is_2d:
+                        coeffs = extract_coefficients(plot_code)
+                    else:
+                        coeffs = {}
+
+                    if coeffs and 1 <= len(coeffs) <= 5:
+                        col_left, col_right = str_app.columns([1, 2.5])
+
+                        with col_left:
+                            # ===== TIÊU ĐỀ =====
+                            coeff_names = ", ".join(coeffs.keys())
+                            str_app.markdown(
+                                f"<h4 style='color:#4a90e2; margin-bottom: 20px;'>⚙️ Hệ số hàm số (theo {coeff_names}):</h4>",
+                                unsafe_allow_html=True
+                            )
+
+                            lab_id = str_app.session_state.get("lab_request_name", "lab")
+                            lab_version = str_app.session_state.get("lab_version", 0)
+
+                            user_coeffs = {}
+                            for name, init_val in coeffs.items():
+                                slider_key = f"coeff_v{lab_version}_{lab_id}_{name}"
+                                min_v = min(-10.0, init_val - 5.0)
+                                max_v = max(10.0, init_val + 5.0)
+
+                                str_app.markdown(f"**Hệ số {name}:**")
+                                user_coeffs[name] = str_app.slider(
+                                    f"Chọn {name}",
+                                    min_value=float(min_v),
+                                    max_value=float(max_v),
+                                    value=float(init_val),
+                                    step=0.1,
+                                    key=slider_key,
+                                    label_visibility="collapsed"
+                                )
+
+                            # ===== CÔNG THỨC ĐỘNG — FORMAT ĐẸP =====
+                            formula_text = _format_formula(user_coeffs, plot_code)
+                            str_app.markdown(
+                                f"<div style='background: linear-gradient(135deg, #4a90e2, #357abd); color: white; "
+                                f"padding: 14px 18px; border-radius: 10px; font-size: 1.05rem; "
+                                f"font-weight: 600; margin: 20px 0; text-align: center;'>"
+                                f"<i>{formula_text}</i></div>",
+                                unsafe_allow_html=True
+                            )
+
+                            # ===== ĐỈNH + TRỤC ĐỐI XỨNG (chỉ khi PARABOL) =====
+                            is_quadratic = (
+                                "a" in user_coeffs
+                                and "b" in user_coeffs
+                                and "d" not in user_coeffs
+                                and "e" not in user_coeffs
+                            )
+
+                            if is_quadratic and user_coeffs["a"] != 0:
+                                a_v = user_coeffs["a"]
+                                b_v = user_coeffs["b"]
+                                c_v = user_coeffs.get("c", 0)
+
+                                vx = -b_v / (2 * a_v)
+                                vy = a_v * vx ** 2 + b_v * vx + c_v
+
                                 str_app.markdown(
-                                    f"<div style='background: linear-gradient(135deg, #4a90e2, #357abd); color: white; "
-                                    f"padding: 14px 18px; border-radius: 10px; font-size: 1.05rem; "
-                                    f"font-weight: 600; margin: 20px 0; text-align: center;'>"
-                                    f"<i>{formula_text}</i></div>",
+                                    f"<p style='color: #d62728; font-weight: 600; margin: 10px 0;'>"
+                                    f"📐 <b>Đỉnh:</b> I({vx:.2f}; {vy:.2f})</p>",
                                     unsafe_allow_html=True
                                 )
+                                str_app.markdown(
+                                    f"<p style='color: #d62728; font-weight: 600; margin: 10px 0;'>"
+                                    f"📏 <b>Trục đối xứng:</b> x = {vx:.2f}</p>",
+                                    unsafe_allow_html=True
+                                )
+
+                        with col_right:
+                            plot_code = substitute_coefficients(plot_code, user_coeffs)
+                            kind, data = run_plot_code(plot_code)
+                            if kind == "plotly" and data is not None:
+                                str_app.plotly_chart(data, use_container_width=True, config=PLOTLY_CONFIG)
+                            elif kind == "png" and data:
+                                str_app.image(data, use_container_width=True)
+                            else:
+                                str_app.warning("AI đã sinh code vẽ nhưng không tạo được đồ thị.")
+                    else:
+                        # ========== KHÔNG CÓ HỆ SỐ → RENDER BÌNH THƯỜNG ==========
+                        kind, data = run_plot_code(plot_code)
+                        if kind == "png" and data:
+                            str_app.markdown(plot_label)
+                            str_app.image(data, use_container_width=True)
+                        elif kind == "plotly" and data is not None:
+                            str_app.markdown(plot_label)
+                            str_app.plotly_chart(data, use_container_width=True, config=PLOTLY_CONFIG)
+                        else:
+                            str_app.warning("AI đã sinh code vẽ nhưng không tạo được đồ thị.")
+                except Exception as plot_err:
+                    str_app.warning(f"Không vẽ được đồ thị: `{plot_err}`")
+
+            trigger_mathjax()
+
+    # ==================== TAB 2 — GIA SƯ SOCRATIC ====================
+    with tab2:
+        str_app.markdown("<br>", unsafe_allow_html=True)
+
+        if "socratic_messages" not in str_app.session_state:
+            str_app.session_state.socratic_messages = []
+        if "socratic_uploader_key" not in str_app.session_state:
+            str_app.session_state.socratic_uploader_key = 0
+        if "analytics_logs" not in str_app.session_state:
+            str_app.session_state.analytics_logs = []
+
+        grade_num = grade.replace("Lớp ", "").strip()
+
+        try:
+            sheet_webhook_url = str_app.secrets.get("SHEET_WEBHOOK", "")
+        except Exception:
+            sheet_webhook_url = ""
+
+        str_app.subheader(f"💬 Gia Sư Socratic môn: {subject} - Lớp {grade_num}")
+        str_app.caption("Chụp ảnh bài làm của em gửi lên đây. Gia Sư AI sẽ chẩn đoán lỗi sai và gợi mở phương pháp để em tự hoàn thiện!")
+
+        if str_app.button("🔄 Làm bài mới / Xóa đối thoại cũ"):
+            str_app.session_state.socratic_messages = []
+            str_app.session_state.socratic_uploader_key += 1
+            str_app.rerun()
+
+        uploaded_file = str_app.file_uploader(
+            "📸 Tải ảnh bài làm của em (JPG, PNG)",
+            type=["jpg", "png", "jpeg"],
+            key=f"socratic_uploader_{str_app.session_state.socratic_uploader_key}"
+        )
+
+        if uploaded_file is not None:
+            image = Image.open(uploaded_file)
+            str_app.image(image, caption="Bài làm của em", use_container_width=True)
+
+            if str_app.button("🚀 Bắt đầu nhận xét bài làm"):
+                if not api_key_to_use:
+                    str_app.error("Chưa phát hiện Mã Kết Nối! Vui lòng dán API Key ở thanh bên trái.")
+                else:
+                    with str_app.spinner("Gia Sư AI đang đối chiếu chuẩn kiến thức GDPT 2018 (SGK KNTT)..."):
+                        try:
+                            sys_prompt = f"""Bạn là 'Gia Sư AI' trường THPT Tân Hiệp.
+Đối tượng: Học sinh Lớp {grade_num}, môn {subject} (SGK Kết nối tri thức).
+Phương pháp: Vấn đáp Socratic.
+NGUYÊN TẮC: Tuyệt đối không giải hộ, khen ngợi bước đúng, đặt câu hỏi gợi mở bước sai.
+Cuối bài chèn khối: <DIAGNOSTIC>{{"topic":"...","error_type":"...","evaluation":"..."}}</DIAGNOSTIC>"""
+
+                            full_res = call_gemini_with_fallback(
+                                [f"Nhận xét bài làm môn {subject} Lớp {grade_num}:", image],
+                                api_key=api_key_to_use,
+                                system_instruction=sys_prompt
+                            )
+
+                            if not full_res:
+                                str_app.error("Không thể kết nối AI. Vui lòng thử lại sau.")
+                            else:
+                                student_fb = full_res.split("<DIAGNOSTIC>")[0].strip() if "<DIAGNOSTIC>" in full_res else full_res
+
+                                if "<DIAGNOSTIC>" in full_res:
+                                    try:
+                                        diag_raw = full_res.split("<DIAGNOSTIC>")[1].split("</DIAGNOSTIC>")[0].strip()
+                                        diag = json.loads(diag_raw)
+                                        entry = {
+                                            "time": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+                                            "grade": grade,
+                                            "subject": subject,
+                                            "topic": diag.get("topic", "Chung"),
+                                            "error_type": diag.get("error_type", "Chưa rõ"),
+                                            "evaluation": diag.get("evaluation", "")
+                                        }
+                                        str_app.session_state.analytics_logs.append(entry)
+
+                                        if sheet_webhook_url:
+                                            try:
+                                                requests.post(sheet_webhook_url, json=entry, timeout=5)
+                                            except Exception:
+                                                pass
+                                    except Exception as parse_err:
+                                        str_app.warning(f"Không parse được DIAGNOSTIC: {parse_err}")
+
+                                str_app.session_state.socratic_messages = [
+                                    {"role": "user", "content": "*(Em đã nộp ảnh bài làm)*"},
+                                    {"role": "assistant", "content": student_fb}
+                                ]
+                                str_app.rerun()
+                        except Exception as e:
+                            str_app.error(f"Lỗi: {e}")
+
+        for m in str_app.session_state.get("socratic_messages", []):
+            with str_app.chat_message(m["role"]):
+                str_app.markdown(m["content"])
+
+        if len(str_app.session_state.get("socratic_messages", [])) > 0:
+            if q := str_app.chat_input("Em muốn hỏi thêm điều gì về bài làm này?...", key="socratic_chat_input"):
+                str_app.session_state.socratic_messages.append({"role": "user", "content": q})
+                with str_app.chat_message("user"):
+                    str_app.markdown(q)
+                with str_app.chat_message("assistant"):
+                    try:
+                        history = str_app.session_state.socratic_messages[-4:]
+                        dialogue_context = "\n".join([f"{msg['role']}: {msg['content']}" for msg in history])
+                        prompt_chat = f"Ngữ cảnh hội thoại trước:\n{dialogue_context}\n\nHọc sinh hỏi tiếp: {q}\nHãy tiếp tục phương pháp gợi mở Socratic, giải thích bình dân học vụ, không giải hộ:"
+
+                        rep = call_gemini_with_fallback(prompt_chat, api_key=api_key_to_use)
+                        rep_clean = rep.split("<DIAGNOSTIC>")[0].strip() if "<DIAGNOSTIC>" in rep else rep
+
+                        if not rep_clean:
+                            str_app.error("Không nhận được phản hồi. Vui lòng thử lại.")
+                        else:
+                            str_app.markdown(rep_clean)
+                            str_app.session_state.socratic_messages.append({"role": "assistant", "content": rep_clean})
+                    except Exception as e:
+                        str_app.error(f"Lỗi phản hồi: {e}")
 
 # ============================================================
 # 8. KHỞI CHẠY ỨNG DỤNG CHÍNH
