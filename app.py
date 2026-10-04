@@ -1338,8 +1338,27 @@ QUY TẮC CHUNG:
 3. KẾT QUẢ / QUAN SÁT ĐƯỢC
 4. MÃ VẼ ĐỒ THỊ (bọc trong <PLOT_2D>...</PLOT_2D> hoặc <PLOT_3D>...</PLOT_3D>)
 
-=== 🎯 QUY TẮC CHỌN TEMPLATE ===
-Đọc yêu cầu học sinh, chọn ĐÚNG 1 template bên dưới phù hợp nhất với yêu cầu. KHÔNG tự bịa template mới.
+=== 🎯 QUY TẮC CHỌN TEMPLATE (BẮT BUỘC ĐỌC KỸ) ===
+
+BƯỚC 1: Đọc yêu cầu học sinh, tìm TỪ KHÓA.
+BƯỚC 2: Tra bảng dưới đây để chọn ĐÚNG 1 template.
+BƯỚC 3: KHÔNG tự bịa template mới. KHÔNG mặc định chọn template ĐA THỨC nếu từ khóa không khớp.
+
+| Từ khóa trong yêu cầu | Template cần chọn |
+|------------------------|-------------------|
+| "sin", "cos", "tan", "cot", "lượng giác", "dao động tuần hoàn" | TEMPLATE LƯỢNG GIÁC |
+| "ax² + bx + c", "parabol", "bậc hai", "bậc 3", "bậc 4", "đa thức" | TEMPLATE ĐA THỨC |
+| "phân thức", "/(dx + e)", "tiệm cận", "hypebol" | TEMPLATE PHÂN THỨC |
+| "mũ", "a^x", "e^x", "exp", "logarit", "ln", "log" | TEMPLATE MŨ VÀ LOGARIT |
+| "căn", "√", "sqrt", "căn bậc hai" | TEMPLATE CĂN THỨC |
+| "đường tròn", "elip", "hình tròn", "x² + y²" | TEMPLATE ĐƯỜNG TRÒN / ELIP |
+| "tam giác", "tứ giác", "đa giác", "hình phẳng" | TEMPLATE HÌNH HỌC PHẲNG |
+| "hình chóp", "lăng trụ", "hộp", "mặt cầu", "nón", "trụ", "3D", "không gian" | TEMPLATE 3D |
+
+⚠️ CẢNH BÁO:
+- Nếu yêu cầu có "sin" HOẶC "cos" HOẶC "tan" HOẶC "cot" HOẶC "lượng giác" → CHẮC CHẮN chọn TEMPLATE LƯỢNG GIÁC, KHÔNG được chọn ĐA THỨC.
+- Nếu yêu cầu có "dao động", "sóng", "chu kỳ" → CHẮC CHẮN chọn TEMPLATE LƯỢNG GIÁC.
+- Chỉ chọn ĐA THỨC khi yêu cầu CÓ RÕ "ax² + bx + c", "parabol", "bậc hai/ba/bốn".
 
 === ⚠️ QUY TẮC KHAI BÁO HỆ SỐ (CHỈ VỚI HÀM SỐ) ===
 - Khai báo hệ số ở ĐẦU CODE (TRƯỚC import), MỖI HỆ SỐ 1 DÒNG
