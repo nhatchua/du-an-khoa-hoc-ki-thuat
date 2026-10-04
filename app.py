@@ -164,17 +164,79 @@ def substitute_coefficients(code_str: str, coeff_values: dict) -> str:
         code_str = pattern.sub(rf"\g<1>{val_str}\g<3>", code_str)
     return code_str
 
+def _add_axis_arrows_if_missing(fig):
+    """
+    Tự động thêm mũi tên trục Ox, Oy nếu đồ thị CHƯA có.
+    Chỉ áp dụng cho đồ thị hàm số (trục hiển thị, gốc O nằm trong vùng nhìn).
+    Bỏ qua: sơ đồ mạch, flowchart, hình học phẳng, phả hệ, bản đồ...
+    """
+    try:
+        xaxis = fig.layout.xaxis
+        yaxis = fig.layout.yaxis
+
+        # 1. Bỏ qua sơ đồ (trục bị ẩn)
+        if xaxis.visible is False or yaxis.visible is False:
+            return fig
+
+        x_range = xaxis.range
+        y_range = yaxis.range
+        if not x_range or not y_range:
+            return fig
+
+        x_min, x_max = float(x_range[0]), float(x_range[1])
+        y_min, y_max = float(y_range[0]), float(y_range[1])
+
+        # 2. Bỏ qua nếu gốc O nằm ngoài vùng hiển thị
+        if not (x_min <= 0 <= x_max) or not (y_min <= 0 <= y_max):
+            return fig
+
+        # 3. Đã có mũi tên trục? -> bỏ qua
+        if fig.layout.annotations:
+            for ann in fig.layout.annotations:
+                if (ann.showarrow
+                        and ann.xref == "x" and ann.yref == "y"
+                        and ann.axref == "x" and ann.ayref == "y"
+                        and not ann.text):
+                    return fig
+
+        arrow_color = "#333"
+        x_tip = x_max - (x_max - x_min) * 0.02
+        y_tip = y_max - (y_max - y_min) * 0.02
+
+        # 4. Thêm mũi tên Ox
+        fig.add_annotation(
+            x=x_tip, y=0, ax=0, ay=0,
+            xref="x", yref="y", axref="x", ayref="y",
+            showarrow=True, arrowhead=3, arrowsize=1.5,
+            arrowwidth=2, arrowcolor=arrow_color,
+        )
+        # 5. Thêm mũi tên Oy
+        fig.add_annotation(
+            x=0, y=y_tip, ax=0, ay=0,
+            xref="x", yref="y", axref="x", ayref="y",
+            showarrow=True, arrowhead=3, arrowsize=1.5,
+            arrowwidth=2, arrowcolor=arrow_color,
+        )
+    except Exception:
+        pass
+    return fig
+
 def _postprocess_figure(fig):
     """
     Chuẩn hóa mọi figure trước khi render:
-    - Bật grid 2 chiều, màu xám vừa đủ thấy
-    - Annotation: bắt buộc có nền trắng mờ + chữ đậm (không để trắng-trên-trắng)
+    - Bật grid nhạt 2 chiều
+    - Ép đường trục Ox/Oy luôn hiện rõ (zeroline)
+    - Annotation: nền trắng mờ + chữ đậm
+    - Tự thêm mũi tên trục nếu thiếu
     """
     try:
         for ax_name in ("xaxis", "yaxis"):
             ax = getattr(fig.layout, ax_name, None)
             if ax is None:
                 continue
+            if ax.visible is False:
+                continue
+
             if ax.showgrid is False:
                 ax.showgrid = True
             c = (ax.gridcolor or "").lower()
@@ -183,21 +245,35 @@ def _postprocess_figure(fig):
             if not ax.gridwidth:
                 ax.gridwidth = 0.5
 
+            # ÉP ĐƯỜNG TRỤC LUÔN HIỆN
+            ax.zeroline = True
+            ax.zerolinewidth = 1.5
+            ax.zerolinecolor = "#333"
+
         if fig.layout.annotations:
             for ann in fig.layout.annotations:
-                # Bỏ qua mũi tên (chỉ xử lý annotation chữ)
+                # Làm đậm nhãn O, x, y
+                if ann.text in ("O", "x", "y") and not ann.showarrow:
+                    if ann.font is None:
+                        ann.font = dict(color="#333", size=15)
+                    else:
+                        ann.font.color = "#333"
+                        if not ann.font.size:
+                            ann.font.size = 15
+                    continue
+
                 if not ann.text or ann.showarrow:
                     continue
-                # Nền trắng mờ để chữ nổi trên mọi nền đồ thị
                 if not ann.bgcolor or ann.bgcolor in ("rgba(0,0,0,0)", "white"):
                     ann.bgcolor = "rgba(255,255,255,0.85)"
-                # Chữ trắng → đổi thành đậm
                 if ann.font is None:
                     ann.font = dict(color="#333")
                 else:
                     fc = (ann.font.color or "").lower()
                     if fc in ("white", "#fff", "#ffffff", ""):
                         ann.font.color = "#333"
+
+        _add_axis_arrows_if_missing(fig)
     except Exception:
         pass
     return fig
