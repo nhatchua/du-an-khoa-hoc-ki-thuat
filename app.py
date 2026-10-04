@@ -12,7 +12,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 # ============================================================
-# CẤU HÌNH TOÀN CỤC MATPLOTLIB — HÌNH ĐẸP, MỊN, SẮC NÉT
+# CẤU HÌNH TOÀN CỤC MATPLOTLIB
 # ============================================================
 plt.rcParams.update({
     "font.family": "DejaVu Sans",
@@ -35,12 +35,12 @@ plt.rcParams.update({
 })
 
 # ============================================================
-# 0. PHÂN LOẠI MÔN HỌC THEO HÌNH THỨC ĐÁNH GIÁ
+# 0. PHÂN LOẠI MÔN HỌC
 # ============================================================
 ESSAY_SUBJECTS = {"Ngữ văn", "Lịch sử & Địa lý"}
 
 # ============================================================
-# 1. CẤU HÌNH GIAO DIỆN TRANG & CSS TƯƠNG THÍCH CHUẨN SÁNG/TỐI
+# 1. CẤU HÌNH GIAO DIỆN TRANG
 # ============================================================
 def setup_page_config():
     str_app.set_page_config(
@@ -50,7 +50,6 @@ def setup_page_config():
     )
     str_app.markdown("""
         <style>
-        /* Tiêu đề chính cực kỳ nổi bật */
         .main-heading {
             background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
             color: white;
@@ -62,8 +61,6 @@ def setup_page_config():
             margin-bottom: 20px;
             box-shadow: 0 4px 6px rgba(13, 110, 253, 0.2);
         }
-        
-        /* Khung nội dung cốt lõi */
         .content-box {
             border-left: 6px solid #0d6efd;
             border-top: 1px solid rgba(128, 128, 128, 0.2);
@@ -75,8 +72,6 @@ def setup_page_config():
             box-shadow: 0 2px 8px rgba(0,0,0,0.03);
             line-height: 1.6;
         }
-
-        /* ===== DÀN ĐỀU 5 TAB ===== */
         .stTabs [data-baseweb="tab-list"] {
             display: flex !important;
             width: 100% !important;
@@ -100,8 +95,6 @@ def setup_page_config():
         .stTabs [data-baseweb="tab-list"] > button[aria-selected="true"] {
             background-color: rgba(13, 110, 253, 0.12) !important;
         }
-
-        /* ===== GIẢM FONT TRONG KHUNG CÂU HỎI / ĐỀ BÀI ===== */
         [data-testid="stVerticalBlockBorderWrapper"] p {
             font-size: 0.92rem !important;
             line-height: 1.55 !important;
@@ -117,8 +110,6 @@ def setup_page_config():
             font-size: 0.9rem !important;
         }
         </style>
-        
-        <!-- Thư viện MathJax -->
         <script type="text/javascript" async
           src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
         </script>
@@ -130,7 +121,6 @@ def setup_page_config():
 def clean_ai_response(text: str) -> str:
     if not text:
         return ""
-
     pattern = re.compile(
         r"(#{1,3}\s*)?📌?\s*1\.\s*KIẾN\s*THỨC\s*CỐT\s*LÕI",
         re.IGNORECASE | re.UNICODE
@@ -138,12 +128,9 @@ def clean_ai_response(text: str) -> str:
     match = pattern.search(text)
     if match:
         text = text[match.start():]
-
     text = re.sub(r'(#+ [^\n]*?)"\s*$', r'\1', text, flags=re.MULTILINE)
-
     lines = text.split('\n')
     filtered = []
-
     draft_patterns = re.compile(
         r"^\s*[\*\-\s]*("
         r"note\s*:|section\s+[ivx]+|theory|concepts|formulas|"
@@ -155,24 +142,19 @@ def clean_ai_response(text: str) -> str:
         r")",
         re.IGNORECASE
     )
-
     english_paren = re.compile(r"\([A-Za-z][A-Za-z\s,;:\-]{4,}\)")
-
     for line in lines:
         stripped = line.strip()
         if not stripped:
             filtered.append(line)
             continue
-
         if draft_patterns.match(stripped):
             continue
-
         if english_paren.search(stripped) and len(stripped) < 200:
             cleaned = english_paren.sub("", stripped).rstrip(".,;: ")
             if cleaned:
                 filtered.append(cleaned)
             continue
-
         if len(stripped) > 15:
             has_vietnamese = bool(re.search(
                 r"[àáảãạăâđêôơưèéẻẽẹìíỉĩịòóỏõọùúủũụỳýỷỹỵ]",
@@ -183,9 +165,7 @@ def clean_ai_response(text: str) -> str:
             ) / max(len(stripped), 1)
             if not has_vietnamese and latin_ratio > 0.5:
                 continue
-
         filtered.append(line)
-
     result = '\n'.join(filtered).strip()
     result = re.sub(r'\n{3,}', '\n\n', result)
     return result
@@ -195,7 +175,6 @@ def clean_ai_response(text: str) -> str:
 # ============================================================
 def call_gemini(prompt: str, api_key: str) -> tuple:
     genai.configure(api_key=api_key)
-    
     model_candidates = [
         "gemini-3.5-flash",
         "gemini-3.1-flash-lite",
@@ -205,13 +184,11 @@ def call_gemini(prompt: str, api_key: str) -> tuple:
         "gemini-1.5-flash-latest",
         "gemini-1.5-flash-8b"
     ]
-
     generation_config = genai.types.GenerationConfig(
         temperature=0.0,
         top_p=0.85,
         max_output_tokens=8192,
     )
-
     last_error = ""
     for model_name in model_candidates:
         retries = 2
@@ -233,7 +210,6 @@ def call_gemini(prompt: str, api_key: str) -> tuple:
                 if "404" in err_str or "not found" in err_str.lower():
                     break
                 break
-
     return None, "", last_error
 
 # ============================================================
@@ -241,7 +217,6 @@ def call_gemini(prompt: str, api_key: str) -> tuple:
 # ============================================================
 def call_gemini_with_fallback(prompt, api_key: str, system_instruction: str = "") -> str:
     genai.configure(api_key=api_key)
-    
     model_candidates = [
         "gemini-3.5-flash",
         "gemini-3.1-flash-lite",
@@ -251,13 +226,11 @@ def call_gemini_with_fallback(prompt, api_key: str, system_instruction: str = ""
         "gemini-1.5-flash-latest",
         "gemini-1.5-flash-8b"
     ]
-
     generation_config = genai.types.GenerationConfig(
         temperature=0.0,
         top_p=0.85,
         max_output_tokens=8192,
     )
-
     for model_name in model_candidates:
         try:
             kwargs = {
@@ -266,7 +239,6 @@ def call_gemini_with_fallback(prompt, api_key: str, system_instruction: str = ""
             }
             if system_instruction:
                 kwargs["system_instruction"] = system_instruction
-            
             model = genai.GenerativeModel(**kwargs)
             response = model.generate_content(prompt)
             if response and response.text:
@@ -277,7 +249,6 @@ def call_gemini_with_fallback(prompt, api_key: str, system_instruction: str = ""
                 time.sleep(2)
                 continue
             continue
-
     return ""
 
 # ============================================================
@@ -285,7 +256,6 @@ def call_gemini_with_fallback(prompt, api_key: str, system_instruction: str = ""
 # ============================================================
 def build_lesson_prompt(lesson_input: str, subject: str, grade: str) -> str:
     is_essay = subject in ESSAY_SUBJECTS
-
     common_head = f"""Bạn là giáo viên chuyên môn cao, soạn tài liệu theo chuẩn chương trình giáo dục phổ thông mới nhất bộ sách "Kết Nối Tri Thức Với Cuộc Sống".
 
 NHIỆM VỤ: Soạn nội dung chi tiết bài học "{lesson_input}" môn {subject} lớp {grade}.
@@ -293,7 +263,7 @@ NHIỆM VỤ: Soạn nội dung chi tiết bài học "{lesson_input}" môn {sub
 QUY TẮC BẮT BUỘC:
 1. TOÀN BỘ nội dung hoàn toàn bằng TIẾNG VIỆT chuẩn xác. Không chứa từ tiếng Anh, không suy luận nội tâm, không bản nháp.
 2. KHÔNG DÙNG DẤU #. Chỉ dùng định dạng đánh số thứ tự cho các phần lớn.
-3. ĐỐI VỚI CÔNG THỨC TOÁN HỌC/KÍ HIỆU KHOA HỌC: Bắt buộc sử dụng kí hiệu LaTeX đặt trong cặp dấu đô la (ví dụ: $x^2 + y^2 = R^2$, $\\frac{{a}}{{b}}$, $\\sqrt{{x}}$) để hiển thị chuẩn xác, đẹp mắt.
+3. ĐỐI VỚI CÔNG THỨC TOÁN HỌC/KÍ HIỆU KHOA HỌC: Bắt buộc sử dụng kí hiệu LaTeX đặt trong cặp dấu đô la (ví dụ: $x^2 + y^2 = R^2$, $\\frac{{a}}{{b}}$, $\\sqrt{{x}}$).
 4. Kiến thức phải cực kỳ chính xác, khoa học, sư phạm theo đúng sách Kết Nối Tri Thức.
 
 CẤU TRÚC ĐẦU RA BẮT BUỘC:
@@ -305,26 +275,25 @@ CẤU TRÚC ĐẦU RA BẮT BUỘC:
 [Liệt kê từ 4 đến 5 lỗi sai học sinh hay mắc phải và hướng khắc phục chi tiết bằng tiếng Việt.]
 
 """
-
     if is_essay:
         tail = """3. HỆ THỐNG ĐỀ LUYỆN VIẾT
 (Hãy tạo ra chính xác 3 đề luyện viết theo cấu trúc đề kiểm tra/đề thi thật, độ khó tăng dần từ nhận biết đến vận dụng cao. KHÔNG đưa đáp án hay bài văn mẫu, chỉ đưa đề bài và gợi ý dàn ý.)
 
-Cấu trúc mỗi đề bắt buộc phải tuân theo định dạng sau để hệ thống tự động nhận diện:
+Cấu trúc mỗi đề bắt buộc phải tuân theo định dạng sau:
 ---
 [ĐỀ 1]
 Loại đề: [Ví dụ: Nghị luận văn học / Nghị luận xã hội / Phân tích nhân vật / Cảm nhận đoạn thơ...]
-Đề bài: [Nội dung đề bài đầy đủ, rõ ràng, giống đề kiểm tra thật — có thể trích dẫn ngữ liệu nếu cần]
+Đề bài: [Nội dung đề bài đầy đủ, rõ ràng, giống đề kiểm tra thật]
 Yêu cầu: [Yêu cầu cụ thể về hình thức, dung lượng, thao tác lập luận...]
-Thang điểm: [Thang điểm tham khảo, ví dụ 2.0 / 3.0 / 5.0 điểm]
-GỢI Ý DÀN Ý: [Dàn ý gợi ý ngắn gọn theo các ý chính — chỉ để học sinh định hướng, KHÔNG viết thành bài văn hoàn chỉnh]
+Thang điểm: [Thang điểm tham khảo]
+GỢI Ý DÀN Ý: [Dàn ý gợi ý ngắn gọn theo các ý chính]
 ---
 (Lặp lại đúng định dạng trên cho ĐỀ 2 và ĐỀ 3)."""
     else:
         tail = """3. HỆ THỐNG CÂU HỎI TRẮC NGHIỆM ĐÁNH GIÁ
 (Hãy tạo ra chính xác 3 câu hỏi trắc nghiệm khách quan 4 lựa chọn A, B, C, D kiểm tra từ mức độ nhận biết đến vận dụng của bài học này).
 
-Cấu trúc mỗi câu trắc nghiệm bắt buộc phải tuân theo định dạng sau để hệ thống tự động nhận diện:
+Cấu trúc mỗi câu trắc nghiệm bắt buộc phải tuân theo định dạng sau:
 ---
 [CÂU HỎI 1]
 Nội dung câu hỏi cụ thể (có chứa công thức LaTeX nếu cần)...
@@ -333,10 +302,9 @@ B. Đáp án B
 C. Đáp án C
 D. Đáp án D
 ĐÁP ÁN ĐÚNG: [Chỉ ghi đúng một chữ cái A, B, C hoặc D]
-GỢI Ý TƯ DUY: [Gợi ý định hướng cách giải hoặc bản chất kiến thức giúp học sinh tự tư duy, tuyệt đối không tiết lộ trực tiếp đáp án]
+GỢI Ý TƯ DUY: [Gợi ý định hướng cách giải]
 ---
 (Lặp lại đúng định dạng trên cho Câu hỏi 2 và Câu hỏi 3)."""
-
     return common_head + tail
 
 # ============================================================
@@ -357,20 +325,14 @@ QUY TẮC BẮT BUỘC:
 Plotly KHÁC matplotlib. Các lỗi thường gặp PHẢI TRÁNH:
 
 1. Font bold: DÙNG `weight='bold'` (KHÔNG dùng `bold=True`)
-   ĐÚNG: font=dict(size=14, color='#333', weight='bold')
-   SAI:  font=dict(size=14, color='#333', bold=True)
 
 2. Title: DÙNG `title=dict(text='...', font=dict(...))` (KHÔNG dùng `title='...', title_font=dict(...)`)
-   ĐÚNG: title=dict(text='Đồ thị', x=0.5, font=dict(size=14, weight='bold'))
-   SAI:  title='Đồ thị', title_font=dict(bold=True)
 
 3. Marker: DÙNG `marker=dict(size=12, color='#d62728')` (KHÔNG dùng `marker_size=12`)
-   ĐÚNG: marker=dict(size=12, color='#d62728', line=dict(color='white', width=1.5))
-   SAI:  marker_size=12, marker_color='#d62728'
 
 4. Line: DÙNG `line=dict(color='#1f4e9c', width=3)` (KHÔNG dùng `line_color`, `line_width`)
 
-5. Annotation: DÙNG `showarrow=False` (KHÔNG dùng `show_arrow=False`, `arrow=False`)
+5. Annotation: DÙNG `showarrow=False` (KHÔNG dùng `show_arrow=False`)
 
 6. KHÔNG dùng `axref="paper"` hoặc `ayref="paper"` cho mũi tên annotation.
 
@@ -412,35 +374,15 @@ Ví dụ SAI: `coeffs = [1, -4, 3]` HOẶC `a, b, c = 1, -4, 3` HOẶC `a=1`
    y_range = [min(y) - y_pad, max(y) + y_pad]
 3. Mũi tên trục đặt ở cuối data range (không dùng paper coords).
 
-=== ⚠️ QUY TẮC ĐẶT TÊN ĐỒ THỊ VÀ TIỆM CẬN (BẮT BUỘC) ===
-
-A) TÊN ĐỒ THỊ — Đặt ở GÓC DƯỚI PHẢI (vùng paper 0.98, 0.02):
-   fig.add_annotation(
-       x=0.98, y=0.02, xref="paper", yref="paper",
-       text="<công thức tổng quát>",
-       showarrow=False,
-       xanchor='right', yanchor='bottom',
-       font=dict(size=13, color='#1f4e9c'),
-       bgcolor='rgba(255,255,255,0.85)',
-       bordercolor='#1f4e9c', borderwidth=1.5, borderpad=6
-   )
-
-   Quy tắc viết tên:
-   - Hàm bậc 2: "y = ax² + bx + c"
-   - Hàm bậc 3: "y = ax³ + bx² + cx + d"
-   - Hàm phân thức: "y = (ax + b)/(cx + d)"
-   → LUÔN ghi dạng TỔNG QUÁT (có a, b, c), KHÔNG ghi số cụ thể.
-
-B) TIỆM CẬN — Mỗi tiệm cận phải có NHÃN TÊN:
-   - Tiệm cận ĐỨNG x = a: đường dọc dash, nhãn "x = a" đặt gần đường
-   - Tiệm cận NGANG y = a: đường ngang dash, nhãn "y = a" ở đầu phải
-   - Tiệm cận XIÊN y = ax + b: đường chéo dash, nhãn "y = ax + b" ở đầu phải
+=== ⚠️ QUY TẮC ĐẶT TÊN ĐỒ THỊ VÀ TIỆM CẬN ===
+A) TÊN ĐỒ THỊ — GÓC DƯỚI PHẢI (paper 0.98, 0.02), có bgcolor trắng, border
+B) TIỆM CẬN — mỗi tiệm cận có nhãn tên (x = a, y = a, y = ax + b)
 
 === STYLE 2D PLOTLY (BẮT BUỘC) ===
 - Lưới mịn màu #e0e0e0
 - Đường cong xanh đậm #1f4e9c, width 3
 - Nền trắng (plot_bgcolor='white')
-- Điểm đặc biệt: chấm tròn + nhãn tọa độ
+- Nhãn điểm có bgcolor='rgba(255,255,255,0.9)' để không dính vào đường
 
 === MẪU 2D PLOTLY CHUẨN ===
 <PLOT_2D>
@@ -457,49 +399,56 @@ y = a*x**2 + b*x + c
 fig.add_trace(go.Scatter(x=x, y=y, mode='lines',
     line=dict(color='#1f4e9c', width=3), showlegend=False, hoverinfo='skip'))
 
-# Điểm cực trị
 if a != 0:
     vx = -b / (2*a)
     vy = a*vx**2 + b*vx + c
     fig.add_trace(go.Scatter(x=[vx], y=[vy], mode='markers',
-        marker=dict(color='#d62728', size=12, line=dict(color='white', width=1.5)),
+        marker=dict(color='#d62728', size=12, line=dict(color='white', width=2)),
         showlegend=False,
         hovertemplate='Đỉnh I(' + str(round(vx,2)) + '; ' + str(round(vy,2)) + ')<extra></extra>'))
     fig.add_annotation(x=vx, y=vy,
         text="I(" + str(round(vx,2)) + "; " + str(round(vy,2)) + ")",
-        showarrow=False, yshift=-25, font=dict(color='#d62728', size=12, weight='bold'))
+        showarrow=False, xshift=20, yshift=-35,
+        xanchor='left', yanchor='top',
+        font=dict(color='#d62728', size=12, weight='bold'),
+        bgcolor='rgba(255,255,255,0.9)',
+        bordercolor='#d62728', borderwidth=1, borderpad=4)
 
-# Giao Oy
 fig.add_trace(go.Scatter(x=[0], y=[c], mode='markers',
-    marker=dict(color='#2ca02c', size=10, line=dict(color='white', width=1.5)),
+    marker=dict(color='#2ca02c', size=10, line=dict(color='white', width=2)),
     showlegend=False,
     hovertemplate='(0; ' + str(round(c,2)) + ')<extra></extra>'))
 fig.add_annotation(x=0, y=c,
     text="(0; " + str(round(c,2)) + ")",
-    showarrow=False, xshift=35, font=dict(color='#2ca02c', size=12, weight='bold'))
+    showarrow=False, xshift=45, yshift=5,
+    xanchor='left', yanchor='middle',
+    font=dict(color='#2ca02c', size=12, weight='bold'),
+    bgcolor='rgba(255,255,255,0.9)',
+    bordercolor='#2ca02c', borderwidth=1, borderpad=4)
 
-# Giao Ox
 if a != 0:
     roots = np.roots([a, b, c])
     for r in roots:
         if abs(r.imag) < 1e-6:
             xr = r.real
             fig.add_trace(go.Scatter(x=[xr], y=[0], mode='markers',
-                marker=dict(color='#2ca02c', size=10, line=dict(color='white', width=1.5)),
+                marker=dict(color='#2ca02c', size=10, line=dict(color='white', width=2)),
                 showlegend=False,
                 hovertemplate='(' + str(round(xr,2)) + '; 0)<extra></extra>'))
             fig.add_annotation(x=xr, y=0,
                 text="(" + str(round(xr,2)) + "; 0)",
-                showarrow=False, yshift=20, font=dict(color='#2ca02c', size=11, weight='bold'))
+                showarrow=False, yshift=30,
+                xanchor='center', yanchor='bottom',
+                font=dict(color='#2ca02c', size=11, weight='bold'),
+                bgcolor='rgba(255,255,255,0.9)',
+                bordercolor='#2ca02c', borderwidth=1, borderpad=4)
 
-# TÍNH RANGE ĐỘNG
 x_range = [-1.8, 6.8]
 y_min_d = float(np.min(y))
 y_max_d = float(np.max(y))
 y_pad = (y_max_d - y_min_d) * 0.1 + 1
 y_range = [y_min_d - y_pad, y_max_d + y_pad]
 
-# MŨI TÊN TRỤC
 fig.add_annotation(
     x=x_range[1], y=0,
     ax=x_range[1] - 0.5, ay=0,
@@ -515,7 +464,6 @@ fig.add_annotation(
     arrowwidth=2.5, arrowcolor='#333'
 )
 
-# Nhãn O, x, y
 fig.add_annotation(x=0, y=0, text='O', showarrow=False,
     xshift=-14, yshift=-14, font=dict(size=15, color='#333'))
 fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
@@ -523,7 +471,6 @@ fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
 fig.add_annotation(x=0, y=y_range[1], text='y', showarrow=False,
     xshift=-18, yshift=-8, font=dict(size=15, color='#333'))
 
-# TÊN ĐỒ THỊ Ở GÓC DƯỚI PHẢI
 fig.add_annotation(
     x=0.98, y=0.02, xref="paper", yref="paper",
     text="y = ax² + bx + c",
@@ -570,7 +517,6 @@ fig.add_trace(go.Scatter(x=x, y=y, mode='lines',
 x_range = [-6, 6]
 y_range = [-10, 10]
 
-# TIỆM CẬN ĐỨNG x = -d/c
 if c != 0:
     x_tcd = -d / c
     fig.add_trace(go.Scatter(x=[x_tcd, x_tcd], y=y_range,
@@ -578,9 +524,12 @@ if c != 0:
         showlegend=False, hoverinfo='skip'))
     fig.add_annotation(x=x_tcd, y=y_range[1]*0.85,
         text="x = " + str(round(x_tcd, 2)),
-        showarrow=False, xshift=8, font=dict(color='#666', size=12))
+        showarrow=False, xshift=15,
+        xanchor='left', yanchor='middle',
+        font=dict(color='#666', size=12),
+        bgcolor='rgba(255,255,255,0.9)',
+        bordercolor='#999', borderwidth=1, borderpad=4)
 
-# TIỆM CẬN NGANG y = a/c
 if c != 0:
     y_tcn = a / c
     fig.add_trace(go.Scatter(x=x_range, y=[y_tcn, y_tcn],
@@ -588,9 +537,12 @@ if c != 0:
         showlegend=False, hoverinfo='skip'))
     fig.add_annotation(x=x_range[1]*0.95, y=y_tcn,
         text="y = " + str(round(y_tcn, 2)),
-        showarrow=False, yshift=8, xanchor='right', font=dict(color='#666', size=12))
+        showarrow=False, xshift=-10, yshift=15,
+        xanchor='right', yanchor='bottom',
+        font=dict(color='#666', size=12),
+        bgcolor='rgba(255,255,255,0.9)',
+        bordercolor='#999', borderwidth=1, borderpad=4)
 
-# Mũi tên trục
 fig.add_annotation(x=x_range[1], y=0, ax=x_range[1]-0.5, ay=0,
     xref="x", yref="y", axref="x", ayref="y",
     showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
@@ -598,7 +550,6 @@ fig.add_annotation(x=0, y=y_range[1], ax=0, ay=y_range[1]*0.92,
     xref="x", yref="y", axref="x", ayref="y",
     showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
 
-# Nhãn O, x, y
 fig.add_annotation(x=0, y=0, text='O', showarrow=False,
     xshift=-14, yshift=-14, font=dict(size=15, color='#333'))
 fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
@@ -606,7 +557,6 @@ fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
 fig.add_annotation(x=0, y=y_range[1], text='y', showarrow=False,
     xshift=-18, yshift=-8, font=dict(size=15, color='#333'))
 
-# TÊN ĐỒ THỊ GÓC DƯỚI PHẢI
 fig.add_annotation(
     x=0.98, y=0.02, xref="paper", yref="paper",
     text="y = (ax + b)/(cx + d)",
@@ -659,9 +609,9 @@ fig.update_layout(
 LƯU Ý CUỐI:
 - 2D: dùng PLOTLY
 - 2D: KHÔNG dùng `bold=True` — DÙNG `weight='bold'`
-- 2D: KHÔNG dùng `title_font=`, `marker_size=`, `line_color=`, `show_arrow=`
-- 2D: BẮT BUỘC đặt TÊN ĐỒ THỊ ở góc dưới phải (paper 0.98, 0.02)
-- 2D: Mỗi tiệm cận PHẢI có nhãn tên
+- 2D: MỌI NHÃN ĐIỂM PHẢI CÓ `bgcolor='rgba(255,255,255,0.9)'` + `borderwidth=1` + `borderpad=4`
+- 2D: BẮT BUỘC đặt TÊN ĐỒ THỊ ở góc dưới phải
+- 2D: Mỗi tiệm cận PHẢI có nhãn tên + nền trắng
 - KHÔNG gọi fig.show(), KHÔNG savefig"""
 
     return template.replace("__LAB_REQUEST__", lab_request).replace("__SUBJECT__", subject).replace("__GRADE__", grade)
@@ -670,11 +620,6 @@ LƯU Ý CUỐI:
 # 4B2. TRÍCH XUẤT HỆ SỐ TỪ CODE AI SINH
 # ============================================================
 def extract_coefficients(code_str: str) -> dict:
-    """
-    Trích xuất các hệ số dạng 'a = 1.5' ở đầu code.
-    Chỉ lấy dòng khớp chính xác: tên_biến = giá_trị_số (có thể có comment cuối).
-    Trả về dict {tên: giá_trị}.
-    """
     coeffs = {}
     pattern = re.compile(
         r"^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(-?\d+(?:\.\d+)?)\s*(?:#.*)?$"
@@ -683,7 +628,6 @@ def extract_coefficients(code_str: str) -> dict:
         m = pattern.match(line.strip())
         if m:
             name = m.group(1)
-            # Bỏ qua các biến đặc biệt không phải hệ số
             if name in ("dpi", "height", "width", "size", "n"):
                 continue
             try:
@@ -696,9 +640,7 @@ def extract_coefficients(code_str: str) -> dict:
 # 4B3. THAY THẾ HỆ SỐ TRONG CODE
 # ============================================================
 def substitute_coefficients(code_str: str, coeff_values: dict) -> str:
-    """Thay giá trị hệ số trong code bằng giá trị mới từ slider."""
     for name, value in coeff_values.items():
-        # Format gọn: bỏ .0 nếu là số nguyên
         val_str = str(int(value)) if value == int(value) else str(round(value, 4))
         pattern = re.compile(
             rf"^(\s*{re.escape(name)}\s*=\s*)(-?\d+(?:\.\d+)?)(\s*(?:#.*)?)$",
@@ -708,18 +650,81 @@ def substitute_coefficients(code_str: str, coeff_values: dict) -> str:
     return code_str
 
 # ============================================================
+# 4B4. FORMAT CÔNG THỨC ĐẸP — BỎ NGOẶC, GỘP DẤU TRỪ
+# ============================================================
+def format_formula(user_coeffs: dict, plot_code: str = "") -> str:
+    """Trả về chuỗi công thức đẹp: y = ax² + bx + c (không ngoặc thừa, dấu trừ gộp)."""
+    
+    def fmt_num(v):
+        v_abs = abs(v)
+        if v_abs == int(v_abs):
+            return str(int(v_abs))
+        return f"{v_abs:.1f}"
+    
+    # Detect hàm phân thức: có d, e VÀ có dấu "/" trong plot_code
+    is_fractional = (
+        "d" in user_coeffs and "e" in user_coeffs 
+        and "/" in plot_code
+    )
+    
+    if is_fractional:
+        # Tử: ax² + bx + c
+        num_parts = []
+        for i, (name, suffix) in enumerate([("a", "x²"), ("b", "x"), ("c", "")]):
+            if name not in user_coeffs:
+                continue
+            v = user_coeffs[name]
+            v_str = fmt_num(v)
+            if i == 0 or not num_parts:
+                num_parts.append(f"-{v_str}{suffix}" if v < 0 else f"{v_str}{suffix}")
+            else:
+                num_parts.append(f"- {v_str}{suffix}" if v < 0 else f"+ {v_str}{suffix}")
+        
+        # Mẫu: dx + e
+        den_parts = []
+        for i, (name, suffix) in enumerate([("d", "x"), ("e", "")]):
+            if name not in user_coeffs:
+                continue
+            v = user_coeffs[name]
+            v_str = fmt_num(v)
+            if i == 0 or not den_parts:
+                den_parts.append(f"-{v_str}{suffix}" if v < 0 else f"{v_str}{suffix}")
+            else:
+                den_parts.append(f"- {v_str}{suffix}" if v < 0 else f"+ {v_str}{suffix}")
+        
+        num_str = " ".join(num_parts) if num_parts else "0"
+        den_str = " ".join(den_parts) if den_parts else "1"
+        return f"y = ({num_str}) / ({den_str})"
+    
+    else:
+        # Đa thức bậc 2, 3, 4
+        if "e" in user_coeffs:
+            order = [("a", "x⁴"), ("b", "x³"), ("c", "x²"), ("d", "x"), ("e", "")]
+        elif "d" in user_coeffs:
+            order = [("a", "x³"), ("b", "x²"), ("c", "x"), ("d", "")]
+        else:
+            order = [("a", "x²"), ("b", "x"), ("c", "")]
+        
+        parts = []
+        for name, suffix in order:
+            if name not in user_coeffs:
+                continue
+            v = user_coeffs[name]
+            v_str = fmt_num(v)
+            if not parts:
+                parts.append(f"-{v_str}{suffix}" if v < 0 else f"{v_str}{suffix}")
+            else:
+                parts.append(f"- {v_str}{suffix}" if v < 0 else f"+ {v_str}{suffix}")
+        
+        if not parts:
+            return "y = 0"
+        return "y = " + " ".join(parts)
+
+# ============================================================
 # 4C. CHẠY CODE VẼ ĐỒ THỊ AN TOÀN
 # ============================================================
 def run_plot_code(code_str: str):
-    """
-    Chạy code vẽ đồ thị an toàn với validation 3 lớp.
-    Trả về (kind, data):
-      - ("png", path) nếu matplotlib
-      - ("plotly", fig) nếu plotly
-      - (None, None) nếu lỗi
-    """
     import os
-
     plot_path = "/tmp/lab_plot.png"
     if os.path.exists(plot_path):
         try:
@@ -727,7 +732,6 @@ def run_plot_code(code_str: str):
         except Exception:
             pass
 
-    # ---- LỚP 1: Chặn từ khóa nguy hiểm ----
     forbidden = [
         "os.system", "subprocess", "shutil", "socket",
         "open(", "eval(", "compile(",
@@ -738,7 +742,6 @@ def run_plot_code(code_str: str):
         if kw.lower() in code_lower:
             raise ValueError(f"Code chứa từ khóa không được phép: {kw}")
 
-    # ---- LỚP 2: Tự thêm savefig nếu AI quên ----
     has_savefig = "savefig" in code_lower
     has_plotly = "plotly" in code_lower or "go.figure" in code_lower
 
@@ -778,19 +781,16 @@ def run_plot_code(code_str: str):
     try:
         exec(code_str, namespace)
 
-        # Ưu tiên Plotly
         fig_var = namespace.get("fig")
         if fig_var is not None and hasattr(fig_var, "to_plotly_json"):
             return ("plotly", fig_var)
 
-        # Fallback matplotlib: nếu chưa save, tự save
         if not os.path.exists(plot_path):
             try:
                 plt.savefig(plot_path, dpi=130, bbox_inches="tight", pad_inches=0.15)
             except Exception:
                 pass
 
-        # ---- LỚP 3: Verify file output ----
         if os.path.exists(plot_path) and os.path.getsize(plot_path) > 1000:
             return ("png", plot_path)
         return (None, None)
@@ -801,7 +801,6 @@ def run_plot_code(code_str: str):
 # 4D. TRIGGER RENDER LẠI MATHJAX
 # ============================================================
 def trigger_mathjax():
-    """Buộc MathJax typeset lại nội dung."""
     import streamlit.components.v1 as components
     components.html("""
     <script>
@@ -915,18 +914,14 @@ def render_interactive_quizzes(raw_text: str, subject: str):
     str_app.markdown(f"<div class='main-heading'>{display_header}</div>", unsafe_allow_html=True)
     str_app.markdown(f"<p style='font-weight: 500; margin-bottom: 20px;'>{sub_title}</p>", unsafe_allow_html=True)
 
-    # ==================== NHÁNH TỰ LUẬN ====================
     if is_essay:
         essay_blocks = re.findall(r"\[ĐỀ\s*\d+\](.*?)(?=\[ĐỀ\s*\d+\]|\Z)", exercise_part, re.DOTALL | re.IGNORECASE)
-
         d_index = 1
         for e_block in essay_blocks:
             if not e_block.strip():
                 continue
-
             e_block = e_block.strip()
             e_block = re.sub(r"\n?-{2,}\s*$", "", e_block).strip()
-
             hint_match = re.search(r"GỢI\s*Ý\s*DÀN\s*Ý\s*:\s*(.*)", e_block, re.DOTALL | re.IGNORECASE)
             if hint_match:
                 main_content = e_block[:hint_match.start()].strip()
@@ -934,37 +929,27 @@ def render_interactive_quizzes(raw_text: str, subject: str):
             else:
                 main_content = e_block
                 hint_content = ""
-
             with str_app.container(border=True):
                 str_app.markdown(f"### 📝 Đề {d_index}")
                 str_app.markdown(main_content)
-
                 if hint_content:
                     with str_app.expander(f"Gợi ý dàn ý cho đề {d_index} (Nhấp để xem khi cần định hướng)"):
                         str_app.info(hint_content)
-
             d_index += 1
         return
 
-    # ==================== NHÁNH TRẮC NGHIỆM ====================
     question_blocks = re.findall(r"\[CÂU\s*HỎI\s*\d+\](.*?)(?=\[CÂU\s*HỎI|\Z)", exercise_part, re.DOTALL | re.IGNORECASE)
-
     q_index = 1
     for q_block in question_blocks:
         if not q_block.strip():
             continue
-
         ans_match = re.search(r"ĐÁP\s*ÁN\s*ĐÚNG:\s*([A-Da-d])", q_block, re.IGNORECASE)
         correct_ans = ans_match.group(1).strip().upper() if ans_match else "A"
-
         hint_match = re.search(r"GỢI\s*Ý\s*TƯ\s*DUY:\s*(.*?)(?=\n-{2,}|\n\[|$)", q_block, re.DOTALL | re.IGNORECASE)
         hint_text = hint_match.group(1).strip() if hint_match else "Hãy đọc kỹ lại phần lý thuyết cốt lõi ở trên để tìm ra hướng giải quyết."
-
         clean_q_block = re.sub(r"ĐÁP\s*ÁN\s*ĐÚNG:.*", "", q_block, flags=re.IGNORECASE)
         clean_q_block = re.sub(r"GỢI\s*Ý\s*TƯ\s*DUY:.*", "", clean_q_block, flags=re.DOTALL | re.IGNORECASE)
-
         lines = [line.strip() for line in clean_q_block.split('\n') if line.strip()]
-
         question_text = ""
         options = []
         for line in lines:
@@ -972,22 +957,16 @@ def render_interactive_quizzes(raw_text: str, subject: str):
                 options.append(line)
             elif not options:
                 question_text += line + " "
-
         if not options or len(options) < 4:
             continue
-
         with str_app.container(border=True):
             str_app.markdown(f"**Câu {q_index}:** {question_text.strip()}")
-
             for opt in options:
                 str_app.markdown(f"{opt}")
-
             choice_key = f"q_choice_{q_index}"
             checked_key = f"q_checked_{q_index}"
-
             if checked_key not in str_app.session_state:
                 str_app.session_state[checked_key] = False
-
             user_choice = str_app.radio(
                 f"Chọn đáp án cho câu {q_index}:",
                 options=["A", "B", "C", "D"],
@@ -996,19 +975,16 @@ def render_interactive_quizzes(raw_text: str, subject: str):
                 horizontal=True,
                 label_visibility="collapsed"
             )
-
             btn_clicked = str_app.button(
                 "✅ Kiểm tra kết quả",
                 key=f"check_btn_{q_index}",
                 type="primary"
             )
-
             if btn_clicked:
                 if not user_choice:
                     str_app.warning("Em chưa chọn đáp án. Hãy chọn A, B, C hoặc D trước khi kiểm tra!")
                 else:
                     str_app.session_state[checked_key] = True
-
             if str_app.session_state[checked_key] and user_choice:
                 if user_choice == correct_ans:
                     str_app.markdown(
@@ -1022,13 +998,11 @@ def render_interactive_quizzes(raw_text: str, subject: str):
                         "Chưa chính xác. Hãy xem gợi ý tư duy bên dưới để tự tìm ra lỗi sai.</p>",
                         unsafe_allow_html=True
                     )
-
                 with str_app.expander(f"💡 Gợi ý tư duy cho câu {q_index}", expanded=True):
                     str_app.info(hint_text)
             else:
                 with str_app.expander(f"Gợi ý tư duy cho câu {q_index} (Nhấp để xem khi quá bí)", expanded=False):
                     str_app.info(hint_text)
-
         q_index += 1
 
 # ============================================================
@@ -1054,7 +1028,6 @@ def render_main_interface(grade, subject, api_key_to_use):
         "📊 Thống Kê & Đánh Giá"
     ])
 
-    # ===== CONFIG KHÓA TƯƠNG TÁC KÉO CHO PLOTLY =====
     PLOTLY_CONFIG = {
         "scrollZoom": False,
         "displayModeBar": True,
@@ -1178,7 +1151,6 @@ def render_main_interface(grade, subject, api_key_to_use):
 
             if plot_code:
                 try:
-                    # ========== 2D CÓ HỆ SỐ → LAYOUT 2 CỘT ==========
                     if is_2d:
                         coeffs = extract_coefficients(plot_code)
                     else:
@@ -1188,7 +1160,6 @@ def render_main_interface(grade, subject, api_key_to_use):
                         col_left, col_right = str_app.columns([1, 2.5])
 
                         with col_left:
-                            # ===== TIÊU ĐỀ =====
                             coeff_names = ", ".join(coeffs.keys())
                             str_app.markdown(
                                 f"<h4 style='color:#4a90e2; margin-bottom: 20px;'>⚙️ Hệ số hàm số (theo {coeff_names}):</h4>",
@@ -1215,27 +1186,25 @@ def render_main_interface(grade, subject, api_key_to_use):
                                     label_visibility="collapsed"
                                 )
 
-                            # ===== CÔNG THỨC ĐỘNG =====
-                            formula_parts = []
-                            if "a" in user_coeffs:
-                                formula_parts.append(f"{user_coeffs['a']:.1f}x²")
-                            if "b" in user_coeffs:
-                                formula_parts.append(f"({user_coeffs['b']:.1f})x")
-                            if "c" in user_coeffs:
-                                formula_parts.append(f"({user_coeffs['c']:.1f})")
+                            # ===== CÔNG THỨC ĐỘNG — ĐÃ SỬA LỖI NGOẶC THỪA =====
+                            formula_text = format_formula(user_coeffs, plot_code)
+                            str_app.markdown(
+                                f"<div style='background: linear-gradient(135deg, #4a90e2, #357abd); color: white; "
+                                f"padding: 14px 18px; border-radius: 10px; font-size: 1.05rem; "
+                                f"font-weight: 600; margin: 20px 0; text-align: center;'>"
+                                f"<i>{formula_text}</i></div>",
+                                unsafe_allow_html=True
+                            )
 
-                            if formula_parts:
-                                formula_text = "y = " + " + ".join(formula_parts).replace("+ (-", "- (").replace("+ (-", "- (")
-                                str_app.markdown(
-                                    f"<div style='background: linear-gradient(135deg, #4a90e2, #357abd); color: white; "
-                                    f"padding: 14px 18px; border-radius: 10px; font-size: 1.05rem; "
-                                    f"font-weight: 600; margin: 20px 0; text-align: center;'>"
-                                    f"<i>{formula_text}</i></div>",
-                                    unsafe_allow_html=True
-                                )
+                            # ===== ĐỈNH + TRỤC ĐỐI XỨNG (chỉ khi là PARABOL) =====
+                            is_quadratic = (
+                                "a" in user_coeffs
+                                and "b" in user_coeffs
+                                and "d" not in user_coeffs
+                                and "e" not in user_coeffs
+                            )
 
-                            # ===== ĐỈNH + TRỤC ĐỐI XỨNG (nếu có a, b) =====
-                            if "a" in user_coeffs and "b" in user_coeffs and user_coeffs["a"] != 0:
+                            if is_quadratic and user_coeffs["a"] != 0:
                                 a_v = user_coeffs["a"]
                                 b_v = user_coeffs["b"]
                                 c_v = user_coeffs.get("c", 0)
@@ -1264,7 +1233,6 @@ def render_main_interface(grade, subject, api_key_to_use):
                             else:
                                 str_app.warning("AI đã sinh code vẽ nhưng không tạo được đồ thị.")
                     else:
-                        # ========== KHÔNG CÓ HỆ SỐ → RENDER BÌNH THƯỜNG ==========
                         kind, data = run_plot_code(plot_code)
                         if kind == "png" and data:
                             str_app.markdown(plot_label)
