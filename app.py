@@ -2295,7 +2295,7 @@ def render_main_interface(grade, subject, api_key_to_use):
                             with col_left:
                                 coeff_names = ", ".join(coeffs.keys())
                                 str_app.markdown(
-                                    f"<h4 style='color:#4a90e2; margin-bottom: 20px;'>⚙️ Hệ số hàm số (theo {coeff_names}):</h4>",
+                                    f"<h4 style='color:#1976d2; margin-bottom: 20px;'>⚙️ Hệ số hàm số (theo {coeff_names}):</h4>",
                                     unsafe_allow_html=True
                                 )
 
