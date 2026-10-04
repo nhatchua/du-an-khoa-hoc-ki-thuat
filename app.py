@@ -36,7 +36,9 @@ plt.rcParams.update({
 })
 
 ESSAY_SUBJECTS = {"Ngữ văn", "Lịch sử & Địa lý"}
-LAB_SUPPORTED_SUBJECTS = {"Toán học", "Vật lý", "Hóa học", "Sinh học", "Tin học", "Lịch sử & Địa lý"}
+SUBJECTS_WITH_PLOT = {"Toán học", "Vật lý", "Tin học"}
+SUBJECTS_TEXT_ONLY = {"Hóa học", "Sinh học", "Lịch sử & Địa lý"}
+LAB_SUPPORTED_SUBJECTS = SUBJECTS_WITH_PLOT | SUBJECTS_TEXT_ONLY
 
 # ============================================================
 # SECTION 2: UTILITIES
@@ -1592,11 +1594,77 @@ GỢI Ý TƯ DUY: [gợi ý, không tiết lộ đáp án]
 (Lặp lại cho Câu 2, Câu 3)."""
     return common_head + tail
 
+def _build_text_only_prompt(lab_request: str, subject: str, grade: str) -> str:
+    """
+    Prompt riêng cho Hóa, Sinh, Sử-Địa: chỉ trả về văn bản, KHÔNG sinh code plot.
+    Cấu trúc đầu ra khác nhau theo từng môn, chuẩn SGK Kết Nối Tri Thức.
+    """
+    if subject == "Hóa học":
+        structure = """1. PHƯƠNG TRÌNH PHẢN ỨNG
+Viết phương trình hóa học đầy đủ (đã cân bằng), ghi rõ điều kiện phản ứng (nhiệt độ, xúc tác, ánh sáng...). Dùng LaTeX trong cặp dấu $...$ cho công thức.
+
+2. TÊN GỌI CÁC CHẤT
+Liệt kê từng chất tham gia và sản phẩm: tên thường gọi, tên khoa học, công thức phân tử, vai trò trong phản ứng.
+
+3. CÁC BƯỚC TIẾN HÀNH THÍ NGHIỆM
+Mô tả chi tiết từng bước theo trình tự chuẩn phòng thí nghiệm: chuẩn bị dụng cụ, hóa chất, tiến hành, quan sát.
+
+4. HIỆN TƯỢNG QUAN SÁT ĐƯỢC
+Mô tả hiện tượng cụ thể: kết tủa (màu gì), sủi bọt khí, đổi màu dung dịch, tỏa nhiệt, phát sáng, mùi đặc trưng...
+
+5. GIẢI THÍCH BẢN CHẤT
+Giải thích hiện tượng bằng kiến thức hóa học, viết phương trình ion thu gọn (nếu có)."""
+
+    elif subject == "Sinh học":
+        structure = """1. KHÁI NIỆM / ĐỊNH NGHĨA
+Nêu rõ khái niệm, định nghĩa chuẩn theo SGK Kết Nối Tri Thức.
+
+2. CƠ CHẾ / DIỄN BIẾN
+Mô tả chi tiết cơ chế, các giai đoạn, các yếu tố tham gia, mối quan hệ nhân quả.
+
+3. Ý NGHĨA SINH HỌC
+Ý nghĩa của quá trình / cấu trúc đối với sinh vật, đối với hệ sinh thái.
+
+4. ỨNG DỤNG / LIÊN HỆ THỰC TẾ
+Ứng dụng trong đời sống, y học, nông nghiệp, công nghệ sinh học..."""
+
+    else:  # Lịch sử & Địa lý
+        structure = """1. BỐI CẢNH / ĐIỀU KIỆN
+Trình bày bối cảnh lịch sử hoặc điều kiện tự nhiên - kinh tế - xã hội liên quan.
+
+2. DIỄN BIẾN CHÍNH
+Trình bày diễn biến theo trình tự thời gian hoặc không gian rõ ràng, có mốc cụ thể.
+
+3. KẾT QUẢ / Ý NGHĨA
+Nêu kết quả và ý nghĩa của sự kiện / hiện tượng.
+
+4. LIÊN HỆ MỞ RỘNG
+Liên hệ với kiến thức liên quan, bài học kinh nghiệm, xu hướng hiện nay."""
+
+    return f"""Bạn là giáo viên chuyên môn cao, soạn tài liệu theo chuẩn chương trình giáo dục phổ thông mới nhất bộ sách "Kết Nối Tri Thức Với Cuộc Sống".
+
+YÊU CẦU CỦA HỌC SINH: {lab_request}
+MÔN: {subject} - {grade}
+
+QUY TẮC BẮT BUỘC:
+1. TOÀN BỘ nội dung bằng TIẾNG VIỆT chuẩn xác, không có từ tiếng Anh xen lẫn.
+2. KHÔNG DÙNG DẤU #.
+3. Công thức hóa học, ký hiệu khoa học: dùng LaTeX đặt trong cặp dấu $...$.
+4. TUYỆT ĐỐI KHÔNG sinh code Python, KHÔNG sinh thẻ <PLOT_2D>, <PLOT_3D> hay <PLOT>.
+5. KHÔNG vẽ đồ thị, không vẽ hình — chỉ trả về nội dung văn bản thuần.
+6. Kiến thức phải cực kỳ chính xác, khoa học, sư phạm theo đúng sách Kết Nối Tri Thức.
+
+CẤU TRÚC ĐẦU RA BẮT BUỘC:
+
+{structure}
+
+LƯU Ý CUỐI:
+- Chỉ trả lời bằng văn bản, KHÔNG có code Python, KHÔNG có thẻ XML nào.
+- Trình bày rõ ràng, có xuống dòng giữa các mục lớn."""
 
 def build_virtual_lab_prompt(lab_request: str, subject: str, grade: str) -> str:
     # Lấy template theo môn, fallback Toán nếu không có
     subject_templates = _ALL_TEMPLATES.get(subject, _TOAN_TEMPLATES)
-
     # Xây khối template text từ dict
     templates_block = ""
     for idx, (name, code) in enumerate(subject_templates.items(), 1):
