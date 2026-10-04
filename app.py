@@ -2016,7 +2016,7 @@ def render_main_interface(grade, subject, api_key_to_use):
                 inner += f" + {_fmt_num(c)}" if c > 0 else f" - {_fmt_num(abs(c))}"
             return f"y = {a_str}{func_name}({inner})"
 
-        # === PHÂN THỨC ===
+                # === PHÂN THỨC ===
         if is_frac:
             def _build_poly(coeff_pairs):
                 parts = []
@@ -2033,9 +2033,21 @@ def render_main_interface(grade, subject, api_key_to_use):
                         parts.append(f"- {v_str}" if v < 0 else f"+ {v_str}")
                 return " ".join(parts) if parts else "0"
 
+            num_parts = [p for p in [("a", "x²"), ("b", "x"), ("c", "")] if p[0] in coeffs_dict and not _is_zero(coeffs_dict[p[0]])]
+            den_parts = [p for p in [("d", "x"), ("e", "")] if p[0] in coeffs_dict and not _is_zero(coeffs_dict[p[0]])]
+
             num_str = _build_poly([("a", "x²"), ("b", "x"), ("c", "")])
             den_str = _build_poly([("d", "x"), ("e", "")])
-            return f"y = ({num_str}) / ({den_str})"
+
+            # Mẫu = 0 → hàm không xác định
+            if den_str == "0":
+                return "y = không xác định (mẫu bằng 0)"
+
+            # Bỏ ngoặc khi tử hoặc mẫu chỉ có 1 hạng tử
+            num_display = num_str if len(num_parts) <= 1 else f"({num_str})"
+            den_display = den_str if len(den_parts) <= 1 else f"({den_str})"
+
+            return f"y = {num_display} / {den_display}"
 
         # === MŨ ===
         if "a**x" in code_lower or "e**x" in code_lower or "exp(" in code_lower:
