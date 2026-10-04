@@ -352,7 +352,6 @@ QUY TẮC BẮT BUỘC:
 2. LaTeX đặt trong cặp dấu đô la cho mọi công thức.
 3. KHÔNG DÙNG DẤU #.
 4. Code Python vẽ đồ thị PHẢI ngắn gọn, tối ưu.
-5. KHÔNG set lại font, dpi, figsize.
 
 CẤU TRÚC ĐẦU RA BẮT BUỘC:
 
@@ -385,20 +384,64 @@ import numpy as np
 
 Ví dụ SAI: `coeffs = [1, -4, 3]` HOẶC `a, b, c = 1, -4, 3` HOẶC `a=1`
 
-=== ⚠️ QUY TẮC CỰC KỲ QUAN TRỌNG VỀ RANGE VÀ MŨI TÊN TRỤC ===
-1. MŨI TÊN TRỤC: KHÔNG dùng `axref="paper"` hoặc `ayref="paper"` cho annotation mũi tên (Plotly KHÔNG cho phép).
-   → Mũi tên phải dùng DATA COORDS hoàn toàn: `xref="x", yref="y", axref="x", ayref="y"`.
+=== ⚠️ QUY TẮC VỀ RANGE VÀ MŨI TÊN TRỤC ===
+1. KHÔNG dùng `axref="paper"` hoặc `ayref="paper"` cho annotation mũi tên.
+2. PHẢI set range cho CẢ xaxis và yaxis. Tính y_range từ dữ liệu y:
+   y_pad = (max(y) - min(y)) * 0.1 + 1
+   y_range = [min(y) - y_pad, max(y) + y_pad]
+3. Mũi tên trục đặt ở cuối data range (không dùng paper coords).
 
-2. RANGE TRỤC: PHẢI set range cho CẢ xaxis và yaxis (không để auto) để tính trước vị trí mũi tên.
-   → xaxis range CỐ ĐỊNH: [-1.8, 6.8]
-   → yaxis range TÍNH TỪ dữ liệu y: y_range = [min(y_data) - pad, max(y_data) + pad]
-   → pad = (max - min) * 0.1 + 1
+=== ⚠️ QUY TẮC ĐẶT TÊN ĐỒ THỊ VÀ TIỆM CẬN (BẮT BUỘC) ===
 
-3. MŨI TÊN PHẢI ĐẶT Ở CUỐI TRỤC (dùng giá trị từ range):
-   → Mũi tên Ox: x = x_range_max, y = 0 (đuôi: ax = x_range_max - 0.5)
-   → Mũi tên Oy: x = 0, y = y_range_max (đuôi: ay = y_range_max * 0.9)
+A) TÊN ĐỒ THỊ — Đặt ở GÓC DƯỚI PHẢI (vùng paper 0.98, 0.02):
+   fig.add_annotation(
+       x=0.98, y=0.02, xref="paper", yref="paper",
+       text="<công thức tổng quát>",
+       showarrow=False,
+       xanchor='right', yanchor='bottom',
+       font=dict(size=13, color='#1f4e9c', family='Arial'),
+       bgcolor='rgba(255,255,255,0.85)',
+       bordercolor='#1f4e9c', borderwidth=1.5, borderpad=6
+   )
 
-4. Nhãn O, x, y đặt bằng data coords tại (0, 0), (x_range_max, 0), (0, y_range_max).
+   Quy tắc viết tên:
+   - Hàm bậc 2: "y = ax² + bx + c"
+   - Hàm bậc 3: "y = ax³ + bx² + cx + d"
+   - Hàm phân thức: "y = (ax + b)/(cx + d)"
+   - Hàm mũ: "y = a^x"
+   - Hàm logarit: "y = log_a(x)"
+   - Hàm căn: "y = √(ax + b)"
+   - Hàm lượng giác: "y = sin(x)" hoặc "y = a·sin(bx + c)"
+   → LUÔN ghi dạng TỔNG QUÁT (có a, b, c), KHÔNG ghi số cụ thể.
+
+B) TIỆM CẬN — Mỗi tiệm cận phải có NHÃN TÊN theo chuẩn SGK:
+   - Tiệm cận ĐỨNG x = a: vẽ đường dọc tại x = a, nhãn "x = a" đặt gần đường, xoay dọc nếu cần
+   - Tiệm cận NGANG y = a: vẽ đường ngang tại y = a, nhãn "y = a" đặt ở đầu phải đường
+   - Tiệm cận XIÊN y = ax + b: vẽ đường chéo, nhãn "y = ax + b" đặt gần đầu phải đường
+
+   Mẫu code cho tiệm cận:
+   # Tiệm cận đứng x = 3
+   fig.add_trace(go.Scatter(x=[3, 3], y=[y_range[0], y_range[1]],
+       mode='lines', line=dict(color='#999', width=1.5, dash='dash'),
+       showlegend=False, hoverinfo='skip'))
+   fig.add_annotation(x=3, y=y_range[1]*0.85, text="x = 3",
+       showarrow=False, xshift=5, font=dict(color='#666', size=11))
+
+   # Tiệm cận ngang y = 2
+   fig.add_trace(go.Scatter(x=[x_range[0], x_range[1]], y=[2, 2],
+       mode='lines', line=dict(color='#999', width=1.5, dash='dash'),
+       showlegend=False, hoverinfo='skip'))
+   fig.add_annotation(x=x_range[1]*0.95, y=2, text="y = 2",
+       showarrow=False, yshift=8, xanchor='right', font=dict(color='#666', size=11))
+
+   # Tiệm cận xiên y = 2x + 1
+   x_tc = np.array([x_range[0], x_range[1]])
+   y_tc = 2*x_tc + 1
+   fig.add_trace(go.Scatter(x=x_tc, y=y_tc, mode='lines',
+       line=dict(color='#999', width=1.5, dash='dash'),
+       showlegend=False, hoverinfo='skip'))
+   fig.add_annotation(x=x_range[1]*0.9, y=2*x_range[1]*0.9 + 1, text="y = 2x + 1",
+       showarrow=False, yshift=8, font=dict(color='#666', size=11))
 
 === STYLE 2D PLOTLY (BẮT BUỘC) ===
 - Lưới mịn màu #e0e0e0
@@ -456,14 +499,14 @@ if a != 0:
                 text="(" + str(round(xr,2)) + "; 0)",
                 showarrow=False, yshift=20, font=dict(color='#2ca02c', size=11))
 
-# TÍNH RANGE ĐỘNG TỪ DỮ LIỆU
+# TÍNH RANGE ĐỘNG
 x_range = [-1.8, 6.8]
 y_min_d = float(np.min(y))
 y_max_d = float(np.max(y))
 y_pad = (y_max_d - y_min_d) * 0.1 + 1
 y_range = [y_min_d - y_pad, y_max_d + y_pad]
 
-# MŨI TÊN TRỤC (data coords hoàn toàn)
+# MŨI TÊN TRỤC
 fig.add_annotation(
     x=x_range[1], y=0,
     ax=x_range[1] - 0.5, ay=0,
@@ -487,6 +530,17 @@ fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
 fig.add_annotation(x=0, y=y_range[1], text='y', showarrow=False,
     xshift=-18, yshift=-8, font=dict(size=15, color='#333'))
 
+# TÊN ĐỒ THỊ Ở GÓC DƯỚI PHẢI (vùng khoanh đỏ)
+fig.add_annotation(
+    x=0.98, y=0.02, xref="paper", yref="paper",
+    text="y = ax² + bx + c",
+    showarrow=False,
+    xanchor='right', yanchor='bottom',
+    font=dict(size=13, color='#1f4e9c'),
+    bgcolor='rgba(255,255,255,0.85)',
+    bordercolor='#1f4e9c', borderwidth=1.5, borderpad=6
+)
+
 fig.update_layout(
     title=dict(text='Đồ thị hàm số bậc hai y = ax² + bx + c', x=0.5,
         font=dict(size=14, color='#333')),
@@ -502,7 +556,84 @@ fig.update_layout(
 )
 </PLOT_2D>
 
-Lưu ý: KHÔNG dùng axref="paper". KHÔNG gọi fig.show().
+=== MẪU HÀM PHÂN THỨC CÓ TIỆM CẬN ===
+<PLOT_2D>
+a = 1
+b = 1
+c = 1
+d = 1
+import plotly.graph_objects as go
+import numpy as np
+
+fig = go.Figure()
+
+x = np.linspace(-5, 5, 1000)
+x = x[np.abs(c*x + d) > 0.01]
+y = (a*x + b) / (c*x + d)
+
+fig.add_trace(go.Scatter(x=x, y=y, mode='lines',
+    line=dict(color='#1f4e9c', width=3), showlegend=False, hoverinfo='skip'))
+
+# Range
+x_range = [-6, 6]
+y_range = [-10, 10]
+
+# TIỆM CẬN ĐỨNG x = -d/c
+if c != 0:
+    x_tcd = -d / c
+    fig.add_trace(go.Scatter(x=[x_tcd, x_tcd], y=y_range,
+        mode='lines', line=dict(color='#999', width=1.5, dash='dash'),
+        showlegend=False, hoverinfo='skip'))
+    fig.add_annotation(x=x_tcd, y=y_range[1]*0.85,
+        text="x = " + str(round(x_tcd, 2)),
+        showarrow=False, xshift=8, font=dict(color='#666', size=12))
+
+# TIỆM CẬN NGANG y = a/c
+if c != 0:
+    y_tcn = a / c
+    fig.add_trace(go.Scatter(x=x_range, y=[y_tcn, y_tcn],
+        mode='lines', line=dict(color='#999', width=1.5, dash='dash'),
+        showlegend=False, hoverinfo='skip'))
+    fig.add_annotation(x=x_range[1]*0.95, y=y_tcn,
+        text="y = " + str(round(y_tcn, 2)),
+        showarrow=False, yshift=8, xanchor='right', font=dict(color='#666', size=12))
+
+# Mũi tên trục
+fig.add_annotation(x=x_range[1], y=0, ax=x_range[1]-0.5, ay=0,
+    xref="x", yref="y", axref="x", ayref="y",
+    showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
+fig.add_annotation(x=0, y=y_range[1], ax=0, ay=y_range[1]*0.92,
+    xref="x", yref="y", axref="x", ayref="y",
+    showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
+
+# Nhãn O, x, y
+fig.add_annotation(x=0, y=0, text='O', showarrow=False,
+    xshift=-14, yshift=-14, font=dict(size=15, color='#333'))
+fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
+    xshift=-6, yshift=-18, font=dict(size=15, color='#333'))
+fig.add_annotation(x=0, y=y_range[1], text='y', showarrow=False,
+    xshift=-18, yshift=-8, font=dict(size=15, color='#333'))
+
+# TÊN ĐỒ THỊ GÓC DƯỚI PHẢI
+fig.add_annotation(
+    x=0.98, y=0.02, xref="paper", yref="paper",
+    text="y = (ax + b)/(cx + d)",
+    showarrow=False, xanchor='right', yanchor='bottom',
+    font=dict(size=13, color='#1f4e9c'),
+    bgcolor='rgba(255,255,255,0.85)',
+    bordercolor='#1f4e9c', borderwidth=1.5, borderpad=6
+)
+
+fig.update_layout(
+    title=dict(text='Đồ thị hàm phân thức', x=0.5, font=dict(size=14, color='#333')),
+    xaxis=dict(range=x_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
+        showgrid=True, gridcolor='#e0e0e0'),
+    yaxis=dict(range=y_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
+        showgrid=True, gridcolor='#e0e0e0'),
+    plot_bgcolor='white', height=520,
+    margin=dict(l=20, r=20, t=50, b=30)
+)
+</PLOT_2D>
 
 === MẪU 3D PLOTLY ===
 <PLOT_3D>
@@ -534,13 +665,10 @@ fig.update_layout(
 </PLOT_3D>
 
 LƯU Ý CUỐI:
-- 2D: dùng PLOTLY, KHÔNG dùng axref="paper" hay ayref="paper"
-- 2D: khai báo a, b, c trên dòng riêng TRƯỚC import
-- 2D: PHẢI set range cả 2 trục, tính y_range từ dữ liệu y
-- 2D: mũi tên trục đặt ở data coords cuối trục
-- Tiệm cận (nếu có) phải tính từ biến a, b, c
-- KHÔNG gọi fig.show(), KHÔNG savefig
-- CHỈ dùng: plotly.graph_objects, numpy, math"""
+- 2D: dùng PLOTLY, KHÔNG dùng axref="paper"
+- 2D: BẮT BUỘC đặt TÊN ĐỒ THỊ ở góc dưới phải (paper 0.98, 0.02), dạng công thức tổng quát có a, b, c
+- 2D: Mỗi tiệm cận PHẢI có nhãn tên (x = a cho đứng, y = a cho ngang, y = ax + b cho xiên)
+- KHÔNG gọi fig.show(), KHÔNG savefig"""
 
     return template.replace("__LAB_REQUEST__", lab_request).replace("__SUBJECT__", subject).replace("__GRADE__", grade)
 
@@ -932,6 +1060,19 @@ def render_main_interface(grade, subject, api_key_to_use):
         "📊 Thống Kê & Đánh Giá"
     ])
 
+    # ===== CONFIG KHÓA TƯƠNG TÁC KÉO CHO PLOTLY =====
+    PLOTLY_CONFIG = {
+        "scrollZoom": False,
+        "displayModeBar": True,
+        "displaylogo": False,
+        "modeBarButtonsToRemove": [
+            "pan2d", "select2d", "lasso2d", "zoom2d",
+            "autoScale2d", "toggleSpikelines",
+            "hoverCompareCartesian", "hoverClosestCartesian"
+        ],
+        "doubleClick": "reset",
+    }
+
     # ==================== TAB 1 ====================
     with tab1:
         str_app.markdown(f"<div class='main-heading' style='text-align: center;'>TỰ HỌC & CHIẾM LĨNH KIẾN THỨC: MÔN {subject.upper()} - {grade.upper()}</div>", unsafe_allow_html=True)
@@ -1123,7 +1264,7 @@ def render_main_interface(grade, subject, api_key_to_use):
                             plot_code = substitute_coefficients(plot_code, user_coeffs)
                             kind, data = run_plot_code(plot_code)
                             if kind == "plotly" and data is not None:
-                                str_app.plotly_chart(data, use_container_width=True)
+                                str_app.plotly_chart(data, use_container_width=True, config=PLOTLY_CONFIG)
                             elif kind == "png" and data:
                                 str_app.image(data, use_container_width=True)
                             else:
@@ -1136,7 +1277,7 @@ def render_main_interface(grade, subject, api_key_to_use):
                             str_app.image(data, use_container_width=True)
                         elif kind == "plotly" and data is not None:
                             str_app.markdown(plot_label)
-                            str_app.plotly_chart(data, use_container_width=True)
+                            str_app.plotly_chart(data, use_container_width=True, config=PLOTLY_CONFIG)
                         else:
                             str_app.warning("AI đã sinh code vẽ nhưng không tạo được đồ thị.")
                 except Exception as plot_err:
