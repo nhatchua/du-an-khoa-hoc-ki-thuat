@@ -13,6 +13,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import numpy as np
+import ast
 
 plt.rcParams.update({
     "font.family": "DejaVu Sans",
@@ -153,6 +154,114 @@ def extract_coefficients(code_str: str) -> dict:
                 continue
     return coeffs
 
+def _analyze_function_code(code_str: str) -> dict:
+    """
+    Phân tích AST của code AI sinh để hiểu hàm THỰC SỰ:
+    - Bậc tử số, bậc mẫu số
+    - Biến thực sự được đọc (không tính biến chỉ khai báo)
+    - Tên biến hệ số của x và hằng số trong mẫu
+    Dùng để formatter hiển thị ĐÚNG dạng hàm, không giả định sai.
+    """
+    try:
+        tree = ast.parse(code_str)
+    except SyntaxError:
+        return {}
+
+    code_lower = code_str.lower()
+
+    # 1. Tìm biểu thức gán cho y
+    y_expr = None
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for tgt in node.targets:
+                if isinstance(tgt, ast.Name) and tgt.id == "y":
+                    y_expr = node.value
+                    break
+            if y_expr is not None:
+                break
+    if y_expr is None:
+        return {}
+
+    # 2. Tách tử/mẫu nếu là phép chia
+    is_fraction = isinstance(y_expr, ast.BinOp) and isinstance(y_expr.op, ast.Div)
+    num_expr = y_expr.left if is_fraction else y_expr
+    den_expr = y_expr.right if is_fraction else None
+
+    # 3. Đếm bậc của x
+    def _deg(expr):
+        if expr is None:
+            return 0
+        max_d = 0
+        for n in ast.walk(expr):
+            if isinstance(n, ast.BinOp) and isinstance(n.op, ast.Pow):
+                if isinstance(n.left, ast.Name) and n.left.id == "x":
+                    if isinstance(n.right, ast.Constant) and isinstance(n.right.value, (int, float)):
+                        try:
+                            max_d = max(max_d, int(n.right.value))
+                        except Exception:
+                            pass
+            elif isinstance(n, ast.Name) and n.id == "x":
+                max_d = max(max_d, 1)
+        return max_d
+
+    # 4. Biến đọc trong từng phần (loại x)
+    def _vars(expr):
+        if expr is None:
+            return set()
+        return {n.id for n in ast.walk(expr)
+                if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load)
+                and n.id != "x"}
+
+    # 5. Tìm biến đi với x và biến hằng trong 1 biểu thức
+    def _find_coef_and_const(expr):
+        coef_var = None
+        for n in ast.walk(expr):
+            if isinstance(n, ast.BinOp) and isinstance(n.op, ast.Mult):
+                left, right = n.left, n.right
+                if isinstance(left, ast.Name) and left.id != "x":
+                    if isinstance(right, ast.Name) and right.id == "x":
+                        coef_var = left.id
+                if isinstance(right, ast.Name) and right.id != "x":
+                    if isinstance(left, ast.Name) and left.id == "x":
+                        coef_var = right.id
+        all_vars = _vars(expr)
+        const_var = None
+        for v in all_vars:
+            if v != coef_var:
+                const_var = v
+                break
+        return coef_var, const_var
+
+    # 6. Phân loại hàm
+    def _classify():
+        if is_fraction:
+            return "rational"
+        if any(k in code_lower for k in ("sin", "cos", "tan", "cot")):
+            return "trig"
+        if "a**x" in code_lower or "e**x" in code_lower or "exp(" in code_lower:
+            return "exp"
+        if "log" in code_lower or "ln(" in code_lower:
+            return "log"
+        if "sqrt" in code_lower:
+            return "sqrt"
+        if "cos(t)" in code_lower or "sin(t)" in code_lower:
+            return "circle"
+        return "polynomial"
+
+    den_coef_var, den_const_var = (None, None)
+    if den_expr is not None:
+        den_coef_var, den_const_var = _find_coef_and_const(den_expr)
+
+    return {
+        "type": _classify(),
+        "degree_num": _deg(num_expr),
+        "degree_den": _deg(den_expr) if is_fraction else 0,
+        "num_vars": _vars(num_expr),
+        "den_vars": _vars(den_expr),
+        "den_coef_var": den_coef_var,
+        "den_const_var": den_const_var,
+        "used_vars": _vars(y_expr) | {"x"},
+    }
 
 def substitute_coefficients(code_str: str, coeff_values: dict) -> str:
     for name, value in coeff_values.items():
