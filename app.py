@@ -114,7 +114,7 @@ def render_lab_text_block(text: str):
                 flush()
                 str_app.markdown(
                     f"<div style='font-size:1.02rem; font-weight:700;"
-                    f"color:#1f4e9c; margin:14px 0 4px 0;'>{s}</div>",
+                    f"color:#2196f3; margin:14px 0 4px 0;'>{s}</div>",
                     unsafe_allow_html=True,
                 )
             else:
