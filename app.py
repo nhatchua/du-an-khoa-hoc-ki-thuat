@@ -158,9 +158,9 @@ def _analyze_function_code(code_str: str) -> dict:
     """
     Phân tích AST của code AI sinh để hiểu hàm THỰC SỰ:
     - Bậc tử số, bậc mẫu số
-    - Biến thực sự được đọc (không tính biến chỉ khai báo)
+    - Biến thực sự được đọc trong CẢ x= và y=
     - Tên biến hệ số của x và hằng số trong mẫu
-    Dùng để formatter hiển thị ĐÚNG dạng hàm, không giả định sai.
+    - Phân biệt elip (x=a·cos(t), y=b·sin(t)) vs đường tròn (x=a·cos(t), y=a·sin(t))
     """
     try:
         tree = ast.parse(code_str)
@@ -169,16 +169,18 @@ def _analyze_function_code(code_str: str) -> dict:
 
     code_lower = code_str.lower()
 
-    # 1. Tìm biểu thức gán cho y
+    # 1. Tìm biểu thức gán cho x và y
+    x_expr = None
     y_expr = None
     for node in ast.walk(tree):
         if isinstance(node, ast.Assign):
             for tgt in node.targets:
-                if isinstance(tgt, ast.Name) and tgt.id == "y":
-                    y_expr = node.value
-                    break
-            if y_expr is not None:
-                break
+                if isinstance(tgt, ast.Name):
+                    if tgt.id == "y" and y_expr is None:
+                        y_expr = node.value
+                    elif tgt.id == "x" and x_expr is None:
+                        x_expr = node.value
+
     if y_expr is None:
         return {}
 
@@ -204,13 +206,15 @@ def _analyze_function_code(code_str: str) -> dict:
                 max_d = max(max_d, 1)
         return max_d
 
-    # 4. Biến đọc trong từng phần (loại x)
+    # 4. Biến đọc trong từng phần (loại x, t, np, math)
+    EXCLUDE_VARS = {"x", "y", "t", "np", "math", "plt", "go", "px"}
+
     def _vars(expr):
         if expr is None:
             return set()
         return {n.id for n in ast.walk(expr)
                 if isinstance(n, ast.Name) and isinstance(n.ctx, ast.Load)
-                and n.id != "x"}
+                and n.id not in EXCLUDE_VARS}
 
     # 5. Tìm biến đi với x và biến hằng trong 1 biểu thức
     def _find_coef_and_const(expr):
@@ -252,6 +256,14 @@ def _analyze_function_code(code_str: str) -> dict:
     if den_expr is not None:
         den_coef_var, den_const_var = _find_coef_and_const(den_expr)
 
+    # 7. Phân tích x_expr (dùng cho elip/đường tròn)
+    x_vars = _vars(x_expr) if x_expr is not None else set()
+    y_vars = _vars(y_expr)
+
+    # 8. Tìm biến hệ số trong x_expr và y_expr (cho elip/tròn)
+    x_coef_var, _ = _find_coef_and_const(x_expr) if x_expr is not None else (None, None)
+    y_coef_var, _ = _find_coef_and_const(y_expr)
+
     return {
         "type": _classify(),
         "degree_num": _deg(num_expr),
@@ -260,7 +272,11 @@ def _analyze_function_code(code_str: str) -> dict:
         "den_vars": _vars(den_expr),
         "den_coef_var": den_coef_var,
         "den_const_var": den_const_var,
-        "used_vars": _vars(y_expr) | {"x"},
+        "used_vars": x_vars | y_vars | {"x"},
+        "x_vars": x_vars,
+        "y_vars": y_vars,
+        "x_coef_var": x_coef_var,
+        "y_coef_var": y_coef_var,
     }
 
 def substitute_coefficients(code_str: str, coeff_values: dict) -> str:
@@ -336,8 +352,9 @@ def _postprocess_figure(fig):
     - Bật grid nhạt 2 chiều
     - Ép đường trục Ox/Oy luôn hiện rõ (zeroline)
     - Đảm bảo range không bị đảo (min < max)
-    - Ép tỉ lệ trục 1:1 cho đồ thị hình học (tròn, elip, tam giác, vector)
-    - Xóa annotation công thức góc phải (xref=paper VÀ yref=paper)
+    - Ép tỉ lệ trục 1:1 cho đồ thị hình học
+    - Xóa annotation công thức góc phải
+    - Tắt legend nếu chỉ có 1 trace
     - Annotation: nền trắng mờ + chữ đậm
     - Tự thêm mũi tên trục nếu thiếu
     """
@@ -362,7 +379,7 @@ def _postprocess_figure(fig):
             ax.zerolinewidth = 1.5
             ax.zerolinecolor = "#333"
 
-            # ĐẢM BẢO RANGE KHÔNG ĐẢO (min < max)
+            # ĐẢM BẢO RANGE KHÔNG ĐẢO
             r = ax.range
             if r and len(r) == 2 and r[0] is not None and r[1] is not None:
                 if r[0] > r[1]:
@@ -370,7 +387,7 @@ def _postprocess_figure(fig):
             if getattr(ax, "autorange", None) == "reversed":
                 ax.autorange = True
 
-        # ÉP TỈ LỆ TRỤC 1:1 nếu 2 trục có cùng khoảng (hình học: tròn, elip, tam giác, vector)
+        # ÉP TỈ LỆ TRỤC 1:1 nếu 2 trục có cùng khoảng
         try:
             xr = fig.layout.xaxis.range
             yr = fig.layout.yaxis.range
@@ -385,7 +402,14 @@ def _postprocess_figure(fig):
         except Exception:
             pass
 
-        # XÓA ANNOTATION CÔNG THỨC GÓC PHẢI (xref=paper VÀ yref=paper, không phải mũi tên)
+        # TẮT LEGEND NẾU CHỈ CÓ 1 TRACE
+        try:
+            if fig.data and len(fig.data) == 1:
+                fig.update_layout(showlegend=False)
+        except Exception:
+            pass
+
+        # XÓA ANNOTATION CÔNG THỨC GÓC PHẢI
         if fig.layout.annotations:
             fig.layout.annotations = tuple(
                 ann for ann in fig.layout.annotations
@@ -397,7 +421,6 @@ def _postprocess_figure(fig):
         # LÀM ĐẬM NHÃN + NỀN CHO ANNOTATION CÒN LẠI
         if fig.layout.annotations:
             for ann in fig.layout.annotations:
-                # Nhãn O, x, y
                 if ann.text in ("O", "x", "y") and not ann.showarrow:
                     if ann.font is None:
                         ann.font = dict(color="#333", size=15)
@@ -2172,10 +2195,29 @@ def render_main_interface(grade, subject, api_key_to_use):
         is_sqrt = ("sqrt" in code_lower or "np.sqrt" in code_lower)
         is_circle = ("cos(t)" in code_lower or "sin(t)" in code_lower)
 
-        # === ĐƯỜNG TRÒN ===
+        # === ELIP / ĐƯỜNG TRÒN (check TRƯỚC lượng giác) ===
         if is_circle:
-            a = coeffs_dict.get("a", 1)
-            return f"x² + y² = {_fmt_coef(a)}²"
+            # Ưu tiên dùng x_coef_var, y_coef_var từ AST
+            coef_x = func_info.get("x_coef_var")
+            coef_y = func_info.get("y_coef_var")
+
+            # Fallback: lọc x_vars, y_vars theo coeffs_dict
+            if not coef_x:
+                x_candidates = [v for v in func_info.get("x_vars", set()) if v in coeffs_dict]
+                coef_x = x_candidates[0] if x_candidates else None
+            if not coef_y:
+                y_candidates = [v for v in func_info.get("y_vars", set()) if v in coeffs_dict]
+                coef_y = y_candidates[0] if y_candidates else None
+
+            if coef_x and coef_y and coef_x != coef_y:
+                # ELIP: 2 hệ số khác nhau
+                a_val = coeffs_dict.get(coef_x, 1)
+                b_val = coeffs_dict.get(coef_y, 1)
+                return f"x²/{_fmt_coef(a_val)}² + y²/{_fmt_coef(b_val)}² = 1"
+            else:
+                # ĐƯỜNG TRÒN
+                a = coeffs_dict.get(coef_x or coef_y or "a", 1)
+                return f"x² + y² = {_fmt_coef(a)}²"
 
         # === LƯỢNG GIÁC ===
         if is_trig:
@@ -2201,7 +2243,6 @@ def render_main_interface(grade, subject, api_key_to_use):
         if is_frac:
             deg_num = func_info.get("degree_num", None)
 
-            # Trường hợp đặc biệt: tử bậc 0 (hằng) → y = a/(dx+e)
             if deg_num == 0:
                 num_vars = func_info.get("num_vars", set())
                 num_var = next(iter(num_vars)) if num_vars else "c"
@@ -2232,7 +2273,6 @@ def render_main_interface(grade, subject, api_key_to_use):
                     return "y = không xác định (mẫu bằng 0)"
                 return f"y = {num_str} / ({den_str})"
 
-            # Mặc định: phân thức bậc 2 / bậc 1
             num_parts = [p for p in [("a", "x²"), ("b", "x"), ("c", "")]
                          if p[0] in coeffs_dict and not _is_zero(coeffs_dict[p[0]])]
             den_parts_l = [p for p in [("d", "x"), ("e", "")]
@@ -2272,11 +2312,6 @@ def render_main_interface(grade, subject, api_key_to_use):
                 inner += f" + {_fmt_coef(b)}" if b > 0 else f" - {_fmt_coef(abs(b))}"
             return f"y = √({inner})"
 
-        # === ĐƯỜNG TRÒN ===
-        if is_circle:
-            a = coeffs_dict.get("a", 1)
-            return f"x² + y² = {_fmt_coef(a)}²"
-
         # === ĐA THỨC (mặc định) ===
         if "e" in coeffs_dict:
             order = [("a", "x⁴"), ("b", "x³"), ("c", "x²"), ("d", "x"), ("e", "")]
@@ -2287,6 +2322,7 @@ def render_main_interface(grade, subject, api_key_to_use):
 
         poly = _build_poly(order)
         return f"y = {poly}" if poly else "y = 0"
+
     # ===== HÀM CON: PHÂN TÍCH ĐẶC TRƯNG (CHỈ VỚI TOÁN) =====
     def _analyze_features(coeffs_dict, code_str):
         if subject != "Toán học":
