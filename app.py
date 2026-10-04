@@ -124,6 +124,22 @@ def render_lab_text_block(text: str):
                 buffer.append(line)
         flush()
 
+def strip_plot_section_from_text(text: str) -> str:
+    """
+    Cắt bỏ mục "4. MÃ VẼ ĐỒ THỊ" (hoặc tương tự) và mọi nội dung sau nó.
+    Dùng cho môn text-only (Hóa, Sinh, Sử-Địa) để phòng AI vẫn sinh mục này.
+    """
+    if not text:
+        return text
+    pattern = re.compile(
+        r"^\s*\d+\.\s*(MÃ\s*VẼ\s*ĐỒ\s*THỊ|VẼ\s*ĐỒ\s*THỊ|CODE\s*VẼ|PLOT|SƠ\s*ĐỒ\s*CODE|MÃ\s*PLOT)[^\n]*$",
+        re.IGNORECASE | re.MULTILINE | re.UNICODE,
+    )
+    m = pattern.search(text)
+    if m:
+        text = text[:m.start()].rstrip()
+    return text
+
 def trigger_mathjax():
     import streamlit.components.v1 as components
     components.html("""
@@ -1652,7 +1668,8 @@ QUY TẮC BẮT BUỘC:
 3. Công thức hóa học, ký hiệu khoa học: dùng LaTeX đặt trong cặp dấu $...$.
 4. TUYỆT ĐỐI KHÔNG sinh code Python, KHÔNG sinh thẻ <PLOT_2D>, <PLOT_3D> hay <PLOT>.
 5. KHÔNG vẽ đồ thị, không vẽ hình — chỉ trả về nội dung văn bản thuần.
-6. Kiến thức phải cực kỳ chính xác, khoa học, sư phạm theo đúng sách Kết Nối Tri Thức.
+6. KHÔNG có mục "MÃ VẼ ĐỒ THỊ" hay bất kỳ mục nào liên quan đến code vẽ. Chỉ có ĐÚNG các mục đã liệt kê ở CẤU TRÚC ĐẦU RA, không thêm mục mới.
+7. Kiến thức phải cực kỳ chính xác, khoa học, sư phạm theo đúng sách Kết Nối Tri Thức.
 
 CẤU TRÚC ĐẦU RA BẮT BUỘC:
 
@@ -2670,8 +2687,11 @@ def render_main_interface(grade, subject, api_key_to_use):
                 text_part = re.sub(r"<PLOT>.*?</PLOT>", "", text_part, flags=re.DOTALL | re.IGNORECASE).strip()
 
                 clean_text = clean_ai_response(text_part)
+                # Với môn text-only: cắt bỏ mục "MÃ VẼ ĐỒ THỊ" nếu AI vẫn sinh
+                if subject in SUBJECTS_TEXT_ONLY:
+                    clean_text = strip_plot_section_from_text(clean_text)
                 render_lab_text_block(clean_text)
-
+                
                 plot_code = None
                 plot_label = ""
                 is_2d = False
