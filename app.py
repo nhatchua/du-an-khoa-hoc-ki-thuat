@@ -2633,7 +2633,7 @@ def render_main_interface(grade, subject, api_key_to_use):
 
             lab_request = str_app.text_input(
                 "Nhập yêu cầu thí nghiệm:",
-                placeholder="Ví dụ: Đồ thị hàm số y = ax² + bx + c... / Phản ứng H₂ + O₂... / Hình chóp S.ABC...",
+                placeholder="Ví dụ: Đồ thị hàm số bậc hai / Phản ứng tráng gương / Chiến dịch Điện Biên Phủ...",
                 label_visibility="collapsed",
                 key="lab_request_input"
             )
@@ -2675,17 +2675,19 @@ def render_main_interface(grade, subject, api_key_to_use):
                 plot_code = None
                 plot_label = ""
                 is_2d = False
-                if plot_3d_match:
-                    plot_code = plot_3d_match.group(1).strip()
-                    plot_label = "#### 🌐 Đồ thị 3D tương tác"
-                elif plot_2d_match:
-                    plot_code = plot_2d_match.group(1).strip()
-                    plot_label = "#### 📈 Đồ thị minh họa"
-                    is_2d = True
-                elif plot_old_match:
-                    plot_code = plot_old_match.group(1).strip()
-                    plot_label = "#### 📈 Đồ thị minh họa"
-                    is_2d = True
+                # Chỉ tìm plot khi môn thuộc nhóm có đồ thị (Toán, Lý, Tin)
+                if subject in SUBJECTS_WITH_PLOT:
+                    if plot_3d_match:
+                        plot_code = plot_3d_match.group(1).strip()
+                        plot_label = "#### 🌐 Đồ thị 3D tương tác"
+                    elif plot_2d_match:
+                        plot_code = plot_2d_match.group(1).strip()
+                        plot_label = "#### 📈 Đồ thị minh họa"
+                        is_2d = True
+                    elif plot_old_match:
+                        plot_code = plot_old_match.group(1).strip()
+                        plot_label = "#### 📈 Đồ thị minh họa"
+                        is_2d = True
 
                 if plot_code:
                     try:
