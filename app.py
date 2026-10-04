@@ -1838,13 +1838,46 @@ def render_main_interface(grade, subject, api_key_to_use):
 
     # ===== HÀM CON: FORMAT CÔNG THỨC =====
     def _format_formula(coeffs_dict, code_str=""):
-        is_frac = ("d" in coeffs_dict and "e" in coeffs_dict and "/" in code_str)
+        code_lower = code_str.lower()
+
+        # === PHÂN LOẠI HÀM ===
+        is_frac = ("d" in coeffs_dict and "e" in coeffs_dict and "/" in code_str
+                   and "cos" not in code_lower and "sin" not in code_lower)
+
+        # === LƯỢNG GIÁC ===
+        if "sin" in code_lower or "cos" in code_lower or "tan" in code_lower or "cot" in code_lower:
+            a = coeffs_dict.get("a", 1)
+            b = coeffs_dict.get("b", 1)
+            c = coeffs_dict.get("c", 0)
+            # Xác định tên hàm
+            if "sin" in code_lower:
+                func_name = "sin"
+            elif "cos" in code_lower:
+                func_name = "cos"
+            elif "tan" in code_lower:
+                func_name = "tan"
+            else:
+                func_name = "cot"
+            # Xây chuỗi bên trong ngoặc: "bx + c"
+            a_str = "" if abs(a - 1) < 1e-9 else ("-" if abs(a + 1) < 1e-9 else _fmt_num(a))
+            b_str = "" if abs(b - 1) < 1e-9 else ("-" if abs(b + 1) < 1e-9 else _fmt_num(b))
+            inner = f"{b_str}x"
+            if abs(c) > 1e-9:
+                if c > 0:
+                    inner += f" + {_fmt_num(c)}"
+                else:
+                    inner += f" - {_fmt_num(abs(c))}"
+            return f"y = {a_str}{func_name}({inner})"
+
+        # === PHÂN THỨC ===
         if is_frac:
             num_parts = []
             for name, suffix in [("a", "x²"), ("b", "x"), ("c", "")]:
                 if name not in coeffs_dict:
                     continue
                 v = coeffs_dict[name]
+                if abs(v) < 1e-9 and num_parts:
+                    continue
                 v_str = _fmt_num(v, suffix)
                 if not num_parts:
                     num_parts.append(f"-{v_str}" if v < 0 else v_str)
@@ -1855,6 +1888,8 @@ def render_main_interface(grade, subject, api_key_to_use):
                 if name not in coeffs_dict:
                     continue
                 v = coeffs_dict[name]
+                if abs(v) < 1e-9 and den_parts:
+                    continue
                 v_str = _fmt_num(v, suffix)
                 if not den_parts:
                     den_parts.append(f"-{v_str}" if v < 0 else v_str)
@@ -1863,26 +1898,59 @@ def render_main_interface(grade, subject, api_key_to_use):
             num_str = " ".join(num_parts) if num_parts else "0"
             den_str = " ".join(den_parts) if den_parts else "1"
             return f"y = ({num_str}) / ({den_str})"
-        else:
-            if "e" in coeffs_dict:
-                order = [("a", "x⁴"), ("b", "x³"), ("c", "x²"), ("d", "x"), ("e", "")]
-            elif "d" in coeffs_dict:
-                order = [("a", "x³"), ("b", "x²"), ("c", "x"), ("d", "")]
-            else:
-                order = [("a", "x²"), ("b", "x"), ("c", "")]
-            parts = []
-            for name, suffix in order:
-                if name not in coeffs_dict:
-                    continue
-                v = coeffs_dict[name]
-                v_str = _fmt_num(v, suffix)
-                if not parts:
-                    parts.append(f"-{v_str}" if v < 0 else v_str)
+
+        # === MŨ ===
+        if "a**x" in code_lower or "e**x" in code_lower or "exp(" in code_lower:
+            a = coeffs_dict.get("a", 2)
+            return f"y = {_fmt_num(a)}^x"
+
+        # === LOGARIT ===
+        if "log" in code_lower or "ln(" in code_lower:
+            a = coeffs_dict.get("a", 10)
+            return f"y = log_{_fmt_num(a)}(x)"
+
+        # === CĂN THỨC ===
+        if "sqrt" in code_lower or "np.sqrt" in code_lower:
+            a = coeffs_dict.get("a", 1)
+            b = coeffs_dict.get("b", 0)
+            a_str = "" if abs(a - 1) < 1e-9 else ("-" if abs(a + 1) < 1e-9 else _fmt_num(a))
+            inner = f"{a_str}x"
+            if abs(b) > 1e-9:
+                if b > 0:
+                    inner += f" + {_fmt_num(b)}"
                 else:
-                    parts.append(f"- {v_str}" if v < 0 else f"+ {v_str}")
+                    inner += f" - {_fmt_num(abs(b))}"
+            return f"y = √({inner})"
+
+        # === ĐƯỜNG TRÒN ===
+        if "cos(t)" in code_lower or "sin(t)" in code_lower:
+            a = coeffs_dict.get("a", 1)
+            return f"x² + y² = {_fmt_num(a)}²"
+
+        # === ĐA THỨC ===
+        if "e" in coeffs_dict:
+            order = [("a", "x⁴"), ("b", "x³"), ("c", "x²"), ("d", "x"), ("e", "")]
+        elif "d" in coeffs_dict:
+            order = [("a", "x³"), ("b", "x²"), ("c", "x"), ("d", "")]
+        else:
+            order = [("a", "x²"), ("b", "x"), ("c", "")]
+
+        parts = []
+        for name, suffix in order:
+            if name not in coeffs_dict:
+                continue
+            v = coeffs_dict[name]
+            # Bỏ số hạng có hệ số = 0 (trừ số hạng đầu tiên)
+            if abs(v) < 1e-9 and parts:
+                continue
+            v_str = _fmt_num(v, suffix)
             if not parts:
-                return "y = 0"
-            return "y = " + " ".join(parts)
+                parts.append(f"-{v_str}" if v < 0 else v_str)
+            else:
+                parts.append(f"- {v_str}" if v < 0 else f"+ {v_str}")
+        if not parts:
+            return "y = 0"
+        return "y = " + " ".join(parts)
 
     # ===== HÀM CON: PHÂN TÍCH ĐẶC TRƯNG (CHỈ VỚI TOÁN) =====
     def _analyze_features(coeffs_dict, code_str):
