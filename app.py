@@ -48,7 +48,7 @@ def clean_ai_response(text: str) -> str:
     if match:
         text = text[match.start():]
     # BỎ MỌI DẤU # Ở ĐẦU DÒNG (###, ##, #)
-    text = re.sub(r"^\s*#{1,6}\s*", "", text, flags=re.MULTILINE)
+    text = re.sub(r"^[ \t]*#{1,6}[ \t]*", "", text, flags=re.MULTILINE)
     text = re.sub(r'(#+ [^\n]*?)"\s*$', r'\1', text, flags=re.MULTILINE)
     lines = text.split('\n')
     filtered = []
