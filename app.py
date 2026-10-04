@@ -1042,20 +1042,26 @@ def render_sidebar():
 
         str_app.markdown("---")
         str_app.subheader("THÔNG TIN HỌC SINH")
-        name = str_app.text_input("Họ và tên:", placeholder="Ví dụ: Nguyễn Minh Nhật")
+        name = str_app.text_input(
+            "Họ và tên:",
+            placeholder="Ví dụ: Nguyễn Minh Nhật",
+            key="sidebar_student_name"
+        )
 
         str_app.markdown("---")
         str_app.subheader("ĐƯỜNG TRUYỀN AI CÁ NHÂN")
         str_app.link_button(
             "Lấy Mã Miễn Phí (15 giây)",
             "https://aistudio.google.com/app/apikey",
-            use_container_width=True
+            use_container_width=True,
+            key="sidebar_api_link"
         )
 
         user_api_key = str_app.text_input(
             "Dán Mã Kết Nối (API Key):",
             type="password",
-            placeholder="Nhập mã bí mật tại đây..."
+            placeholder="Nhập mã bí mật tại đây...",
+            key="sidebar_api_key"
         )
 
         if user_api_key:
@@ -1073,20 +1079,21 @@ def render_sidebar():
         grade = str_app.selectbox(
             "Chọn khối lớp",
             ["Lớp 6", "Lớp 7", "Lớp 8", "Lớp 9", "Lớp 10", "Lớp 11", "Lớp 12"],
-            index=5
+            index=5,
+            key="sidebar_grade"
         )
 
         subject = str_app.selectbox(
             "Môn học cần hỗ trợ",
             ["Toán học", "Vật lý", "Hóa học", "Sinh học", "Tin học",
              "Ngữ văn", "Tiếng Anh", "Lịch sử & Địa lý"],
-            index=0
+            index=0,
+            key="sidebar_subject"
         )
 
         str_app.markdown("---")
         str_app.info("Triết lý: Dưỡng thiện tâm - Ươm nhân tài • Dẫn dắt tư duy tự học!")
         return grade, subject, api_key_to_use
-
 # ============================================================
 # 6. HIỂN THỊ NỘI DUNG VÀ TRẮC NGHIỆM TƯƠNG TÁC
 # ============================================================
