@@ -1759,15 +1759,50 @@ def render_main_interface(grade, subject, api_key_to_use):
             except Exception:
                 return str(v)
 
+        # === PHÂN LOẠI HÀM (đặt phân thức lên đầu để ưu tiên) ===
         is_fractional = ("d" in coeffs_dict and "e" in coeffs_dict and "/" in code_str)
-        is_quartic = ("a" in coeffs_dict and "b" in coeffs_dict and "c" in coeffs_dict
-                      and "d" in coeffs_dict and "e" in coeffs_dict)
-        is_cubic = ("a" in coeffs_dict and "b" in coeffs_dict and "c" in coeffs_dict
-                    and "d" in coeffs_dict and "e" not in coeffs_dict)
-        is_quadratic = ("a" in coeffs_dict and "b" in coeffs_dict and "c" in coeffs_dict
+
+        is_quadratic = (not is_fractional
+                        and "a" in coeffs_dict and "b" in coeffs_dict and "c" in coeffs_dict
                         and "d" not in coeffs_dict and "e" not in coeffs_dict)
 
-        if is_quadratic and coeffs_dict["a"] != 0:
+        is_cubic = (not is_fractional
+                    and "a" in coeffs_dict and "b" in coeffs_dict and "c" in coeffs_dict
+                    and "d" in coeffs_dict and "e" not in coeffs_dict)
+
+        is_quartic = (not is_fractional
+                      and "a" in coeffs_dict and "b" in coeffs_dict and "c" in coeffs_dict
+                      and "d" in coeffs_dict and "e" in coeffs_dict)
+
+        # === HÀM PHÂN THỨC (ưu tiên kiểm tra ĐẦU TIÊN) ===
+        if is_fractional:
+            a = coeffs_dict["a"]; b = coeffs_dict["b"]; c = coeffs_dict["c"]
+            d = coeffs_dict["d"]; e = coeffs_dict["e"]
+            if d != 0:
+                x_tcd = -e / d
+                features.append(("🔵", "Tiệm cận đứng", f"x = {fmt(x_tcd)}"))
+                m = a / d; n = (b * d - a * e) / (d * d)
+                if abs(m) < 1e-9:
+                    features.append(("🔵", "Tiệm cận ngang", f"y = {fmt(n)}"))
+                else:
+                    if abs(m - 1) < 1e-9:
+                        m_part = "x"
+                    elif abs(m + 1) < 1e-9:
+                        m_part = "-x"
+                    else:
+                        m_part = fmt(m) + "x"
+                    if n > 1e-9:
+                        n_part = " + " + fmt(n)
+                    elif n < -1e-9:
+                        n_part = " - " + fmt(abs(n))
+                    else:
+                        n_part = ""
+                    features.append(("🔵", "Tiệm cận xiên", f"y = {m_part}{n_part}"))
+                if e != 0:
+                    features.append(("🟢", "Giao Oy", f"(0; {fmt(c/e)})"))
+
+        # === HÀM BẬC 2 ===
+        elif is_quadratic and coeffs_dict["a"] != 0:
             a = coeffs_dict["a"]; b = coeffs_dict["b"]; c = coeffs_dict["c"]
             delta = b * b - 4 * a * c
             vx = -b / (2 * a); vy = a * vx ** 2 + b * vx + c
@@ -1785,6 +1820,7 @@ def render_main_interface(grade, subject, api_key_to_use):
             features.append(("🟢", "Giao Oy", f"(0; {fmt(c)})"))
             features.append(("📊", "Bề lõm", "Hướng lên (a > 0)" if a > 0 else "Hướng xuống (a < 0)"))
 
+        # === HÀM BẬC 3 ===
         elif is_cubic and coeffs_dict["a"] != 0:
             a = coeffs_dict["a"]; b = coeffs_dict["b"]
             c = coeffs_dict["c"]; d = coeffs_dict["d"]
@@ -1806,30 +1842,12 @@ def render_main_interface(grade, subject, api_key_to_use):
                 features.append(("🔴", "Cực trị", "Không có cực trị"))
             features.append(("🟢", "Giao Oy", f"(0; {fmt(d)})"))
 
+        # === HÀM BẬC 4 ===
         elif is_quartic and coeffs_dict["a"] != 0:
             features.append(("📊", "Bậc", "Hàm bậc 4"))
             features.append(("🟢", "Giao Oy", f"(0; {fmt(coeffs_dict['e'])})"))
 
-        elif is_fractional:
-            a = coeffs_dict["a"]; b = coeffs_dict["b"]; c = coeffs_dict["c"]
-            d = coeffs_dict["d"]; e = coeffs_dict["e"]
-            if d != 0:
-                x_tcd = -e / d
-                features.append(("🔵", "Tiệm cận đứng", f"x = {fmt(x_tcd)}"))
-                m = a / d; n = (b * d - a * e) / (d * d)
-                if abs(m) < 1e-9:
-                    features.append(("🔵", "Tiệm cận ngang", f"y = {fmt(n)}"))
-                else:
-                    if abs(m - 1) < 1e-9: m_part = "x"
-                    elif abs(m + 1) < 1e-9: m_part = "-x"
-                    else: m_part = fmt(m) + "x"
-                    if n > 1e-9: n_part = " + " + fmt(n)
-                    elif n < -1e-9: n_part = " - " + fmt(abs(n))
-                    else: n_part = ""
-                    features.append(("🔵", "Tiệm cận xiên", f"y = {m_part}{n_part}"))
-                if e != 0:
-                    features.append(("🟢", "Giao Oy", f"(0; {fmt(c/e)})"))
-
+        # === HÀM LƯỢNG GIÁC ===
         elif "sin" in code_lower or "cos" in code_lower or "tan" in code_lower or "cot" in code_lower:
             a = coeffs_dict.get("a", 1); b = coeffs_dict.get("b", 1)
             if b != 0:
@@ -1843,16 +1861,19 @@ def render_main_interface(grade, subject, api_key_to_use):
             elif "cos" in code_lower:
                 features.append(("🔄", "Trục đối xứng", "Oy"))
 
+        # === HÀM MŨ ===
         elif "a**x" in code_lower or "e**x" in code_lower or "exp(" in code_lower:
             features.append(("🔵", "Tiệm cận ngang", "y = 0"))
             features.append(("🟢", "Giao Oy", "(0; 1)"))
             features.append(("📊", "Miền xác định", "D = ℝ"))
 
+        # === HÀM LOG ===
         elif "log" in code_lower or "ln(" in code_lower:
             features.append(("🔵", "Tiệm cận đứng", "x = 0"))
             features.append(("📊", "Miền xác định", "D = (0; +∞)"))
             features.append(("🟢", "Giao Ox", "(1; 0)"))
 
+        # === ĐƯỜNG TRÒN / ELIP ===
         elif ("cos(t)" in code_lower or "np.cos(t)" in code_lower) and \
              ("sin(t)" in code_lower or "np.sin(t)" in code_lower):
             if "a" in coeffs_dict and "b" in coeffs_dict:
