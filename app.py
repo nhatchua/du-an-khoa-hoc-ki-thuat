@@ -1530,6 +1530,7 @@ def render_main_interface(grade, subject, api_key_to_use):
     if "lab_request_name" not in str_app.session_state:
         str_app.session_state.lab_request_name = ""
 
+    # ===== HÀM CON: FORMAT SỐ =====
     def _fmt_num(v, suffix=""):
         v_abs = abs(v)
         if v_abs == 1 and suffix:
@@ -1538,6 +1539,7 @@ def render_main_interface(grade, subject, api_key_to_use):
             return f"{int(v_abs)}{suffix}"
         return f"{v_abs:.1f}{suffix}"
 
+    # ===== HÀM CON: FORMAT CÔNG THỨC =====
     def _format_formula(coeffs_dict, code_str=""):
         is_frac = ("d" in coeffs_dict and "e" in coeffs_dict and "/" in code_str)
         if is_frac:
@@ -1584,6 +1586,166 @@ def render_main_interface(grade, subject, api_key_to_use):
             if not parts:
                 return "y = 0"
             return "y = " + " ".join(parts)
+
+    # ===== HÀM CON: PHÂN TÍCH ĐẶC TRƯNG ĐỒ THỊ =====
+    def _analyze_features(coeffs_dict, code_str):
+        """Phân tích đặc trưng đồ thị, trả về list[(icon, label, value)]."""
+        features = []
+        code_lower = code_str.lower()
+
+        def fmt(v, decimals=2):
+            try:
+                if abs(v - round(v)) < 1e-9:
+                    return str(int(round(v)))
+                return f"{v:.{decimals}f}"
+            except Exception:
+                return str(v)
+
+        is_fractional = ("d" in coeffs_dict and "e" in coeffs_dict and "/" in code_str)
+        is_quartic = ("a" in coeffs_dict and "b" in coeffs_dict and "c" in coeffs_dict
+                      and "d" in coeffs_dict and "e" in coeffs_dict)
+        is_cubic = ("a" in coeffs_dict and "b" in coeffs_dict and "c" in coeffs_dict
+                    and "d" in coeffs_dict and "e" not in coeffs_dict)
+        is_quadratic = ("a" in coeffs_dict and "b" in coeffs_dict and "c" in coeffs_dict
+                        and "d" not in coeffs_dict and "e" not in coeffs_dict)
+
+        # ===== HÀM BẬC 2 =====
+        if is_quadratic and coeffs_dict["a"] != 0:
+            a = coeffs_dict["a"]; b = coeffs_dict["b"]; c = coeffs_dict["c"]
+            delta = b * b - 4 * a * c
+            vx = -b / (2 * a)
+            vy = a * vx ** 2 + b * vx + c
+
+            features.append(("📐", "Đỉnh", f"I({fmt(vx)}; {fmt(vy)})"))
+            features.append(("📏", "Trục đối xứng", f"x = {fmt(vx)}"))
+            features.append(("🎯", "Delta (Δ)", fmt(delta)))
+
+            if delta > 0:
+                x1 = (-b + np.sqrt(delta)) / (2 * a)
+                x2 = (-b - np.sqrt(delta)) / (2 * a)
+                features.append(("⚫", "Giao Ox", f"x₁ = {fmt(x1)}, x₂ = {fmt(x2)}"))
+            elif abs(delta) < 1e-9:
+                features.append(("⚫", "Giao Ox", f"x = {fmt(vx)} (nghiệm kép)"))
+            else:
+                features.append(("⚫", "Giao Ox", "Không cắt trục Ox"))
+
+            features.append(("🟢", "Giao Oy", f"(0; {fmt(c)})"))
+            features.append(("📊", "Bề lõm", "Hướng lên (a > 0)" if a > 0 else "Hướng xuống (a < 0)"))
+
+        # ===== HÀM BẬC 3 =====
+        elif is_cubic and coeffs_dict["a"] != 0:
+            a = coeffs_dict["a"]; b = coeffs_dict["b"]
+            c = coeffs_dict["c"]; d = coeffs_dict["d"]
+
+            xi = -b / (3 * a)
+            yi = a * xi ** 3 + b * xi ** 2 + c * xi + d
+            features.append(("🔄", "Điểm uốn", f"I({fmt(xi)}; {fmt(yi)})"))
+
+            delta_cp = 4 * b * b - 12 * a * c
+            if delta_cp > 0:
+                x1 = (-2 * b + np.sqrt(delta_cp)) / (6 * a)
+                x2 = (-2 * b - np.sqrt(delta_cp)) / (6 * a)
+                y1 = a * x1 ** 3 + b * x1 ** 2 + c * x1 + d
+                y2 = a * x2 ** 3 + b * x2 ** 2 + c * x2 + d
+                if a > 0:
+                    features.append(("🔴", "Cực đại", f"({fmt(x2)}; {fmt(y2)})"))
+                    features.append(("🔴", "Cực tiểu", f"({fmt(x1)}; {fmt(y1)})"))
+                else:
+                    features.append(("🔴", "Cực đại", f"({fmt(x1)}; {fmt(y1)})"))
+                    features.append(("🔴", "Cực tiểu", f"({fmt(x2)}; {fmt(y2)})"))
+            elif abs(delta_cp) < 1e-9:
+                features.append(("🔴", "Cực trị", "Không có (y' có nghiệm kép)"))
+            else:
+                features.append(("🔴", "Cực trị", "Không có cực trị"))
+            features.append(("🟢", "Giao Oy", f"(0; {fmt(d)})"))
+
+        # ===== HÀM BẬC 4 =====
+        elif is_quartic and coeffs_dict["a"] != 0:
+            features.append(("📊", "Bậc", "Hàm bậc 4 (trùng phương có thể có)"))
+            features.append(("🟢", "Giao Oy", f"(0; {fmt(coeffs_dict['e'])})"))
+
+        # ===== HÀM PHÂN THỨC =====
+        elif is_fractional:
+            a = coeffs_dict["a"]; b = coeffs_dict["b"]; c = coeffs_dict["c"]
+            d = coeffs_dict["d"]; e = coeffs_dict["e"]
+
+            if d != 0:
+                x_tcd = -e / d
+                features.append(("🔵", "Tiệm cận đứng", f"x = {fmt(x_tcd)}"))
+
+                m = a / d
+                n = (b * d - a * e) / (d * d)
+                if abs(m) < 1e-9:
+                    features.append(("🔵", "Tiệm cận ngang", f"y = {fmt(n)}"))
+                else:
+                    if abs(m - 1) < 1e-9:
+                        m_part = "x"
+                    elif abs(m + 1) < 1e-9:
+                        m_part = "-x"
+                    else:
+                        m_part = fmt(m) + "x"
+                    if n > 1e-9:
+                        n_part = " + " + fmt(n)
+                    elif n < -1e-9:
+                        n_part = " - " + fmt(abs(n))
+                    else:
+                        n_part = ""
+                    features.append(("🔵", "Tiệm cận xiên", f"y = {m_part}{n_part}"))
+
+                if e != 0:
+                    features.append(("🟢", "Giao Oy", f"(0; {fmt(c/e)})"))
+
+        # ===== HÀM LƯỢNG GIÁC =====
+        elif "sin" in code_lower or "cos" in code_lower or "tan" in code_lower or "cot" in code_lower:
+            a = coeffs_dict.get("a", 1)
+            b = coeffs_dict.get("b", 1)
+
+            if b != 0:
+                if "tan" in code_lower or "cot" in code_lower:
+                    T = np.pi / abs(b)
+                    features.append(("📏", "Chu kỳ", f"T = π/{fmt(abs(b))}"))
+                else:
+                    T = 2 * np.pi / abs(b)
+                    features.append(("📏", "Chu kỳ", f"T = 2π/{fmt(abs(b))}"))
+                features.append(("📊", "Biên độ", f"|a| = {fmt(abs(a))}"))
+
+            if "sin" in code_lower:
+                features.append(("🔄", "Tâm đối xứng", "O(0; 0) — hàm lẻ"))
+            elif "cos" in code_lower:
+                features.append(("🔄", "Trục đối xứng", "Oy — hàm chẵn"))
+
+        # ===== HÀM MŨ =====
+        elif "a**x" in code_lower or "e**x" in code_lower or "exp(" in code_lower:
+            features.append(("🔵", "Tiệm cận ngang", "y = 0"))
+            features.append(("🟢", "Giao Oy", "(0; 1)"))
+            if "a" in coeffs_dict and coeffs_dict["a"] > 0:
+                if coeffs_dict["a"] > 1:
+                    features.append(("📊", "Tính chất", "Đồng biến (a > 1)"))
+                elif coeffs_dict["a"] < 1:
+                    features.append(("📊", "Tính chất", "Nghịch biến (0 < a < 1)"))
+            features.append(("📊", "Miền xác định", "D = ℝ"))
+
+        # ===== HÀM LOG =====
+        elif "log" in code_lower or "ln(" in code_lower:
+            features.append(("🔵", "Tiệm cận đứng", "x = 0"))
+            features.append(("📊", "Miền xác định", "D = (0; +∞)"))
+            features.append(("🟢", "Giao Ox", "(1; 0)"))
+
+        # ===== ĐƯỜNG TRÒN / ELIP =====
+        elif ("cos(t)" in code_lower or "np.cos(t)" in code_lower) and \
+             ("sin(t)" in code_lower or "np.sin(t)" in code_lower):
+            if "a" in coeffs_dict and "b" in coeffs_dict:
+                features.append(("🎯", "Tâm đối xứng", "O(0; 0)"))
+                if abs(coeffs_dict["a"] - coeffs_dict["b"]) < 1e-9:
+                    features.append(("📏", "Bán kính", f"R = {fmt(coeffs_dict['a'])}"))
+                else:
+                    features.append(("📏", "Trục lớn", f"2a = {fmt(2*coeffs_dict['a'])}"))
+                    features.append(("📏", "Trục nhỏ", f"2b = {fmt(2*coeffs_dict['b'])}"))
+            elif "a" in coeffs_dict:
+                features.append(("🎯", "Tâm đối xứng", "O(0; 0)"))
+                features.append(("📏", "Bán kính", f"R = {fmt(coeffs_dict['a'])}"))
+
+        return features
 
     # ==================== TAB 1 ====================
     with tab1:
@@ -1662,7 +1824,7 @@ def render_main_interface(grade, subject, api_key_to_use):
                     else:
                         str_app.error(f"Không thể kết nối AI. Lỗi chi tiết: `{lab_error}`")
 
-        # ===== RENDER KẾT QUẢ LAB (dùng session_state, KHÔNG phụ thuộc btn_lab) =====
+        # ===== RENDER KẾT QUẢ LAB =====
         if str_app.session_state.lab_result:
             raw_lab = str_app.session_state.lab_result
 
@@ -1719,11 +1881,9 @@ def render_main_interface(grade, subject, api_key_to_use):
                             for name, init_val in coeffs.items():
                                 slider_key = f"coeff_v{lab_version}_{lab_id_safe}_{name}"
 
-                                # Đảm bảo giá trị khởi tạo nằm trong range
                                 min_v = min(-10.0, init_val - 5.0)
                                 max_v = max(10.0, init_val + 5.0)
 
-                                # Nếu đã có giá trị trong session_state, dùng nó
                                 if slider_key in str_app.session_state:
                                     current_val = str_app.session_state[slider_key]
                                     if current_val < min_v:
@@ -1753,32 +1913,23 @@ def render_main_interface(grade, subject, api_key_to_use):
                                 unsafe_allow_html=True
                             )
 
-                            # Đỉnh + Trục đối xứng (chỉ khi parabol)
-                            is_quadratic = (
-                                "a" in user_coeffs
-                                and "b" in user_coeffs
-                                and "d" not in user_coeffs
-                                and "e" not in user_coeffs
-                            )
-
-                            if is_quadratic and user_coeffs["a"] != 0:
-                                a_v = user_coeffs["a"]
-                                b_v = user_coeffs["b"]
-                                c_v = user_coeffs.get("c", 0)
-
-                                vx = -b_v / (2 * a_v)
-                                vy = a_v * vx ** 2 + b_v * vx + c_v
-
+                            # ===== THÔNG TIN ĐẶC TRƯNG =====
+                            features = _analyze_features(user_coeffs, plot_code)
+                            if features:
                                 str_app.markdown(
-                                    f"<p style='color: #d62728; font-weight: 600; margin: 10px 0;'>"
-                                    f"📐 <b>Đỉnh:</b> I({vx:.2f}; {vy:.2f})</p>",
+                                    "<h5 style='color:#4a90e2; margin: 20px 0 10px 0; "
+                                    "font-size: 0.95rem;'>📋 Đặc trưng đồ thị:</h5>",
                                     unsafe_allow_html=True
                                 )
-                                str_app.markdown(
-                                    f"<p style='color: #d62728; font-weight: 600; margin: 10px 0;'>"
-                                    f"📏 <b>Trục đối xứng:</b> x = {vx:.2f}</p>",
-                                    unsafe_allow_html=True
-                                )
+                                for icon, label, value in features:
+                                    str_app.markdown(
+                                        f"<div style='margin: 5px 0; padding: 7px 10px; "
+                                        f"background: rgba(74, 144, 226, 0.08); "
+                                        f"border-left: 3px solid #4a90e2; border-radius: 4px; "
+                                        f"font-size: 0.88rem; color: #333;'>"
+                                        f"{icon} <b>{label}:</b> {value}</div>",
+                                        unsafe_allow_html=True
+                                    )
 
                         with col_right:
                             new_plot_code = substitute_coefficients(plot_code, user_coeffs)
