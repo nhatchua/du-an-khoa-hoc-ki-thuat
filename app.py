@@ -1759,7 +1759,7 @@ def render_main_interface(grade, subject, api_key_to_use):
             except Exception:
                 return str(v)
 
-        # === PHÂN LOẠI HÀM (đặt phân thức lên đầu để ưu tiên) ===
+        # === PHÂN LOẠI HÀM ===
         is_fractional = ("d" in coeffs_dict and "e" in coeffs_dict and "/" in code_str)
 
         is_quadratic = (not is_fractional
@@ -1774,13 +1774,16 @@ def render_main_interface(grade, subject, api_key_to_use):
                       and "a" in coeffs_dict and "b" in coeffs_dict and "c" in coeffs_dict
                       and "d" in coeffs_dict and "e" in coeffs_dict)
 
-        # === HÀM PHÂN THỨC (ưu tiên kiểm tra ĐẦU TIÊN) ===
+        # === HÀM PHÂN THỨC (ĐÃ THÊM CỰC TRỊ) ===
         if is_fractional:
             a = coeffs_dict["a"]; b = coeffs_dict["b"]; c = coeffs_dict["c"]
             d = coeffs_dict["d"]; e = coeffs_dict["e"]
             if d != 0:
+                # Tiệm cận đứng
                 x_tcd = -e / d
                 features.append(("🔵", "Tiệm cận đứng", f"x = {fmt(x_tcd)}"))
+
+                # Tiệm cận xiên/ngang
                 m = a / d; n = (b * d - a * e) / (d * d)
                 if abs(m) < 1e-9:
                     features.append(("🔵", "Tiệm cận ngang", f"y = {fmt(n)}"))
@@ -1798,6 +1801,39 @@ def render_main_interface(grade, subject, api_key_to_use):
                     else:
                         n_part = ""
                     features.append(("🔵", "Tiệm cận xiên", f"y = {m_part}{n_part}"))
+
+                # === CỰC TRỊ: nghiệm của ad·x² + 2ae·x + (be−cd) = 0 ===
+                A2 = a * d
+                B2 = 2 * a * e
+                C2 = b * e - c * d
+                if abs(A2) > 1e-9:
+                    delta = B2 * B2 - 4 * A2 * C2
+                    if delta > 1e-9:
+                        sqrt_delta = np.sqrt(delta)
+                        x1 = (-B2 + sqrt_delta) / (2 * A2)
+                        x2 = (-B2 - sqrt_delta) / (2 * A2)
+                        y1 = (a * x1**2 + b * x1 + c) / (d * x1 + e)
+                        y2 = (a * x2**2 + b * x2 + c) / (d * x2 + e)
+                        # Sắp xếp theo x tăng dần
+                        if x1 < x2:
+                            p1 = (x1, y1); p2 = (x2, y2)
+                        else:
+                            p1 = (x2, y2); p2 = (x1, y1)
+                        # Xác định cực đại/tiểu qua y'' = 2a/(dx+e)
+                        ypp1 = 2 * a / (d * p1[0] + e)
+                        if ypp1 > 0:
+                            features.append(("🔴", "Cực tiểu", f"({fmt(p1[0])}; {fmt(p1[1])})"))
+                            features.append(("🔴", "Cực đại", f"({fmt(p2[0])}; {fmt(p2[1])})"))
+                        else:
+                            features.append(("🔴", "Cực đại", f"({fmt(p1[0])}; {fmt(p1[1])})"))
+                            features.append(("🔴", "Cực tiểu", f"({fmt(p2[0])}; {fmt(p2[1])})"))
+                    else:
+                        features.append(("🔴", "Cực trị", "Không có cực trị"))
+                else:
+                    # A2 = 0 → hàm bậc 1/bậc 1, không có cực trị
+                    features.append(("🔴", "Cực trị", "Không có cực trị"))
+
+                # Giao Oy
                 if e != 0:
                     features.append(("🟢", "Giao Oy", f"(0; {fmt(c/e)})"))
 
