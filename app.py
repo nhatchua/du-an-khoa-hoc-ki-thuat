@@ -1992,12 +1992,43 @@ def render_main_interface(grade, subject, api_key_to_use):
         def _is_zero(v):
             return abs(v) < 1e-9
 
+        def _fmt_coef(v, suffix=""):
+            """Format hệ số kèm biến, xử lý dấu và bỏ hệ số 1/-1."""
+            v_abs = abs(v)
+            if v_abs == 1 and suffix:
+                return suffix
+            if v_abs == int(v_abs):
+                return f"{int(v_abs)}{suffix}"
+            return f"{v_abs:.1f}{suffix}"
+
+        def _build_poly(coeff_pairs):
+            """Ghép các hạng tử thành chuỗi, tự xử lý dấu."""
+            parts = []
+            for name, suffix in coeff_pairs:
+                if name not in coeffs_dict:
+                    continue
+                v = coeffs_dict[name]
+                if _is_zero(v):
+                    continue
+                v_str = _fmt_coef(v, suffix)
+                if not parts:
+                    parts.append(f"-{v_str}" if v < 0 else v_str)
+                else:
+                    parts.append(f"- {v_str}" if v < 0 else f"+ {v_str}")
+            return " ".join(parts) if parts else ""
+
         # === PHÂN LOẠI HÀM ===
+        is_trig = ("sin" in code_lower or "cos" in code_lower
+                   or "tan" in code_lower or "cot" in code_lower)
         is_frac = ("d" in coeffs_dict and "e" in coeffs_dict and "/" in code_str
-                   and "cos" not in code_lower and "sin" not in code_lower)
+                   and not is_trig)
+        is_exp = ("a**x" in code_lower or "e**x" in code_lower or "exp(" in code_lower)
+        is_log = ("log" in code_lower or "ln(" in code_lower)
+        is_sqrt = ("sqrt" in code_lower or "np.sqrt" in code_lower)
+        is_circle = ("cos(t)" in code_lower or "sin(t)" in code_lower)
 
         # === LƯỢNG GIÁC ===
-        if "sin" in code_lower or "cos" in code_lower or "tan" in code_lower or "cot" in code_lower:
+        if is_trig:
             a = coeffs_dict.get("a", 1)
             b = coeffs_dict.get("b", 1)
             c = coeffs_dict.get("c", 0)
@@ -2009,74 +2040,60 @@ def render_main_interface(grade, subject, api_key_to_use):
                 func_name = "tan"
             else:
                 func_name = "cot"
-            a_str = "" if abs(a - 1) < 1e-9 else ("-" if abs(a + 1) < 1e-9 else _fmt_num(a))
-            b_str = "" if abs(b - 1) < 1e-9 else ("-" if abs(b + 1) < 1e-9 else _fmt_num(b))
+            a_str = "" if abs(a - 1) < 1e-9 else ("-" if abs(a + 1) < 1e-9 else _fmt_coef(a))
+            b_str = "" if abs(b - 1) < 1e-9 else ("-" if abs(b + 1) < 1e-9 else _fmt_coef(b))
             inner = f"{b_str}x"
             if not _is_zero(c):
-                inner += f" + {_fmt_num(c)}" if c > 0 else f" - {_fmt_num(abs(c))}"
+                inner += f" + {_fmt_coef(c)}" if c > 0 else f" - {_fmt_coef(abs(c))}"
             return f"y = {a_str}{func_name}({inner})"
 
-                # === PHÂN THỨC ===
+        # === PHÂN THỨC ===
         if is_frac:
-            def _build_poly(coeff_pairs):
-                parts = []
-                for name, suffix in coeff_pairs:
-                    if name not in coeffs_dict:
-                        continue
-                    v = coeffs_dict[name]
-                    if _is_zero(v):
-                        continue
-                    v_str = _fmt_num(v, suffix)
-                    if not parts:
-                        parts.append(f"-{v_str}" if v < 0 else v_str)
-                    else:
-                        parts.append(f"- {v_str}" if v < 0 else f"+ {v_str}")
-                return " ".join(parts) if parts else "0"
-
-            num_parts = [p for p in [("a", "x²"), ("b", "x"), ("c", "")] if p[0] in coeffs_dict and not _is_zero(coeffs_dict[p[0]])]
-            den_parts = [p for p in [("d", "x"), ("e", "")] if p[0] in coeffs_dict and not _is_zero(coeffs_dict[p[0]])]
+            num_parts = [p for p in [("a", "x²"), ("b", "x"), ("c", "")]
+                         if p[0] in coeffs_dict and not _is_zero(coeffs_dict[p[0]])]
+            den_parts = [p for p in [("d", "x"), ("e", "")]
+                         if p[0] in coeffs_dict and not _is_zero(coeffs_dict[p[0]])]
 
             num_str = _build_poly([("a", "x²"), ("b", "x"), ("c", "")])
             den_str = _build_poly([("d", "x"), ("e", "")])
 
-            # Mẫu = 0 → hàm không xác định
-            if den_str == "0":
+            if not num_str:
+                num_str = "0"
+            if not den_str:
                 return "y = không xác định (mẫu bằng 0)"
 
-            # Bỏ ngoặc khi tử hoặc mẫu chỉ có 1 hạng tử
             num_display = num_str if len(num_parts) <= 1 else f"({num_str})"
             den_display = den_str if len(den_parts) <= 1 else f"({den_str})"
-
             return f"y = {num_display} / {den_display}"
 
         # === MŨ ===
-        if "a**x" in code_lower or "e**x" in code_lower or "exp(" in code_lower:
+        if is_exp:
             a = coeffs_dict.get("a", 2)
-            return f"y = {_fmt_num(a)}^x"
+            return f"y = {_fmt_coef(a)}^x"
 
         # === LOGARIT ===
-        if "log" in code_lower or "ln(" in code_lower:
+        if is_log:
             a = coeffs_dict.get("a", 10)
-            return f"y = log_{_fmt_num(a)}(x)"
+            return f"y = log_{_fmt_coef(a)}(x)"
 
         # === CĂN THỨC ===
-        if "sqrt" in code_lower or "np.sqrt" in code_lower:
+        if is_sqrt:
             a = coeffs_dict.get("a", 1)
             b = coeffs_dict.get("b", 0)
             if _is_zero(a):
-                return f"y = √({_fmt_num(b)})"
-            a_str = "" if abs(a - 1) < 1e-9 else ("-" if abs(a + 1) < 1e-9 else _fmt_num(a))
+                return f"y = √({_fmt_coef(b)})"
+            a_str = "" if abs(a - 1) < 1e-9 else ("-" if abs(a + 1) < 1e-9 else _fmt_coef(a))
             inner = f"{a_str}x"
             if not _is_zero(b):
-                inner += f" + {_fmt_num(b)}" if b > 0 else f" - {_fmt_num(abs(b))}"
+                inner += f" + {_fmt_coef(b)}" if b > 0 else f" - {_fmt_coef(abs(b))}"
             return f"y = √({inner})"
 
         # === ĐƯỜNG TRÒN ===
-        if "cos(t)" in code_lower or "sin(t)" in code_lower:
+        if is_circle:
             a = coeffs_dict.get("a", 1)
-            return f"x² + y² = {_fmt_num(a)}²"
+            return f"x² + y² = {_fmt_coef(a)}²"
 
-        # === ĐA THỨC ===
+        # === ĐA THỨC (mặc định) ===
         if "e" in coeffs_dict:
             order = [("a", "x⁴"), ("b", "x³"), ("c", "x²"), ("d", "x"), ("e", "")]
         elif "d" in coeffs_dict:
@@ -2084,104 +2101,8 @@ def render_main_interface(grade, subject, api_key_to_use):
         else:
             order = [("a", "x²"), ("b", "x"), ("c", "")]
 
-        parts = []
-        for name, suffix in order:
-            if name not in coeffs_dict:
-                continue
-            v = coeffs_dict[name]
-            if _is_zero(v):
-                continue
-            v_str = _fmt_num(v, suffix)
-            if not parts:
-                parts.append(f"-{v_str}" if v < 0 else v_str)
-            else:
-                parts.append(f"- {v_str}" if v < 0 else f"+ {v_str}")
-        if not parts:
-            return "y = 0"
-        return "y = " + " ".join(parts)
-
-        # === PHÂN THỨC ===
-        if is_frac:
-            num_parts = []
-            for name, suffix in [("a", "x²"), ("b", "x"), ("c", "")]:
-                if name not in coeffs_dict:
-                    continue
-                v = coeffs_dict[name]
-                if abs(v) < 1e-9 and num_parts:
-                    continue
-                v_str = _fmt_num(v, suffix)
-                if not num_parts:
-                    num_parts.append(f"-{v_str}" if v < 0 else v_str)
-                else:
-                    num_parts.append(f"- {v_str}" if v < 0 else f"+ {v_str}")
-            den_parts = []
-            for name, suffix in [("d", "x"), ("e", "")]:
-                if name not in coeffs_dict:
-                    continue
-                v = coeffs_dict[name]
-                if abs(v) < 1e-9 and den_parts:
-                    continue
-                v_str = _fmt_num(v, suffix)
-                if not den_parts:
-                    den_parts.append(f"-{v_str}" if v < 0 else v_str)
-                else:
-                    den_parts.append(f"- {v_str}" if v < 0 else f"+ {v_str}")
-            num_str = " ".join(num_parts) if num_parts else "0"
-            den_str = " ".join(den_parts) if den_parts else "1"
-            return f"y = ({num_str}) / ({den_str})"
-
-        # === MŨ ===
-        if "a**x" in code_lower or "e**x" in code_lower or "exp(" in code_lower:
-            a = coeffs_dict.get("a", 2)
-            return f"y = {_fmt_num(a)}^x"
-
-        # === LOGARIT ===
-        if "log" in code_lower or "ln(" in code_lower:
-            a = coeffs_dict.get("a", 10)
-            return f"y = log_{_fmt_num(a)}(x)"
-
-        # === CĂN THỨC ===
-        if "sqrt" in code_lower or "np.sqrt" in code_lower:
-            a = coeffs_dict.get("a", 1)
-            b = coeffs_dict.get("b", 0)
-            a_str = "" if abs(a - 1) < 1e-9 else ("-" if abs(a + 1) < 1e-9 else _fmt_num(a))
-            inner = f"{a_str}x"
-            if abs(b) > 1e-9:
-                if b > 0:
-                    inner += f" + {_fmt_num(b)}"
-                else:
-                    inner += f" - {_fmt_num(abs(b))}"
-            return f"y = √({inner})"
-
-        # === ĐƯỜNG TRÒN ===
-        if "cos(t)" in code_lower or "sin(t)" in code_lower:
-            a = coeffs_dict.get("a", 1)
-            return f"x² + y² = {_fmt_num(a)}²"
-
-        # === ĐA THỨC ===
-        if "e" in coeffs_dict:
-            order = [("a", "x⁴"), ("b", "x³"), ("c", "x²"), ("d", "x"), ("e", "")]
-        elif "d" in coeffs_dict:
-            order = [("a", "x³"), ("b", "x²"), ("c", "x"), ("d", "")]
-        else:
-            order = [("a", "x²"), ("b", "x"), ("c", "")]
-
-        parts = []
-        for name, suffix in order:
-            if name not in coeffs_dict:
-                continue
-            v = coeffs_dict[name]
-            # Bỏ số hạng có hệ số = 0 (trừ số hạng đầu tiên)
-            if abs(v) < 1e-9 and parts:
-                continue
-            v_str = _fmt_num(v, suffix)
-            if not parts:
-                parts.append(f"-{v_str}" if v < 0 else v_str)
-            else:
-                parts.append(f"- {v_str}" if v < 0 else f"+ {v_str}")
-        if not parts:
-            return "y = 0"
-        return "y = " + " ".join(parts)
+        poly = _build_poly(order)
+        return f"y = {poly}" if poly else "y = 0"
 
     # ===== HÀM CON: PHÂN TÍCH ĐẶC TRƯNG (CHỈ VỚI TOÁN) =====
     def _analyze_features(coeffs_dict, code_str):
