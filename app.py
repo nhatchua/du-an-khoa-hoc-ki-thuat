@@ -336,6 +336,7 @@ def _postprocess_figure(fig):
     - Bật grid nhạt 2 chiều
     - Ép đường trục Ox/Oy luôn hiện rõ (zeroline)
     - Annotation: nền trắng mờ + chữ đậm
+    - Xóa annotation công thức góc phải (do template hoặc AI sinh)
     - Tự thêm mũi tên trục nếu thiếu
     """
     try:
@@ -358,6 +359,15 @@ def _postprocess_figure(fig):
             ax.zeroline = True
             ax.zerolinewidth = 1.5
             ax.zerolinecolor = "#333"
+
+        # XÓA ANNOTATION CÔNG THỨC GÓC PHẢI (xref=paper VÀ yref=paper, không phải mũi tên)
+        if fig.layout.annotations:
+            fig.layout.annotations = tuple(
+                ann for ann in fig.layout.annotations
+                if not (getattr(ann, "xref", "x") == "paper"
+                        and getattr(ann, "yref", "y") == "paper"
+                        and not ann.showarrow)
+            )
 
         if fig.layout.annotations:
             for ann in fig.layout.annotations:
@@ -2095,14 +2105,14 @@ def render_main_interface(grade, subject, api_key_to_use):
         return f"{v_abs:.1f}{suffix}"
 
     # ===== HÀM CON: FORMAT CÔNG THỨC =====
-    def _format_formula(coeffs_dict, code_str=""):
+    def _format_formula(coeffs_dict, code_str="", func_info=None):
         code_lower = code_str.lower()
+        func_info = func_info or {}
 
         def _is_zero(v):
             return abs(v) < 1e-9
 
         def _fmt_coef(v, suffix=""):
-            """Format hệ số kèm biến, xử lý dấu và bỏ hệ số 1/-1."""
             v_abs = abs(v)
             if v_abs == 1 and suffix:
                 return suffix
@@ -2111,7 +2121,6 @@ def render_main_interface(grade, subject, api_key_to_use):
             return f"{v_abs:.1f}{suffix}"
 
         def _build_poly(coeff_pairs):
-            """Ghép các hạng tử thành chuỗi, tự xử lý dấu."""
             parts = []
             for name, suffix in coeff_pairs:
                 if name not in coeffs_dict:
@@ -2129,8 +2138,9 @@ def render_main_interface(grade, subject, api_key_to_use):
         # === PHÂN LOẠI HÀM ===
         is_trig = ("sin" in code_lower or "cos" in code_lower
                    or "tan" in code_lower or "cot" in code_lower)
-        is_frac = ("d" in coeffs_dict and "e" in coeffs_dict and "/" in code_str
-                   and not is_trig)
+        is_frac = (func_info.get("type") == "rational") or (
+            "d" in coeffs_dict and "e" in coeffs_dict and "/" in code_str and not is_trig
+        )
         is_exp = ("a**x" in code_lower or "e**x" in code_lower or "exp(" in code_lower)
         is_log = ("log" in code_lower or "ln(" in code_lower)
         is_sqrt = ("sqrt" in code_lower or "np.sqrt" in code_lower)
@@ -2142,26 +2152,60 @@ def render_main_interface(grade, subject, api_key_to_use):
             b = coeffs_dict.get("b", 1)
             c = coeffs_dict.get("c", 0)
             if "sin" in code_lower:
-                func_name = "sin"
+                fn = "sin"
             elif "cos" in code_lower:
-                func_name = "cos"
+                fn = "cos"
             elif "tan" in code_lower:
-                func_name = "tan"
+                fn = "tan"
             else:
-                func_name = "cot"
+                fn = "cot"
             a_str = "" if abs(a - 1) < 1e-9 else ("-" if abs(a + 1) < 1e-9 else _fmt_coef(a))
             b_str = "" if abs(b - 1) < 1e-9 else ("-" if abs(b + 1) < 1e-9 else _fmt_coef(b))
             inner = f"{b_str}x"
             if not _is_zero(c):
                 inner += f" + {_fmt_coef(c)}" if c > 0 else f" - {_fmt_coef(abs(c))}"
-            return f"y = {a_str}{func_name}({inner})"
+            return f"y = {a_str}{fn}({inner})"
 
         # === PHÂN THỨC ===
         if is_frac:
+            deg_num = func_info.get("degree_num", None)
+
+            # Trường hợp đặc biệt: tử bậc 0 (hằng) → y = a/(dx+e)
+            if deg_num == 0:
+                num_vars = func_info.get("num_vars", set())
+                num_var = next(iter(num_vars)) if num_vars else "c"
+                den_coef = func_info.get("den_coef_var") or "d"
+                den_const = func_info.get("den_const_var") or "e"
+
+                c_val = coeffs_dict.get(num_var, 0)
+                d_val = coeffs_dict.get(den_coef, 0)
+                e_val = coeffs_dict.get(den_const, 0)
+
+                if _is_zero(c_val):
+                    return "y = 0"
+
+                num_str = _fmt_coef(c_val)
+
+                den_parts = []
+                if not _is_zero(d_val):
+                    d_str = "" if abs(d_val - 1) < 1e-9 else ("-" if abs(d_val + 1) < 1e-9 else _fmt_coef(d_val))
+                    den_parts.append(f"{d_str}x")
+                if not _is_zero(e_val):
+                    if den_parts:
+                        den_parts.append(f" + {_fmt_coef(e_val)}" if e_val > 0 else f" - {_fmt_coef(abs(e_val))}")
+                    else:
+                        den_parts.append(_fmt_coef(e_val))
+
+                den_str = "".join(den_parts) if den_parts else "0"
+                if den_str == "0":
+                    return "y = không xác định (mẫu bằng 0)"
+                return f"y = {num_str} / ({den_str})"
+
+            # Mặc định: phân thức bậc 2 / bậc 1
             num_parts = [p for p in [("a", "x²"), ("b", "x"), ("c", "")]
                          if p[0] in coeffs_dict and not _is_zero(coeffs_dict[p[0]])]
-            den_parts = [p for p in [("d", "x"), ("e", "")]
-                         if p[0] in coeffs_dict and not _is_zero(coeffs_dict[p[0]])]
+            den_parts_l = [p for p in [("d", "x"), ("e", "")]
+                           if p[0] in coeffs_dict and not _is_zero(coeffs_dict[p[0]])]
 
             num_str = _build_poly([("a", "x²"), ("b", "x"), ("c", "")])
             den_str = _build_poly([("d", "x"), ("e", "")])
@@ -2171,9 +2215,9 @@ def render_main_interface(grade, subject, api_key_to_use):
             if not den_str:
                 return "y = không xác định (mẫu bằng 0)"
 
-            num_display = num_str if len(num_parts) <= 1 else f"({num_str})"
-            den_display = den_str if len(den_parts) <= 1 else f"({den_str})"
-            return f"y = {num_display} / {den_display}"
+            num_disp = num_str if len(num_parts) <= 1 else f"({num_str})"
+            den_disp = den_str if len(den_parts_l) <= 1 else f"({den_str})"
+            return f"y = {num_disp} / {den_disp}"
 
         # === MŨ ===
         if is_exp:
@@ -2212,7 +2256,6 @@ def render_main_interface(grade, subject, api_key_to_use):
 
         poly = _build_poly(order)
         return f"y = {poly}" if poly else "y = 0"
-
     # ===== HÀM CON: PHÂN TÍCH ĐẶC TRƯNG (CHỈ VỚI TOÁN) =====
     def _analyze_features(coeffs_dict, code_str):
         if subject != "Toán học":
@@ -2510,23 +2553,25 @@ def render_main_interface(grade, subject, api_key_to_use):
                     try:
                         if is_2d:
                             coeffs = extract_coefficients(plot_code)
+                            func_info = _analyze_function_code(plot_code)
+                            used = func_info.get("used_vars", set())
+                            coeffs = {k: v for k, v in coeffs.items() if k in used}
                         else:
                             coeffs = {}
+                            func_info = {}
 
-                        # Kiểm tra trước: với giá trị AI sinh, công thức có xác định không?
                         _is_invalid_formula = False
                         if coeffs and subject == "Toán học":
-                            _pre_formula = _format_formula(coeffs, plot_code)
+                            _pre_formula = _format_formula(coeffs, plot_code, func_info)
                             _is_invalid_formula = "không xác định" in _pre_formula
 
-                        # Chỉ hiển thị sliders khi có từ 1-5 hệ số, môn Toán, VÀ công thức xác định
                         if (coeffs and 1 <= len(coeffs) <= 5
                                 and subject == "Toán học"
                                 and not _is_invalid_formula):
                             col_left, col_right = str_app.columns([1, 2.5])
 
                             with col_left:
-                                coeff_names = ", ".join(coeffs.keys())
+                                coeff_names = ", ".join(sorted(coeffs.keys()))
                                 str_app.markdown(
                                     f"<h4 style='color:#1976d2; margin-bottom: 20px;'>⚙️ Hệ số hàm số (theo {coeff_names}):</h4>",
                                     unsafe_allow_html=True
@@ -2536,7 +2581,8 @@ def render_main_interface(grade, subject, api_key_to_use):
                                 lab_version = str_app.session_state.lab_version
 
                                 user_coeffs = {}
-                                for name, init_val in coeffs.items():
+                                for name in sorted(coeffs.keys()):
+                                    init_val = coeffs[name]
                                     slider_key = f"coeff_v{lab_version}_{lab_id_safe}_{name}"
                                     min_v = min(-10.0, init_val - 5.0)
                                     max_v = max(10.0, init_val + 5.0)
@@ -2553,7 +2599,7 @@ def render_main_interface(grade, subject, api_key_to_use):
                                         key=slider_key, label_visibility="collapsed"
                                     )
 
-                                formula_text = _format_formula(user_coeffs, plot_code)
+                                formula_text = _format_formula(user_coeffs, plot_code, func_info)
                                 str_app.markdown(
                                     f"<div style='background: linear-gradient(135deg, #4a90e2, #357abd); color: white; "
                                     f"padding: 14px 18px; border-radius: 10px; font-size: 1.05rem; "
@@ -2585,7 +2631,6 @@ def render_main_interface(grade, subject, api_key_to_use):
                                 else:
                                     str_app.warning("AI đã sinh code vẽ nhưng không tạo được đồ thị.")
                         else:
-                            # Các môn khác HOẶC hàm không xác định: chỉ render đồ thị
                             kind, data = run_plot_code(plot_code)
                             if kind == "png" and data:
                                 str_app.markdown(plot_label)
