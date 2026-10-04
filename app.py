@@ -335,8 +335,9 @@ def _postprocess_figure(fig):
     Chuẩn hóa mọi figure trước khi render:
     - Bật grid nhạt 2 chiều
     - Ép đường trục Ox/Oy luôn hiện rõ (zeroline)
+    - Đảm bảo range không bị đảo (min < max)
+    - Xóa annotation công thức góc phải (xref=paper VÀ yref=paper)
     - Annotation: nền trắng mờ + chữ đậm
-    - Xóa annotation công thức góc phải (do template hoặc AI sinh)
     - Tự thêm mũi tên trục nếu thiếu
     """
     try:
@@ -359,6 +360,14 @@ def _postprocess_figure(fig):
             ax.zeroline = True
             ax.zerolinewidth = 1.5
             ax.zerolinecolor = "#333"
+
+            # ĐẢM BẢO RANGE KHÔNG ĐẢO (min < max)
+            r = ax.range
+            if r and len(r) == 2 and r[0] is not None and r[1] is not None:
+                if r[0] > r[1]:
+                    ax.range = [r[1], r[0]]
+            if getattr(ax, "autorange", None) == "reversed":
+                ax.autorange = True
 
         # XÓA ANNOTATION CÔNG THỨC GÓC PHẢI (xref=paper VÀ yref=paper, không phải mũi tên)
         if fig.layout.annotations:
@@ -2145,6 +2154,11 @@ def render_main_interface(grade, subject, api_key_to_use):
         is_log = ("log" in code_lower or "ln(" in code_lower)
         is_sqrt = ("sqrt" in code_lower or "np.sqrt" in code_lower)
         is_circle = ("cos(t)" in code_lower or "sin(t)" in code_lower)
+
+        # === ĐƯỜNG TRÒN ===
+        if is_circle:
+            a = coeffs_dict.get("a", 1)
+            return f"x² + y² = {_fmt_coef(a)}²"
 
         # === LƯỢNG GIÁC ===
         if is_trig:
