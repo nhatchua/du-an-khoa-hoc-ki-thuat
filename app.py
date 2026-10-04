@@ -933,7 +933,7 @@ def render_main_interface(grade, subject, api_key_to_use):
 
         lab_request = str_app.text_input(
             "Nhập yêu cầu thí nghiệm:",
-            placeholder="Ví dụ: Đồ thị hàm số y = x² - 2x + 1... / Phản ứng H₂ + O₂... / Hình chóp S.ABC...",
+            placeholder="Ví dụ: Đồ thị hàm số y = ax² + bx + c... / Phản ứng H₂ + O₂... / Hình chóp S.ABC...",
             label_visibility="collapsed",
             key="lab_request_input"
         )
@@ -953,6 +953,8 @@ def render_main_interface(grade, subject, api_key_to_use):
                     if lab_response:
                         str_app.session_state["lab_result"] = lab_response
                         str_app.session_state["lab_request_name"] = lab_request
+                        # Tăng version → reset sliders cũ khi có lab mới
+                        str_app.session_state["lab_version"] = str_app.session_state.get("lab_version", 0) + 1
                     else:
                         str_app.error(f"Không thể kết nối AI. Lỗi chi tiết: `{lab_error}`")
 
@@ -975,18 +977,55 @@ def render_main_interface(grade, subject, api_key_to_use):
 
             plot_code = None
             plot_label = ""
+            is_2d = False
             if plot_3d_match:
                 plot_code = plot_3d_match.group(1).strip()
                 plot_label = "#### 🌐 Đồ thị 3D tương tác (giữ chuột trái để xoay, cuộn để zoom)"
             elif plot_2d_match:
                 plot_code = plot_2d_match.group(1).strip()
                 plot_label = "#### 📈 Đồ thị minh họa"
+                is_2d = True
             elif plot_old_match:
                 plot_code = plot_old_match.group(1).strip()
                 plot_label = "#### 📈 Đồ thị minh họa"
+                is_2d = True
 
             if plot_code:
                 try:
+                    # ========== XỬ LÝ THANH TRƯỢT HỆ SỐ (chỉ với 2D) ==========
+                    if is_2d:
+                        coeffs = extract_coefficients(plot_code)
+
+                        if coeffs and 1 <= len(coeffs) <= 5:
+                            str_app.markdown("#### 🎛️ Điều chỉnh hệ số — kéo thanh trượt để xem đồ thị thay đổi")
+
+                            lab_id = str_app.session_state.get("lab_request_name", "lab")
+                            lab_version = str_app.session_state.get("lab_version", 0)
+
+                            user_coeffs = {}
+                            cols = str_app.columns(min(len(coeffs), 3))
+
+                            for idx, (name, init_val) in enumerate(coeffs.items()):
+                                slider_key = f"coeff_v{lab_version}_{lab_id}_{name}"
+
+                                # Xác định khoảng slider hợp lý
+                                min_v = min(-10.0, init_val - 5.0)
+                                max_v = max(10.0, init_val + 5.0)
+
+                                with cols[idx % min(len(coeffs), 3)]:
+                                    user_coeffs[name] = str_app.slider(
+                                        f"Hệ số {name}",
+                                        min_value=float(min_v),
+                                        max_value=float(max_v),
+                                        value=float(init_val),
+                                        step=0.1,
+                                        key=slider_key
+                                    )
+
+                            # Thay giá trị mới vào code
+                            plot_code = substitute_coefficients(plot_code, user_coeffs)
+
+                    # ========== CHẠY CODE VẼ ==========
                     kind, data = run_plot_code(plot_code)
                     if kind == "png" and data:
                         str_app.markdown(plot_label)
@@ -1115,7 +1154,6 @@ Cuối bài chèn khối: <DIAGNOSTIC>{{"topic":"...","error_type":"...","evalua
                             str_app.session_state.socratic_messages.append({"role": "assistant", "content": rep_clean})
                     except Exception as e:
                         str_app.error(f"Lỗi phản hồi: {e}")
-
 # ============================================================
 # 8. KHỞI CHẠY ỨNG DỤNG CHÍNH
 # ============================================================
