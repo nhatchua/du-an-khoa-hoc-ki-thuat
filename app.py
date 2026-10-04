@@ -349,7 +349,7 @@ YÊU CẦU CỦA HỌC SINH: __LAB_REQUEST__
 
 QUY TẮC BẮT BUỘC:
 1. TOÀN BỘ nội dung bằng TIẾNG VIỆT, không suy luận nội tâm, không bản nháp.
-2. LaTeX đặt trong cặp dấu đô la cho mọi công thức (ví dụ: $v = v_0 + at$, $H_2SO_4$, $\\vec{AB} = (x, y, z)$).
+2. LaTeX đặt trong cặp dấu đô la cho mọi công thức.
 3. KHÔNG DÙNG DẤU #.
 4. Code Python vẽ đồ thị PHẢI ngắn gọn, tối ưu.
 5. KHÔNG set lại font, dpi, figsize.
@@ -357,25 +357,24 @@ QUY TẮC BẮT BUỘC:
 CẤU TRÚC ĐẦU RA BẮT BUỘC:
 
 1. MÔ TẢ THÍ NGHIỆM / HIỆN TƯỢNG
-[Mô tả chi tiết thí nghiệm, hiện tượng, quá trình, dụng cụ (nếu có).]
+[Mô tả chi tiết.]
 
 2. NGUYÊN LÝ / PHƯƠNG TRÌNH / HIỆN TƯỢNG XẢY RA
-[Giải thích bản chất khoa học, phương trình phản ứng, phương trình chuyển động, định lý... Dùng LaTeX đầy đủ.]
+[Giải thích bản chất, dùng LaTeX đầy đủ.]
 
 3. KẾT QUẢ / QUAN SÁT ĐƯỢC
-[Mô tả kết quả, số liệu, hiện tượng, kết luận.]
+[Mô tả kết quả, kết luận.]
 
-4. MÃ VẼ ĐỒ THỊ (nếu không cần, ghi rõ "Không cần vẽ đồ thị")
+4. MÃ VẼ ĐỒ THỊ (nếu không cần, ghi "Không cần vẽ đồ thị")
 
 QUY TẮC CHỌN LOẠI ĐỒ THỊ:
-- 2D hàm số → thẻ <PLOT_2D>...</PLOT_2D> (DÙNG PLOTLY)
-- 3D hình học → thẻ <PLOT_3D>...</PLOT_3D> (DÙNG PLOTLY)
+- 2D hàm số → thẻ <PLOT_2D>...</PLOT_2D> (PLOTLY)
+- 3D hình học → thẻ <PLOT_3D>...</PLOT_3D> (PLOTLY)
 
-=== QUY TẮC KHAI BÁO HỆ SỐ (BẮT BUỘC VỚI 2D HÀM ĐA THỨC) ===
-Với hàm số y = ax² + bx + c (hoặc bậc 3, bậc 4):
+=== QUY TẮC KHAI BÁO HỆ SỐ (BẮT BUỘC) ===
+Với hàm số y = ax² + bx + c (hoặc bậc 3, 4):
 - Khai báo hệ số ở ĐẦU CODE (TRƯỚC cả import), MỖI HỆ SỐ MỘT DÒNG RIÊNG
 - Định dạng CHÍNH XÁC: `a = 1` (có khoảng trắng quanh dấu =)
-- Dùng chữ a, b, c, d, e
 
 Ví dụ ĐÚNG:
 a = 1
@@ -383,22 +382,27 @@ b = -4
 c = 3
 import plotly.graph_objects as go
 import numpy as np
-...
-y = a*x**2 + b*x + c
 
 Ví dụ SAI: `coeffs = [1, -4, 3]` HOẶC `a, b, c = 1, -4, 3` HOẶC `a=1`
 
-Nếu hàm không có hệ số (y = sin(x), y = ln(x)) → KHÔNG khai báo biến hệ số.
+=== ⚠️ QUY TẮC QUAN TRỌNG VỀ RANGE TRỤC (BẮT BUỘC) ===
+- TUYỆT ĐỐI KHÔNG set `range=[...]` cứng cho yaxis (để Plotly tự auto-scale theo giá trị a, b, c)
+- CHỈ set range cho xaxis nếu cần giới hạn vùng vẽ (ví dụ: x nhỏ hơn 5.5)
+- KHÔNG hard-code bất kỳ giá trị nào phụ thuộc vào a, b, c trong annotation hoặc text
+
+=== ⚠️ QUY TẮC VỀ TIỆM CẬN (NẾU HÀM CÓ TIỆM CẬN) ===
+Nếu hàm có tiệm cận (y = a/x, y = (ax+b)/(cx+d), ...):
+- PHẢI tính tiệm cận từ biến a, b, c (KHÔNG hard-code số)
+- Ví dụ hàm y = (ax+b)/(cx+d): tiệm cận đứng x = -d/c, tiệm cận ngang y = a/c
+- Vẽ tiệm cận bằng go.Scatter với mode='lines', line=dict(dash='dash', color='#999', width=1.5)
+- Cập nhật annotation nhãn tiệm cận theo giá trị tính được
 
 === STYLE 2D PLOTLY (BẮT BUỘC) ===
-Đồ thị 2D dùng Plotly với style hiện đại, tương tác được:
-- Trục Ox, Oy có MŨI TÊN (dùng annotation)
-- Lưới mịn, màu xám nhạt (#e0e0e0)
+- Trục Ox, Oy có MŨI TÊN (dùng annotation với paper coords)
+- Lưới mịn màu #e0e0e0
 - Đường cong xanh đậm #1f4e9c, width 3
 - Nền trắng (plot_bgcolor='white')
-- Nhãn O, x, y rõ ràng
-- Điểm đặc biệt: chấm tròn màu + nhãn tọa độ
-- Tiêu đề trên cùng, căn giữa
+- Điểm đặc biệt: chấm tròn + nhãn tọa độ
 
 === MẪU 2D PLOTLY CHUẨN ===
 <PLOT_2D>
@@ -421,16 +425,20 @@ if a != 0:
     vy = a*vx**2 + b*vx + c
     fig.add_trace(go.Scatter(x=[vx], y=[vy], mode='markers',
         marker=dict(color='#d62728', size=12, line=dict(color='white', width=1.5)),
-        showlegend=False, hovertemplate='Đỉnh I(' + str(round(vx,2)) + '; ' + str(round(vy,2)) + ')<extra></extra>'))
-    fig.add_annotation(x=vx, y=vy, text="I(" + str(round(vx,2)) + "; " + str(round(vy,2)) + ")",
-        showarrow=False, xshift=0, yshift=-25, font=dict(color='#d62728', size=12))
+        showlegend=False,
+        hovertemplate='Đỉnh I(' + str(round(vx,2)) + '; ' + str(round(vy,2)) + ')<extra></extra>'))
+    fig.add_annotation(x=vx, y=vy,
+        text="I(" + str(round(vx,2)) + "; " + str(round(vy,2)) + ")",
+        showarrow=False, yshift=-25, font=dict(color='#d62728', size=12))
 
 # Giao Oy
 fig.add_trace(go.Scatter(x=[0], y=[c], mode='markers',
     marker=dict(color='#2ca02c', size=10, line=dict(color='white', width=1.5)),
-    showlegend=False, hovertemplate='(0; ' + str(round(c,2)) + ')<extra></extra>'))
-fig.add_annotation(x=0, y=c, text="(0; " + str(round(c,2)) + ")",
-    showarrow=False, xshift=35, yshift=0, font=dict(color='#2ca02c', size=12))
+    showlegend=False,
+    hovertemplate='(0; ' + str(round(c,2)) + ')<extra></extra>'))
+fig.add_annotation(x=0, y=c,
+    text="(0; " + str(round(c,2)) + ")",
+    showarrow=False, xshift=35, font=dict(color='#2ca02c', size=12))
 
 # Giao Ox
 if a != 0:
@@ -440,22 +448,35 @@ if a != 0:
             xr = r.real
             fig.add_trace(go.Scatter(x=[xr], y=[0], mode='markers',
                 marker=dict(color='#2ca02c', size=10, line=dict(color='white', width=1.5)),
-                showlegend=False, hovertemplate='(' + str(round(xr,2)) + '; 0)<extra></extra>'))
-            fig.add_annotation(x=xr, y=0, text="(" + str(round(xr,2)) + "; 0)",
-                showarrow=False, xshift=0, yshift=20, font=dict(color='#2ca02c', size=11))
+                showlegend=False,
+                hovertemplate='(' + str(round(xr,2)) + '; 0)<extra></extra>'))
+            fig.add_annotation(x=xr, y=0,
+                text="(" + str(round(xr,2)) + "; 0)",
+                showarrow=False, yshift=20, font=dict(color='#2ca02c', size=11))
 
-# Mũi tên trục
-fig.add_annotation(x=6.2, y=0, ax=5.7, ay=0, xref="x", yref="y",
-    axref="x", ayref="y", showarrow=True, arrowhead=3, arrowsize=1.8,
-    arrowwidth=2.5, arrowcolor='#333')
-fig.add_annotation(x=0, y=10, ax=0, ay=9.5, xref="x", yref="y",
-    axref="x", ayref="y", showarrow=True, arrowhead=3, arrowsize=1.8,
-    arrowwidth=2.5, arrowcolor='#333')
+# MŨI TÊN TRỤC (dùng paper coords để luôn ở đúng vị trí)
+# Mũi tên Ox - ở y=0 data, đuôi ở paper 0.94, đầu ở paper 0.99
+fig.add_annotation(
+    x=1.0, y=0, xref="paper", yref="y",
+    ax=0.94, ay=0, axref="paper", ayref="y",
+    showarrow=True, arrowhead=3, arrowsize=1.8,
+    arrowwidth=2.5, arrowcolor='#333'
+)
+# Mũi tên Oy - ở x=0 data, đuôi ở paper y 0.94, đầu ở paper y 0.99
+fig.add_annotation(
+    x=0, y=1.0, xref="x", yref="paper",
+    ax=0, ay=0.94, axref="x", ayref="paper",
+    showarrow=True, arrowhead=3, arrowsize=1.8,
+    arrowwidth=2.5, arrowcolor='#333'
+)
 
 # Nhãn O, x, y
-fig.add_annotation(x=-0.35, y=-0.6, text='O', showarrow=False, font=dict(size=15, color='#333'))
-fig.add_annotation(x=6.4, y=-0.6, text='x', showarrow=False, font=dict(size=15, color='#333'))
-fig.add_annotation(x=-0.35, y=10.2, text='y', showarrow=False, font=dict(size=15, color='#333'))
+fig.add_annotation(x=0, y=0, xref="x", yref="y", text='O',
+    showarrow=False, xshift=-14, yshift=-14, font=dict(size=15, color='#333'))
+fig.add_annotation(x=1.0, y=0, xref="paper", yref="y", text='x',
+    showarrow=False, xshift=8, yshift=-18, font=dict(size=15, color='#333'))
+fig.add_annotation(x=0, y=1.0, xref="x", yref="paper", text='y',
+    showarrow=False, xshift=-18, yshift=8, font=dict(size=15, color='#333'))
 
 fig.update_layout(
     title=dict(text='Đồ thị hàm số bậc hai y = ax² + bx + c', x=0.5,
@@ -463,7 +484,7 @@ fig.update_layout(
     xaxis=dict(range=[-1.8, 6.8], zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
         showgrid=True, gridcolor='#e0e0e0', gridwidth=0.5,
         showline=False, ticks='outside', tickfont=dict(size=11)),
-    yaxis=dict(range=[-1, 10], zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
+    yaxis=dict(zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
         showgrid=True, gridcolor='#e0e0e0', gridwidth=0.5,
         showline=False, ticks='outside', tickfont=dict(size=11)),
     plot_bgcolor='white',
@@ -472,7 +493,7 @@ fig.update_layout(
 )
 </PLOT_2D>
 
-Lưu ý: KHÔNG gọi fig.show(). KHÔNG savefig. Hệ thống tự xử lý.
+Lưu ý: KHÔNG set range cho yaxis. KHÔNG gọi fig.show().
 
 === MẪU 3D PLOTLY ===
 <PLOT_3D>
@@ -503,33 +524,12 @@ fig.update_layout(
     margin=dict(l=0, r=0, t=40, b=0), height=520)
 </PLOT_3D>
 
-=== MẪU TRỤC Oxyz ===
-<PLOT_3D>
-import plotly.graph_objects as go
-
-fig = go.Figure()
-for vec, color, label in [((5,0,0),'red','x'), ((0,5,0),'green','y'), ((0,0,5),'blue','z')]:
-    fig.add_trace(go.Scatter3d(x=[0,vec[0]], y=[0,vec[1]], z=[0,vec[2]],
-        mode='lines+text', line=dict(color=color, width=8),
-        text=['', label], textposition='top center',
-        textfont=dict(size=14, color=color), showlegend=False))
-
-fig.add_trace(go.Scatter3d(x=[0], y=[0], z=[0], mode='text',
-    text=['O'], textfont=dict(size=14, color='black'), showlegend=False))
-
-fig.update_layout(
-    title='Hệ trục tọa độ Oxyz',
-    scene=dict(xaxis_title='x', yaxis_title='y', zaxis_title='z', aspectmode='cube'),
-    margin=dict(l=0, r=0, t=40, b=0), height=520)
-</PLOT_3D>
-
 LƯU Ý CUỐI:
-- 2D: dùng PLOTLY (KHÔNG dùng matplotlib)
+- 2D: dùng PLOTLY, KHÔNG set range cho yaxis
 - 2D: khai báo a, b, c trên dòng riêng TRƯỚC import
-- 2D: KHÔNG dùng list coeffs
-- KHÔNG gọi fig.show()
-- CHỈ dùng: plotly.graph_objects, numpy, math
-- Không đọc file ngoài"""
+- Tiệm cận (nếu có) phải tính từ biến a, b, c
+- KHÔNG gọi fig.show(), KHÔNG savefig
+- CHỈ dùng: plotly.graph_objects, numpy, math"""
 
     return template.replace("__LAB_REQUEST__", lab_request).replace("__SUBJECT__", subject).replace("__GRADE__", grade)
 
