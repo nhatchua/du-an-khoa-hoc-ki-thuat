@@ -1379,6 +1379,7 @@ def setup_page_config():
     )
     str_app.markdown("""
         <style>
+        /* ===== TIÊU ĐỀ CHÍNH ===== */
         .main-heading {
             background: linear-gradient(135deg, #0d6efd 0%, #0dcaf0 100%);
             color: white;
@@ -1401,6 +1402,8 @@ def setup_page_config():
             box-shadow: 0 2px 8px rgba(0,0,0,0.03);
             line-height: 1.6;
         }
+
+        /* ===== DÀN ĐỀU 5 TAB (DESKTOP) ===== */
         .stTabs [data-baseweb="tab-list"] {
             display: flex !important;
             width: 100% !important;
@@ -1424,6 +1427,8 @@ def setup_page_config():
         .stTabs [data-baseweb="tab-list"] > button[aria-selected="true"] {
             background-color: rgba(13, 110, 253, 0.12) !important;
         }
+
+        /* ===== GIẢM FONT TRONG KHUNG CÂU HỎI / ĐỀ BÀI ===== */
         [data-testid="stVerticalBlockBorderWrapper"] p {
             font-size: 0.92rem !important;
             line-height: 1.55 !important;
@@ -1438,6 +1443,8 @@ def setup_page_config():
         [data-testid="stVerticalBlockBorderWrapper"] .stExpander summary {
             font-size: 0.9rem !important;
         }
+
+        /* ===== ĐẶC TRƯNG ĐỒ THỊ ===== */
         .feature-title {
             color: #4a90e2 !important;
             margin: 20px 0 10px 0;
@@ -1458,12 +1465,126 @@ def setup_page_config():
             color: #4a90e2 !important;
             font-weight: 700;
         }
+
+        /* ============================================================
+           RESPONSIVE MOBILE — Áp dụng cho màn hình < 768px
+           ============================================================ */
+        @media (max-width: 768px) {
+
+            /* --- 1. TAB: chia 2 dòng, chữ xuống dòng thay vì bị cắt --- */
+            .stTabs [data-baseweb="tab-list"] {
+                flex-wrap: wrap !important;
+                gap: 4px !important;
+            }
+            .stTabs [data-baseweb="tab-list"] > button {
+                flex: 1 1 calc(50% - 4px) !important;
+                font-size: 0.72rem !important;
+                padding: 8px 4px !important;
+                white-space: normal !important;
+                line-height: 1.2 !important;
+                min-height: 48px !important;
+            }
+
+            /* --- 2. LAYOUT 2 CỘT (sliders + đồ thị) → xếp dọc, full width --- */
+            [data-testid="stHorizontalBlock"] {
+                flex-wrap: wrap !important;
+            }
+            [data-testid="column"],
+            [data-testid="stColumn"] {
+                width: 100% !important;
+                flex: 1 1 100% !important;
+                min-width: 100% !important;
+                margin-bottom: 12px !important;
+            }
+
+            /* --- 3. TIÊU ĐỀ + KHUNG NỘI DUNG GỌN HƠN --- */
+            .main-heading {
+                font-size: 1.0rem !important;
+                padding: 10px 14px !important;
+                margin-top: 15px !important;
+                margin-bottom: 12px !important;
+            }
+            .content-box {
+                padding: 15px !important;
+                margin-bottom: 15px !important;
+            }
+
+            /* --- 4. TIÊU ĐỀ TRANG CHỦ H1 nhỏ hơn --- */
+            h1 {
+                font-size: 1.3rem !important;
+                line-height: 1.3 !important;
+            }
+            h2 { font-size: 1.1rem !important; }
+            h3 { font-size: 1.0rem !important; }
+
+            /* --- 5. ĐẶC TRƯNG ĐỒ THỊ GỌN HƠN --- */
+            .feature-item {
+                font-size: 0.82rem !important;
+                padding: 6px 10px !important;
+                margin: 4px 0 !important;
+            }
+            .feature-title {
+                font-size: 0.9rem !important;
+                margin: 15px 0 8px 0 !important;
+            }
+
+            /* --- 6. SLIDER: label nhỏ, slider dễ kéo --- */
+            [data-testid="stSlider"] label {
+                font-size: 0.85rem !important;
+            }
+            [data-testid="stSlider"] [role="slider"] {
+                width: 22px !important;
+                height: 22px !important;
+            }
+
+            /* --- 7. INPUT + BUTTON full width, font vừa --- */
+            [data-testid="stTextInput"] input {
+                font-size: 0.9rem !important;
+                padding: 8px 10px !important;
+            }
+            [data-testid="stButton"] button {
+                font-size: 0.85rem !important;
+                padding: 8px 12px !important;
+                width: 100% !important;
+            }
+
+            /* --- 8. RADIO + EXPANDER nhỏ hơn --- */
+            [data-testid="stRadio"] label {
+                font-size: 0.85rem !important;
+            }
+            [data-testid="stExpander"] summary {
+                font-size: 0.85rem !important;
+                padding: 8px 10px !important;
+            }
+
+            /* --- 9. CHAT MESSAGE gọn hơn --- */
+            [data-testid="stChatMessage"] {
+                font-size: 0.9rem !important;
+                padding: 10px !important;
+            }
+
+            /* --- 10. ĐỒ THỊ PLOTLY: bo góc + giảm margin --- */
+            [data-testid="stPlotlyChart"] {
+                border-radius: 8px !important;
+                overflow: hidden !important;
+            }
+        }
+
+        /* ============================================================
+           RESPONSIVE TABLET — Màn hình 768px - 1024px
+           ============================================================ */
+        @media (min-width: 769px) and (max-width: 1024px) {
+            .stTabs [data-baseweb="tab-list"] > button {
+                font-size: 0.8rem !important;
+                padding: 9px 6px !important;
+            }
+            .main-heading { font-size: 1.15rem !important; }
+        }
         </style>
         <script type="text/javascript" async
           src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/2.7.7/MathJax.js?config=TeX-MML-AM_CHTML">
         </script>
     """, unsafe_allow_html=True)
-
 
 def render_sidebar():
     with str_app.sidebar:
