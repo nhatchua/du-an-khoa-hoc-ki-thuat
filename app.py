@@ -347,115 +347,62 @@ def build_virtual_lab_prompt(lab_request: str, subject: str, grade: str) -> str:
 
 YÊU CẦU CỦA HỌC SINH: __LAB_REQUEST__
 
-QUY TẮC BẮT BUỘC:
+QUY TẮC CHUNG:
 1. TOÀN BỘ nội dung bằng TIẾNG VIỆT.
 2. LaTeX đặt trong cặp dấu đô la cho mọi công thức.
 3. KHÔNG DÙNG DẤU #.
 4. Code Python vẽ đồ thị PHẢI ngắn gọn, tối ưu.
 
-=== ⚠️ CẢNH BÁO QUAN TRỌNG VỀ PLOTLY ===
-1. Font bold: DÙNG `weight='bold'` (KHÔNG dùng `bold=True`)
-2. Title: DÙNG `title=dict(text='...', font=dict(...))`
-3. Marker: DÙNG `marker=dict(size=12, color='#d62728')`
-4. Line: DÙNG `line=dict(color='#1f4e9c', width=3)`
-5. Annotation: DÙNG `showarrow=False`
-6. KHÔNG dùng `axref="paper"` hoặc `ayref="paper"` cho mũi tên annotation.
+=== ⚠️ CẢNH BÁO PLOTLY ===
+1. Font bold: DÙNG `weight='bold'` (KHÔNG `bold=True`)
+2. Title: `title=dict(text='...', font=dict(...))`
+3. Marker: `marker=dict(size=12, color='#d62728')`
+4. Line: `line=dict(color='#1f4e9c', width=3)`
+5. Annotation: `showarrow=False`
+6. KHÔNG dùng `axref="paper"` cho MŨI TÊN annotation.
 
-=== 🔥 QUY TẮC VẼ ĐỒ THỊ CHÍNH (CỰC KỲ QUAN TRỌNG) ===
-
-⚠️ Với hàm phân thức (mẫu số có nghiệm → có tiệm cận đứng), đồ thị bị ĐỨT QUÃNG thành nhiều nhánh. Phải xử lý như sau:
-
-1) Dùng SỐ ĐIỂM LỚN để đường mượt khi zoom: `np.linspace(-20, 20, 5000)`
-2) Set giá trị y = np.nan tại vùng gần tiệm cận đứng để Plotly KHÔNG nối 2 nhánh:
-   mask = np.abs(d*x + e) < 0.05
-   y[mask] = np.nan
-3) Dùng duy nhất 1 trace go.Scatter với connectgaps=False:
-   fig.add_trace(go.Scatter(x=x, y=y, mode='lines',
-       line=dict(color='#1f4e9c', width=3),
-       showlegend=False, hoverinfo='skip', connectgaps=False))
-
-⚠️ Với hàm đa thức (bậc 2, 3, 4): dùng `np.linspace(x_min, x_max, 1000)` — không cần mask.
-
-=== 🔥 QUY TẮC VẼ TIỆM CẬN (CỰC KỲ QUAN TRỌNG) ===
-
-⚠️ TUYỆT ĐỐI KHÔNG dùng `go.Scatter` để vẽ tiệm cận — vì khi zoom, tiệm cận không kéo dài theo view.
-
-BẮT BUỘC dùng `fig.add_shape()` với paper coords:
-
-1) TIỆM CẬN ĐỨNG x = a — dùng yref="paper":
-fig.add_shape(type="line", x0=a, x1=a, y0=0, y1=1,
-    xref="x", yref="paper",
-    line=dict(color="#999", width=1.5, dash="dash"))
-
-2) TIỆM CẬN NGANG y = b — dùng xref="paper":
-fig.add_shape(type="line", x0=0, x1=1, y0=b, y1=b,
-    xref="paper", yref="y",
-    line=dict(color="#999", width=1.5, dash="dash"))
-
-3) TIỆM CẬN XIÊN y = mx + n — dùng x từ -1000 đến 1000:
-fig.add_shape(type="line",
-    x0=-1000, y0=m*(-1000) + n,
-    x1=1000, y1=m*1000 + n,
-    xref="x", yref="y",
-    line=dict(color="#999", width=1.5, dash="dash"))
-
-=== 📝 QUY TẮC FORMAT NHÃN TIỆM CẬN ===
-- BỎ ".0" nếu là số nguyên: "4.0" → "4", "1.0" → "1"
-- BỎ "1" trước biến x: "1x" → "x", "-1x" → "-x"
-- GỘP dấu trừ vào số: "+ -4.1" → "- 4.1"
-- VÍ DỤ ĐÚNG: "x = -4.1", "y = 2", "y = x - 4.1"
-- VÍ DỤ SAI: "y = 1.0x + -4.1", "x = 4.0", "y = 1x"
-
-=== CẤU TRÚC ĐẦU RA BẮT BUỘC ===
-
+=== 📋 CẤU TRÚC ĐẦU RA ===
 1. MÔ TẢ THÍ NGHIỆM / HIỆN TƯỢNG
-[Mô tả chi tiết.]
-
-2. NGUYÊN LÝ / PHƯƠNG TRÌNH / HIỆN TƯỢNG XẢY RA
-[Giải thích bản chất, dùng LaTeX đầy đủ.]
-
+2. NGUYÊN LÝ / PHƯƠNG TRÌNH
 3. KẾT QUẢ / QUAN SÁT ĐƯỢC
-[Mô tả kết quả, kết luận.]
+4. MÃ VẼ ĐỒ THỊ (bọc trong <PLOT_2D>...</PLOT_2D> hoặc <PLOT_3D>...</PLOT_3D>)
 
-4. MÃ VẼ ĐỒ THỊ (nếu không cần, ghi "Không cần vẽ đồ thị")
+=== 🎯 QUY TẮC CHỌN TEMPLATE ===
+Đọc yêu cầu học sinh, chọn ĐÚNG 1 trong các template sau:
+- Hàm y = ax² + bx + c → TEMPLATE 1
+- Hàm y = ax³ + bx² + cx + d → TEMPLATE 1 (biến thể bậc 3)
+- Hàm y = (ax+b)/(cx+d) hoặc (ax²+bx+c)/(dx+e) → TEMPLATE 2
+- Hàm y = sin/cos/tan/cot → TEMPLATE 3
+- Hàm y = a^x, e^x, ln(x), log_a(x) → TEMPLATE 4
+- Hàm y = √(ax+b), y = x^n → TEMPLATE 5
+- Đường tròn, elip, hyperbol, parabol ngang → TEMPLATE 6
+- Hình học phẳng (tam giác, tứ giác, đa giác) → TEMPLATE 7
+- Hình học 3D (chóp, lăng trụ, hộp, cầu, nón, trụ) → TEMPLATE 8
 
-QUY TẮC CHỌN LOẠI ĐỒ THỊ:
-- 2D hàm số → thẻ <PLOT_2D>...</PLOT_2D> (PLOTLY)
-- 3D hình học → thẻ <PLOT_3D>...</PLOT_3D> (PLOTLY)
+=== ⚠️ QUY TẮC KHAI BÁO HỆ SỐ (BẮT BUỘC VỚI 2D) ===
+- Khai báo hệ số ở ĐẦU CODE (TRƯỚC import), MỖI HỆ SỐ 1 DÒNG
+- Format: `a = 1` (có khoảng trắng quanh dấu =)
+- KHÔNG dùng list `coeffs = [...]`, KHÔNG gộp `a, b, c = 1, 2, 3`
 
-=== QUY TẮC KHAI BÁO HỆ SỐ (BẮT BUỘC) ===
-- Khai báo hệ số ở ĐẦU CODE (TRƯỚC cả import), MỖI HỆ SỐ MỘT DÒNG RIÊNG
-- Định dạng CHÍNH XÁC: `a = 1` (có khoảng trắng quanh dấu =)
+=== ⚠️ QUY TẮC CỰC TRỊ (CHỈ VỚI ĐA THỨC) ===
+- CHỈ vẽ cực trị khi hàm là ĐA THỨC (bậc 2, 3, 4)
+- KHÔNG vẽ cực trị cho hàm phân thức, lượng giác, mũ, log
+- Parabol: LUÔN nhãn "I(x; y)" — KHÔNG ghi "Cực đại"/"Cực tiểu"
+- KHÔNG nhầm giao Oy (xanh lá) với cực trị (đỏ)
 
-Ví dụ ĐÚNG:
-a = 1
-b = -4
-c = 3
-import plotly.graph_objects as go
-import numpy as np
-
-Ví dụ SAI: `coeffs = [1, -4, 3]` HOẶC `a, b, c = 1, -4, 3` HOẶC `a=1`
-
-=== ⚠️ QUY TẮC NHÃN ĐIỂM KHÔNG DÍNH ĐỒ THỊ ===
-MỌI NHÃN ĐIỂM PHẢI CÓ:
+=== ⚠️ QUY TẮC NHÃN ===
+MỌI nhãn điểm PHẢI CÓ:
 - `bgcolor='rgba(255,255,255,0.9)'`
-- `borderwidth=1` + `bordercolor` cùng màu chữ
-- `borderpad=4`
-- Khoảng cách TỐI THIỂU 35px
+- `borderwidth=1, borderpad=4`
+- Khoảng cách tối thiểu 35px
 
-Vị trí nhãn:
-- ĐỈNH PARABOL: xshift=20, yshift=-40, xanchor='left', yanchor='top'
-- GIAO Oy: xshift=50, yshift=5, xanchor='left', yanchor='middle'
-- GIAO Ox: yshift=35, xanchor='center', yanchor='bottom'
-- TIỆM CẬN ĐỨNG: xshift=15, xanchor='left', yanchor='middle'
-- TIỆM CẬN NGANG: xshift=-10, yshift=15, xanchor='right', yanchor='bottom'
+Màu mặc định:
+- Đường cong: #1f4e9c (xanh đậm)
+- Điểm cực trị: #d62728 (đỏ)
+- Giao điểm: #2ca02c (xanh lá)
+- Tiệm cận: #999 (xám đứt)
 
-=== STYLE 2D PLOTLY (BẮT BUỘC) ===
-- Lưới mịn màu #e0e0e0
-- Đường cong xanh đậm #1f4e9c, width 3
-- Nền trắng (plot_bgcolor='white')
-
-=== MẪU 2D PLOTLY — HÀM ĐA THỨC ===
+=== 📌 TEMPLATE 1 — HÀM ĐA THỨC ===
 <PLOT_2D>
 a = 1
 b = -4
@@ -465,18 +412,18 @@ import numpy as np
 
 fig = go.Figure()
 
-x = np.linspace(-1.5, 5.5, 1000)
+x = np.linspace(-2, 6, 1000)
 y = a*x**2 + b*x + c
 fig.add_trace(go.Scatter(x=x, y=y, mode='lines',
     line=dict(color='#1f4e9c', width=3), showlegend=False, hoverinfo='skip'))
 
+# ĐIỂM CỰC TRỊ
 if a != 0:
     vx = -b / (2*a)
     vy = a*vx**2 + b*vx + c
     fig.add_trace(go.Scatter(x=[vx], y=[vy], mode='markers',
         marker=dict(color='#d62728', size=12, line=dict(color='white', width=2)),
-        showlegend=False,
-        hovertemplate='Đỉnh I(' + str(round(vx,2)) + '; ' + str(round(vy,2)) + ')<extra></extra>'))
+        showlegend=False))
     fig.add_annotation(x=vx, y=vy,
         text="I(" + str(round(vx,2)) + "; " + str(round(vy,2)) + ")",
         showarrow=False, xshift=20, yshift=-40,
@@ -485,10 +432,10 @@ if a != 0:
         bgcolor='rgba(255,255,255,0.9)',
         bordercolor='#d62728', borderwidth=1, borderpad=4)
 
+# GIAO Oy
 fig.add_trace(go.Scatter(x=[0], y=[c], mode='markers',
     marker=dict(color='#2ca02c', size=10, line=dict(color='white', width=2)),
-    showlegend=False,
-    hovertemplate='(0; ' + str(round(c,2)) + ')<extra></extra>'))
+    showlegend=False))
 fig.add_annotation(x=0, y=c,
     text="(0; " + str(round(c,2)) + ")",
     showarrow=False, xshift=50, yshift=5,
@@ -497,6 +444,7 @@ fig.add_annotation(x=0, y=c,
     bgcolor='rgba(255,255,255,0.9)',
     bordercolor='#2ca02c', borderwidth=1, borderpad=4)
 
+# GIAO Ox
 if a != 0:
     roots = np.roots([a, b, c])
     for r in roots:
@@ -504,8 +452,7 @@ if a != 0:
             xr = r.real
             fig.add_trace(go.Scatter(x=[xr], y=[0], mode='markers',
                 marker=dict(color='#2ca02c', size=10, line=dict(color='white', width=2)),
-                showlegend=False,
-                hovertemplate='(' + str(round(xr,2)) + '; 0)<extra></extra>'))
+                showlegend=False))
             fig.add_annotation(x=xr, y=0,
                 text="(" + str(round(xr,2)) + "; 0)",
                 showarrow=False, yshift=35,
@@ -514,12 +461,14 @@ if a != 0:
                 bgcolor='rgba(255,255,255,0.9)',
                 bordercolor='#2ca02c', borderwidth=1, borderpad=4)
 
-x_range = [-1.8, 6.8]
+# TÍNH RANGE
+x_range = [-2.5, 6.5]
 y_min_d = float(np.min(y))
 y_max_d = float(np.max(y))
 y_pad = (y_max_d - y_min_d) * 0.1 + 1
 y_range = [y_min_d - y_pad, y_max_d + y_pad]
 
+# MŨI TÊN TRỤC
 fig.add_annotation(x=x_range[1], y=0, ax=x_range[1]-0.5, ay=0,
     xref="x", yref="y", axref="x", ayref="y",
     showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
@@ -527,6 +476,7 @@ fig.add_annotation(x=0, y=y_range[1], ax=0, ay=y_range[1]*0.92,
     xref="x", yref="y", axref="x", ayref="y",
     showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
 
+# NHÃN O, x, y
 fig.add_annotation(x=0, y=0, text='O', showarrow=False,
     xshift=-14, yshift=-14, font=dict(size=15, color='#333'))
 fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
@@ -534,27 +484,25 @@ fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
 fig.add_annotation(x=0, y=y_range[1], text='y', showarrow=False,
     xshift=-18, yshift=-8, font=dict(size=15, color='#333'))
 
-fig.add_annotation(
-    x=0.98, y=0.02, xref="paper", yref="paper",
+# TÊN CÔNG THỨC GÓC DƯỚI PHẢI
+fig.add_annotation(x=0.98, y=0.02, xref="paper", yref="paper",
     text="y = ax² + bx + c",
     showarrow=False, xanchor='right', yanchor='bottom',
     font=dict(size=13, color='#1f4e9c'),
     bgcolor='rgba(255,255,255,0.85)',
-    bordercolor='#1f4e9c', borderwidth=1.5, borderpad=6
-)
+    bordercolor='#1f4e9c', borderwidth=1.5, borderpad=6)
 
 fig.update_layout(
     title=dict(text='Đồ thị hàm số bậc hai', x=0.5, font=dict(size=14, color='#333')),
     xaxis=dict(range=x_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
-        showgrid=True, gridcolor='#e0e0e0', gridwidth=0.5),
+        showgrid=True, gridcolor='#e0e0e0'),
     yaxis=dict(range=y_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
-        showgrid=True, gridcolor='#e0e0e0', gridwidth=0.5),
+        showgrid=True, gridcolor='#e0e0e0'),
     plot_bgcolor='white', height=520,
-    margin=dict(l=20, r=20, t=50, b=30)
-)
+    margin=dict(l=20, r=20, t=50, b=30))
 </PLOT_2D>
 
-=== MẪU 2D PLOTLY — HÀM PHÂN THỨC CÓ TIỆM CẬN (QUAN TRỌNG NHẤT) ===
+=== 📌 TEMPLATE 2 — HÀM PHÂN THỨC ===
 <PLOT_2D>
 a = 1
 b = 1
@@ -566,11 +514,8 @@ import numpy as np
 
 fig = go.Figure()
 
-# Dùng linspace RỘNG và số điểm LỚN để đường mượt khi zoom
 x = np.linspace(-20, 20, 5000)
 y = (a*x**2 + b*x + c) / (d*x + e)
-
-# Set NaN tại vùng gần tiệm cận đứng để Plotly KHÔNG nối 2 nhánh
 mask = np.abs(d*x + e) < 0.05
 y[mask] = np.nan
 
@@ -581,7 +526,40 @@ fig.add_trace(go.Scatter(x=x, y=y, mode='lines',
 x_range = [-10, 10]
 y_range = [-30, 30]
 
-# === TIỆM CẬN ĐỨNG x = -e/d ===
+# GIAO Oy
+if e != 0:
+    y_giao_oy = c / e
+    fig.add_trace(go.Scatter(x=[0], y=[y_giao_oy], mode='markers',
+        marker=dict(color='#2ca02c', size=10, line=dict(color='white', width=2)),
+        showlegend=False))
+    fig.add_annotation(x=0, y=y_giao_oy,
+        text="(0; " + str(round(y_giao_oy, 2)) + ")",
+        showarrow=False, xshift=50, yshift=5,
+        xanchor='left', yanchor='middle',
+        font=dict(color='#2ca02c', size=12, weight='bold'),
+        bgcolor='rgba(255,255,255,0.9)',
+        bordercolor='#2ca02c', borderwidth=1, borderpad=4)
+
+# GIAO Ox
+if a != 0:
+    roots = np.roots([a, b, c])
+    for r in roots:
+        if abs(r.imag) < 1e-6:
+            xr = r.real
+            if d != 0 and abs(xr - (-e/d)) < 0.1:
+                continue
+            fig.add_trace(go.Scatter(x=[xr], y=[0], mode='markers',
+                marker=dict(color='#2ca02c', size=10, line=dict(color='white', width=2)),
+                showlegend=False))
+            fig.add_annotation(x=xr, y=0,
+                text="(" + str(round(xr,2)) + "; 0)",
+                showarrow=False, yshift=35,
+                xanchor='center', yanchor='bottom',
+                font=dict(color='#2ca02c', size=11, weight='bold'),
+                bgcolor='rgba(255,255,255,0.9)',
+                bordercolor='#2ca02c', borderwidth=1, borderpad=4)
+
+# TIỆM CẬN ĐỨNG x = -e/d
 if d != 0:
     x_tcd = -e / d
     fig.add_shape(type="line", x0=x_tcd, x1=x_tcd, y0=0, y1=1,
@@ -595,7 +573,7 @@ if d != 0:
         bgcolor='rgba(255,255,255,0.9)', bordercolor='#999',
         borderwidth=1, borderpad=4)
 
-# === TIỆM CẬN XIÊN y = (a/d)x + (b/d - ae/d²) ===
+# TIỆM CẬN XIÊN y = (a/d)x + (b/d - ae/d²)
 if d != 0:
     m = a / d
     n = (b*d - a*e) / (d*d)
@@ -604,28 +582,165 @@ if d != 0:
         x1=1000, y1=m*1000 + n,
         xref="x", yref="y",
         line=dict(color="#999", width=1.5, dash="dash"))
-    m_str = "" if m == 1 else ("-" if m == -1 else (str(int(m)) if m == int(m) else str(round(m,2))))
-    if m_str == "":
-        m_part = "x"
-    elif m_str == "-":
-        m_part = "-x"
-    else:
-        m_part = m_str + "x"
+    m_part = "x" if m == 1 else ("-x" if m == -1 else ("" if m == 0 else str(int(m) if m == int(m) else round(m, 2)) + "x"))
     if n > 0:
         n_part = " + " + (str(int(n)) if n == int(n) else str(round(n, 2)))
     elif n < 0:
-        n_part = " - " + (str(int(abs(n))) if abs(n) == int(abs(n)) else str(round(abs(n), 2)))
+        n_abs = abs(n)
+        n_part = " - " + (str(int(n_abs)) if n_abs == int(n_abs) else str(round(n_abs, 2)))
     else:
         n_part = ""
-    label_tcx = "y = " + m_part + n_part
     fig.add_annotation(x=5, y=m*5 + n, xref="x", yref="y",
-        text=label_tcx, showarrow=False, xshift=-10, yshift=15,
+        text="y = " + m_part + n_part, showarrow=False, xshift=-10, yshift=15,
         xanchor='right', yanchor='bottom',
         font=dict(color='#666', size=12),
         bgcolor='rgba(255,255,255,0.9)', bordercolor='#999',
         borderwidth=1, borderpad=4)
 
-# Mũi tên trục
+# MŨI TÊN TRỤC
+fig.add_annotation(x=x_range[1], y=0, ax=x_range[1]-0.5, ay=0,
+    xref="x", yref="y", axref="x", ayref="y",
+    showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
+fig.add_annotation(x=0, y=y_range[1], ax=0, ay=y_range[1]*0.92,
+    xref="x", yref="y", axref="x", ayref="y",
+    showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
+
+# NHÃN O, x, y
+fig.add_annotation(x=0, y=0, text='O', showarrow=False,
+    xshift=-14, yshift=-14, font=dict(size=15, color='#333'))
+fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
+    xshift=-6, yshift=-18, font=dict(size=15, color='#333'))
+fig.add_annotation(x=0, y=y_range[1], text='y', showarrow=False,
+    xshift=-18, yshift=-8, font=dict(size=15, color='#333'))
+
+# TÊN CÔNG THỨC
+fig.add_annotation(x=0.98, y=0.02, xref="paper", yref="paper",
+    text="y = (ax² + bx + c)/(dx + e)",
+    showarrow=False, xanchor='right', yanchor='bottom',
+    font=dict(size=13, color='#1f4e9c'),
+    bgcolor='rgba(255,255,255,0.85)',
+    bordercolor='#1f4e9c', borderwidth=1.5, borderpad=6)
+
+fig.update_layout(
+    title=dict(text='Đồ thị hàm phân thức', x=0.5, font=dict(size=14, color='#333')),
+    xaxis=dict(range=x_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
+        showgrid=True, gridcolor='#e0e0e0'),
+    yaxis=dict(range=y_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
+        showgrid=True, gridcolor='#e0e0e0'),
+    plot_bgcolor='white', height=520,
+    margin=dict(l=20, r=20, t=50, b=30))
+</PLOT_2D>
+
+=== 📌 TEMPLATE 3 — HÀM LƯỢNG GIÁC ===
+<PLOT_2D>
+a = 1
+b = 1
+c = 0
+import plotly.graph_objects as go
+import numpy as np
+
+fig = go.Figure()
+
+x = np.linspace(-2*np.pi, 2*np.pi, 2000)
+y = a*np.sin(b*x + c)
+fig.add_trace(go.Scatter(x=x, y=y, mode='lines',
+    line=dict(color='#1f4e9c', width=3), showlegend=False, hoverinfo='skip'))
+
+x_range = [-2*np.pi - 0.5, 2*np.pi + 0.5]
+y_range = [-abs(a) - 0.5, abs(a) + 0.5]
+
+# Đánh dấu chu kỳ T = 2π/|b|
+if b != 0:
+    T = 2*np.pi / abs(b)
+    if abs(T) > 0.5:
+        # Vẽ 2 đường đứt tại các điểm đặc biệt của sin
+        fig.add_shape(type="line", x0=T, x1=T, y0=0, y1=1,
+            xref="x", yref="paper",
+            line=dict(color="#999", width=1, dash="dot"))
+
+# MŨI TÊN TRỤC
+fig.add_annotation(x=x_range[1], y=0, ax=x_range[1]-0.5, ay=0,
+    xref="x", yref="y", axref="x", ayref="y",
+    showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
+fig.add_annotation(x=0, y=y_range[1], ax=0, ay=y_range[1]*0.92,
+    xref="x", yref="y", axref="x", ayref="y",
+    showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
+
+# NHÃN O, x, y + π labels
+fig.add_annotation(x=0, y=0, text='O', showarrow=False,
+    xshift=-14, yshift=-14, font=dict(size=15, color='#333'))
+fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
+    xshift=-6, yshift=-18, font=dict(size=15, color='#333'))
+fig.add_annotation(x=0, y=y_range[1], text='y', showarrow=False,
+    xshift=-18, yshift=-8, font=dict(size=15, color='#333'))
+
+# Đánh dấu điểm đặc biệt của sin: -π, -π/2, π/2, π
+for mark in [-np.pi, -np.pi/2, np.pi/2, np.pi]:
+    fig.add_annotation(x=mark, y=0, text=str(round(mark/np.pi, 2)) + "π",
+        showarrow=False, yshift=-20, font=dict(size=11, color='#666'))
+
+# TÊN CÔNG THỨC
+fig.add_annotation(x=0.98, y=0.02, xref="paper", yref="paper",
+    text="y = a·sin(bx + c)",
+    showarrow=False, xanchor='right', yanchor='bottom',
+    font=dict(size=13, color='#1f4e9c'),
+    bgcolor='rgba(255,255,255,0.85)',
+    bordercolor='#1f4e9c', borderwidth=1.5, borderpad=6)
+
+fig.update_layout(
+    title=dict(text='Đồ thị hàm số lượng giác', x=0.5, font=dict(size=14, color='#333')),
+    xaxis=dict(range=x_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
+        showgrid=True, gridcolor='#e0e0e0'),
+    yaxis=dict(range=y_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
+        showgrid=True, gridcolor='#e0e0e0'),
+    plot_bgcolor='white', height=520,
+    margin=dict(l=20, r=20, t=50, b=30))
+</PLOT_2D>
+
+Với tan, cot: PHẢI dùng mask tại tiệm cận (cos=0 cho tan, sin=0 cho cot):
+y[np.abs(np.cos(b*x + c)) < 0.05] = np.nan
+Và vẽ tiệm cận đứng bằng add_shape tại các điểm cos(bx+c)=0.
+
+=== 📌 TEMPLATE 4 — HÀM MŨ VÀ LOGARIT ===
+<PLOT_2D>
+a = 2
+import plotly.graph_objects as go
+import numpy as np
+
+fig = go.Figure()
+
+# HÀM MŨ y = a^x (a > 0)
+x = np.linspace(-3, 3, 1000)
+y = a**x
+fig.add_trace(go.Scatter(x=x, y=y, mode='lines',
+    line=dict(color='#1f4e9c', width=3), showlegend=False, hoverinfo='skip'))
+
+x_range = [-3.5, 3.5]
+y_range = [-1, 12]
+
+# TIỆM CẬN NGANG y = 0
+fig.add_shape(type="line", x0=0, x1=1, y0=0, y1=0,
+    xref="paper", yref="y",
+    line=dict(color="#999", width=1.5, dash="dash"))
+fig.add_annotation(x=0.9, y=0, xref="paper", yref="y",
+    text="y = 0", showarrow=False, xshift=-10, yshift=15,
+    xanchor='right', yanchor='bottom',
+    font=dict(color='#666', size=12),
+    bgcolor='rgba(255,255,255,0.9)', bordercolor='#999',
+    borderwidth=1, borderpad=4)
+
+# GIAO Oy
+fig.add_trace(go.Scatter(x=[0], y=[1], mode='markers',
+    marker=dict(color='#2ca02c', size=10, line=dict(color='white', width=2)),
+    showlegend=False))
+fig.add_annotation(x=0, y=1,
+    text="(0; 1)", showarrow=False, xshift=50, yshift=5,
+    xanchor='left', yanchor='middle',
+    font=dict(color='#2ca02c', size=12, weight='bold'),
+    bgcolor='rgba(255,255,255,0.9)',
+    bordercolor='#2ca02c', borderwidth=1, borderpad=4)
+
+# MŨI TÊN TRỤC
 fig.add_annotation(x=x_range[1], y=0, ax=x_range[1]-0.5, ay=0,
     xref="x", yref="y", axref="x", ayref="y",
     showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
@@ -640,64 +755,299 @@ fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
 fig.add_annotation(x=0, y=y_range[1], text='y', showarrow=False,
     xshift=-18, yshift=-8, font=dict(size=15, color='#333'))
 
-fig.add_annotation(
-    x=0.98, y=0.02, xref="paper", yref="paper",
-    text="y = (ax² + bx + c)/(dx + e)",
-    showarrow=False, xanchor='right', yanchor='bottom',
+fig.add_annotation(x=0.98, y=0.02, xref="paper", yref="paper",
+    text="y = a^x", showarrow=False, xanchor='right', yanchor='bottom',
     font=dict(size=13, color='#1f4e9c'),
     bgcolor='rgba(255,255,255,0.85)',
-    bordercolor='#1f4e9c', borderwidth=1.5, borderpad=6
-)
+    bordercolor='#1f4e9c', borderwidth=1.5, borderpad=6)
 
 fig.update_layout(
-    title=dict(text='Đồ thị hàm phân thức', x=0.5, font=dict(size=14, color='#333')),
+    title=dict(text='Đồ thị hàm số mũ', x=0.5, font=dict(size=14, color='#333')),
     xaxis=dict(range=x_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
         showgrid=True, gridcolor='#e0e0e0'),
     yaxis=dict(range=y_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
         showgrid=True, gridcolor='#e0e0e0'),
     plot_bgcolor='white', height=520,
-    margin=dict(l=20, r=20, t=50, b=30)
-)
+    margin=dict(l=20, r=20, t=50, b=30))
 </PLOT_2D>
 
-=== MẪU 3D PLOTLY ===
-<PLOT_3D>
+Với ln(x): chỉ vẽ x > 0, có tiệm cận đứng x = 0.
+Với log_a(x): tương tự ln, chỉ vẽ x > 0.
+
+=== 📌 TEMPLATE 5 — HÀM CĂN THỨC ===
+<PLOT_2D>
+a = 1
+b = 0
 import plotly.graph_objects as go
+import numpy as np
 
 fig = go.Figure()
-S, A, B, C = [0,0,4], [3,0,0], [0,4,0], [-2,-2,0]
 
-for p1, p2 in [(A,B),(B,C),(C,A),(S,A),(S,B)]:
-    fig.add_trace(go.Scatter3d(x=[p1[0],p2[0]], y=[p1[1],p2[1]], z=[p1[2],p2[2]],
+# Miền xác định: ax + b ≥ 0
+if a > 0:
+    x_min = -b/a
+    x = np.linspace(x_min, x_min + 10, 1000)
+elif a < 0:
+    x_max = -b/a
+    x = np.linspace(x_max - 10, x_max, 1000)
+else:
+    x = np.linspace(0, 10, 1000)
+
+y = np.sqrt(np.maximum(a*x + b, 0))
+fig.add_trace(go.Scatter(x=x, y=y, mode='lines',
+    line=dict(color='#1f4e9c', width=3), showlegend=False, hoverinfo='skip'))
+
+x_range = [float(np.min(x)) - 0.5, float(np.max(x)) + 0.5]
+y_range = [-0.5, float(np.max(y)) + 1]
+
+# GIAO Ox: điểm bắt đầu miền xác định
+if a != 0:
+    x0 = -b/a
+    fig.add_trace(go.Scatter(x=[x0], y=[0], mode='markers',
+        marker=dict(color='#2ca02c', size=10, line=dict(color='white', width=2)),
+        showlegend=False))
+    fig.add_annotation(x=x0, y=0,
+        text="(" + str(round(x0, 2)) + "; 0)", showarrow=False,
+        xshift=-30, yshift=20,
+        xanchor='right', yanchor='bottom',
+        font=dict(color='#2ca02c', size=12, weight='bold'),
+        bgcolor='rgba(255,255,255,0.9)',
+        bordercolor='#2ca02c', borderwidth=1, borderpad=4)
+
+fig.add_annotation(x=x_range[1], y=0, ax=x_range[1]-0.5, ay=0,
+    xref="x", yref="y", axref="x", ayref="y",
+    showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
+fig.add_annotation(x=0, y=y_range[1], ax=0, ay=y_range[1]*0.92,
+    xref="x", yref="y", axref="x", ayref="y",
+    showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
+
+fig.add_annotation(x=0, y=0, text='O', showarrow=False,
+    xshift=-14, yshift=-14, font=dict(size=15, color='#333'))
+fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
+    xshift=-6, yshift=-18, font=dict(size=15, color='#333'))
+fig.add_annotation(x=0, y=y_range[1], text='y', showarrow=False,
+    xshift=-18, yshift=-8, font=dict(size=15, color='#333'))
+
+fig.add_annotation(x=0.98, y=0.02, xref="paper", yref="paper",
+    text="y = √(ax + b)", showarrow=False, xanchor='right', yanchor='bottom',
+    font=dict(size=13, color='#1f4e9c'),
+    bgcolor='rgba(255,255,255,0.85)',
+    bordercolor='#1f4e9c', borderwidth=1.5, borderpad=6)
+
+fig.update_layout(
+    title=dict(text='Đồ thị hàm căn thức', x=0.5, font=dict(size=14, color='#333')),
+    xaxis=dict(range=x_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
+        showgrid=True, gridcolor='#e0e0e0'),
+    yaxis=dict(range=y_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
+        showgrid=True, gridcolor='#e0e0e0'),
+    plot_bgcolor='white', height=520,
+    margin=dict(l=20, r=20, t=50, b=30))
+</PLOT_2D>
+
+=== 📌 TEMPLATE 6 — ĐƯỜNG TRÒN / ELIP / HYPERBOL ===
+<PLOT_2D>
+a = 3
+b = 2
+import plotly.graph_objects as go
+import numpy as np
+
+fig = go.Figure()
+
+# ĐƯỜNG TRÒN tâm O bán kính R = a: x = a·cos(t), y = a·sin(t)
+t = np.linspace(0, 2*np.pi, 500)
+x = a*np.cos(t)
+y = a*np.sin(t)
+fig.add_trace(go.Scatter(x=x, y=y, mode='lines',
+    line=dict(color='#1f4e9c', width=3), showlegend=False, hoverinfo='skip'))
+
+# ELIP x = a·cos(t), y = b·sin(t)
+# x = a*np.cos(t); y = b*np.sin(t)
+
+x_range = [-a - 2, a + 2]
+y_range = [-a - 2, a + 2]
+
+# TÂM O — chấm đỏ
+fig.add_trace(go.Scatter(x=[0], y=[0], mode='markers',
+    marker=dict(color='#d62728', size=12, line=dict(color='white', width=2)),
+    showlegend=False))
+fig.add_annotation(x=0, y=0, text="O", showarrow=False,
+    xshift=-18, yshift=-18, font=dict(size=14, weight='bold', color='#333'),
+    bgcolor='rgba(255,255,255,0.9)', borderpad=3)
+
+# MŨI TÊN TRỤC
+fig.add_annotation(x=x_range[1], y=0, ax=x_range[1]-0.5, ay=0,
+    xref="x", yref="y", axref="x", ayref="y",
+    showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
+fig.add_annotation(x=0, y=y_range[1], ax=0, ay=y_range[1]*0.92,
+    xref="x", yref="y", axref="x", ayref="y",
+    showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
+
+fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
+    xshift=-6, yshift=-18, font=dict(size=15, color='#333'))
+fig.add_annotation(x=0, y=y_range[1], text='y', showarrow=False,
+    xshift=-18, yshift=-8, font=dict(size=15, color='#333'))
+
+fig.add_annotation(x=0.98, y=0.02, xref="paper", yref="paper",
+    text="x² + y² = R²", showarrow=False, xanchor='right', yanchor='bottom',
+    font=dict(size=13, color='#1f4e9c'),
+    bgcolor='rgba(255,255,255,0.85)',
+    bordercolor='#1f4e9c', borderwidth=1.5, borderpad=6)
+
+fig.update_layout(
+    title=dict(text='Đường tròn tâm O bán kính R', x=0.5, font=dict(size=14, color='#333')),
+    xaxis=dict(range=x_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
+        showgrid=True, gridcolor='#e0e0e0',
+        scaleanchor="y", scaleratio=1),
+    yaxis=dict(range=y_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
+        showgrid=True, gridcolor='#e0e0e0'),
+    plot_bgcolor='white', height=520,
+    margin=dict(l=20, r=20, t=50, b=30))
+</PLOT_2D>
+
+Với ELIP: x = a·cos(t), y = b·sin(t).
+Với HYPERBOL: x = ±a·cosh(t), y = b·sinh(t) (dùng 2 nhánh riêng).
+
+=== 📌 TEMPLATE 7 — HÌNH HỌC PHẲNG ===
+<PLOT_2D>
+import plotly.graph_objects as go
+import numpy as np
+
+fig = go.Figure()
+
+# TAM GIÁC ABC với tọa độ đỉnh
+A = (0, 0)
+B = (4, 0)
+C = (1, 3)
+
+# Vẽ các cạnh
+fig.add_trace(go.Scatter(x=[A[0], B[0], C[0], A[0]],
+    y=[A[1], B[1], C[1], A[1]],
+    mode='lines', line=dict(color='#1f4e9c', width=3),
+    showlegend=False, hoverinfo='skip'))
+
+# Tô màu nhẹ bên trong
+fig.add_trace(go.Scatter(x=[A[0], B[0], C[0], A[0]],
+    y=[A[1], B[1], C[1], A[1]],
+    mode='none', fill='toself',
+    fillcolor='rgba(31, 78, 156, 0.1)',
+    showlegend=False, hoverinfo='skip'))
+
+# Nhãn đỉnh
+fig.add_annotation(x=A[0], y=A[1], text='A', showarrow=False,
+    xshift=-18, yshift=-12, font=dict(size=16, weight='bold', color='#d62728'),
+    bgcolor='rgba(255,255,255,0.9)', borderpad=3)
+fig.add_annotation(x=B[0], y=B[1], text='B', showarrow=False,
+    xshift=12, yshift=-12, font=dict(size=16, weight='bold', color='#d62728'),
+    bgcolor='rgba(255,255,255,0.9)', borderpad=3)
+fig.add_annotation(x=C[0], y=C[1], text='C', showarrow=False,
+    xshift=-12, yshift=12, font=dict(size=16, weight='bold', color='#d62728'),
+    bgcolor='rgba(255,255,255,0.9)', borderpad=3)
+
+x_range = [-1, 5]
+y_range = [-1, 4]
+
+fig.add_annotation(x=x_range[1], y=0, ax=x_range[1]-0.5, ay=0,
+    xref="x", yref="y", axref="x", ayref="y",
+    showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
+fig.add_annotation(x=0, y=y_range[1], ax=0, ay=y_range[1]*0.92,
+    xref="x", yref="y", axref="x", ayref="y",
+    showarrow=True, arrowhead=3, arrowsize=1.8, arrowwidth=2.5, arrowcolor='#333')
+
+fig.add_annotation(x=0, y=0, text='O', showarrow=False,
+    xshift=-14, yshift=-14, font=dict(size=15, color='#333'))
+fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
+    xshift=-6, yshift=-18, font=dict(size=15, color='#333'))
+fig.add_annotation(x=0, y=y_range[1], text='y', showarrow=False,
+    xshift=-18, yshift=-8, font=dict(size=15, color='#333'))
+
+fig.add_annotation(x=0.98, y=0.02, xref="paper", yref="paper",
+    text="Tam giác ABC", showarrow=False, xanchor='right', yanchor='bottom',
+    font=dict(size=13, color='#1f4e9c'),
+    bgcolor='rgba(255,255,255,0.85)',
+    bordercolor='#1f4e9c', borderwidth=1.5, borderpad=6)
+
+fig.update_layout(
+    title=dict(text='Hình tam giác ABC', x=0.5, font=dict(size=14, color='#333')),
+    xaxis=dict(range=x_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
+        showgrid=True, gridcolor='#e0e0e0',
+        scaleanchor="y", scaleratio=1),
+    yaxis=dict(range=y_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
+        showgrid=True, gridcolor='#e0e0e0'),
+    plot_bgcolor='white', height=520,
+    margin=dict(l=20, r=20, t=50, b=30))
+</PLOT_2D>
+
+=== 📌 TEMPLATE 8 — HÌNH HỌC 3D ===
+<PLOT_3D>
+import plotly.graph_objects as go
+import numpy as np
+
+fig = go.Figure()
+
+# VÍ DỤ HÌNH CHÓP S.ABC
+S = [0, 0, 4]
+A = [3, 0, 0]
+B = [0, 4, 0]
+C = [-2, -2, 0]
+
+# CẠNH NHÌN THẤY (nét liền)
+visible_edges = [(A, B), (B, C), (C, A), (S, A), (S, B)]
+for p1, p2 in visible_edges:
+    fig.add_trace(go.Scatter3d(
+        x=[p1[0], p2[0]], y=[p1[1], p2[1]], z=[p1[2], p2[2]],
         mode='lines', line=dict(color='#1f77b4', width=6), showlegend=False))
 
-for p1, p2 in [(S,C)]:
-    fig.add_trace(go.Scatter3d(x=[p1[0],p2[0]], y=[p1[1],p2[1]], z=[p1[2],p2[2]],
-        mode='lines', line=dict(color='#1f77b4', width=4, dash='dash'), showlegend=False))
+# CẠNH KHUẤT (nét đứt)
+hidden_edges = [(S, C)]
+for p1, p2 in hidden_edges:
+    fig.add_trace(go.Scatter3d(
+        x=[p1[0], p2[0]], y=[p1[1], p2[1]], z=[p1[2], p2[2]],
+        mode='lines', line=dict(color='#1f77b4', width=4, dash='dash'),
+        showlegend=False))
 
-fig.add_trace(go.Mesh3d(x=[A[0],B[0],C[0]], y=[A[1],B[1],C[1]], z=[A[2],B[2],C[2]],
+# MẶT ĐÁY BÁN TRONG SUỐT
+fig.add_trace(go.Mesh3d(
+    x=[A[0], B[0], C[0]], y=[A[1], B[1], C[1]], z=[A[2], B[2], C[2]],
     color='lightblue', opacity=0.3, showlegend=False, hoverinfo='skip'))
 
-for name, p in [('S',S),('A',A),('B',B),('C',C)]:
-    fig.add_trace(go.Scatter3d(x=[p[0]], y=[p[1]], z=[p[2]], mode='text',
-        text=[name], textfont=dict(size=14, color='black'), showlegend=False))
+# NHÃN ĐỈNH
+for name, p in [('S', S), ('A', A), ('B', B), ('C', C)]:
+    fig.add_trace(go.Scatter3d(
+        x=[p[0]], y=[p[1]], z=[p[2]], mode='text',
+        text=[name], textfont=dict(size=14, color='black', weight='bold'),
+        showlegend=False))
+
+# TRỤC Oxyz (nếu cần)
+fig.add_trace(go.Scatter3d(x=[0, 5], y=[0, 0], z=[0, 0],
+    mode='lines', line=dict(color='red', width=4), showlegend=False, hoverinfo='skip'))
+fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 5], z=[0, 0],
+    mode='lines', line=dict(color='green', width=4), showlegend=False, hoverinfo='skip'))
+fig.add_trace(go.Scatter3d(x=[0, 0], y=[0, 0], z=[0, 5],
+    mode='lines', line=dict(color='blue', width=4), showlegend=False, hoverinfo='skip'))
 
 fig.update_layout(
     title='Hình chóp S.ABC',
-    scene=dict(xaxis_title='x', yaxis_title='y', zaxis_title='z',
-        aspectmode='cube', camera=dict(eye=dict(x=1.25, y=1.25, z=1.25))),
+    scene=dict(
+        xaxis_title='x', yaxis_title='y', zaxis_title='z',
+        aspectmode='cube',
+        camera=dict(eye=dict(x=1.5, y=1.5, z=1.2))),
     margin=dict(l=0, r=0, t=40, b=0), height=520)
 </PLOT_3D>
 
+Các biến thể khác:
+- HÌNH LĂNG TRỤ: 2 mặt đáy song song, cạnh bên thẳng đứng
+- HÌNH HỘP: 8 đỉnh, 12 cạnh
+- MẶT CẦU: dùng go.Surface với tham số (u, v) như hướng dẫn
+- HÌNH NÓN: đỉnh trên + đường tròn đáy
+- HÌNH TRỤ: 2 đường tròn song song + cạnh nối
+
 LƯU Ý CUỐI:
-- 2D: dùng PLOTLY
-- 2D: KHÔNG dùng `bold=True` — DÙNG `weight='bold'`
-- 🔥 2D: HÀM PHÂN THỨC PHẢI dùng `np.linspace(-20, 20, 5000)` + mask `np.nan` + `connectgaps=False`
-- 🔥 2D: TIỆM CẬN PHẢI DÙNG `fig.add_shape` (KHÔNG dùng Scatter)
-- 🔥 2D: Tiệm cận đứng dùng `yref="paper"`, ngang dùng `xref="paper"`, xiên dùng x ±1000
-- 2D: Nhãn tiệm cận format: bỏ .0, bỏ 1 trước x, gộp dấu (ví dụ "y = x - 4.1")
-- 2D: MỌI NHÃN ĐIỂM PHẢI CÓ bgcolor trắng + borderwidth + borderpad
-- KHÔNG gọi fig.show(), KHÔNG savefig"""
+- Chọn ĐÚNG 1 template phù hợp với yêu cầu
+- KHÔNG gọi fig.show(), KHÔNG savefig
+- CHỈ dùng: plotly.graph_objects, numpy, math
+- 2D: PHẢI có đầy đủ mũi tên trục, nhãn O/x/y, đường cong, điểm đặc biệt, tên công thức
+- 3D: PHẢI có nét liền cho cạnh nhìn thấy, nét đứt cho cạnh khuất, mặt bán trong suốt
+- MỌI nhãn điểm PHẢI CÓ bgcolor='rgba(255,255,255,0.9)' + borderpad=4"""
 
     return template.replace("__LAB_REQUEST__", lab_request).replace("__SUBJECT__", subject).replace("__GRADE__", grade)
 
