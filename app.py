@@ -351,8 +351,8 @@ QUY TẮC BẮT BUỘC:
 1. TOÀN BỘ nội dung bằng TIẾNG VIỆT, không suy luận nội tâm, không bản nháp.
 2. LaTeX đặt trong cặp dấu đô la cho mọi công thức (ví dụ: $v = v_0 + at$, $H_2SO_4$, $\\vec{AB} = (x, y, z)$).
 3. KHÔNG DÙNG DẤU #.
-4. Code Python vẽ đồ thị PHẢI ngắn gọn, tối ưu, không viết dư thừa.
-5. KHÔNG set lại font, dpi, figsize (hệ thống đã cấu hình sẵn).
+4. Code Python vẽ đồ thị PHẢI ngắn gọn, tối ưu.
+5. KHÔNG set lại font, dpi, figsize.
 
 CẤU TRÚC ĐẦU RA BẮT BUỘC:
 
@@ -368,114 +368,113 @@ CẤU TRÚC ĐẦU RA BẮT BUỘC:
 4. MÃ VẼ ĐỒ THỊ (nếu không cần, ghi rõ "Không cần vẽ đồ thị")
 
 QUY TẮC CHỌN LOẠI ĐỒ THỊ:
-- 2D (matplotlib) → thẻ <PLOT_2D>...</PLOT_2D>
-- 3D (plotly) → thẻ <PLOT_3D>...</PLOT_3D>
+- 2D hàm số → thẻ <PLOT_2D>...</PLOT_2D> (DÙNG PLOTLY)
+- 3D hình học → thẻ <PLOT_3D>...</PLOT_3D> (DÙNG PLOTLY)
 
-=== STYLE 2D CHUẨN SGK VIỆT NAM (BẮT BUỘC) ===
-- Trục Ox ngang, Oy dọc, giao tại O; đầu trục có MŨI TÊN; KHÔNG khung viền
-- LƯỚI Ô VUÔNG mảnh xám nhạt (dùng ax.set_xticks/set_yticks với np.arange bước đều)
-- Nhãn "O", "x", "y" đúng vị trí; vạch chia đơn vị rõ ràng
-- Đường cong xanh đậm #1f4e9c, nét liền, linewidth 2
-- Tiêu đề dưới đồ thị dạng "Hình N. Mô tả"
+=== QUY TẮC KHAI BÁO HỆ SỐ (BẮT BUỘC VỚI 2D HÀM ĐA THỨC) ===
+Với hàm số y = ax² + bx + c (hoặc bậc 3, bậc 4):
+- Khai báo hệ số ở ĐẦU CODE (TRƯỚC cả import), MỖI HỆ SỐ MỘT DÒNG RIÊNG
+- Định dạng CHÍNH XÁC: `a = 1` (có khoảng trắng quanh dấu =)
+- Dùng chữ a, b, c, d, e
 
-=== ĐIỂM ĐẶC BIỆT PHẢI ĐÁNH DẤU (QUAN TRỌNG) ===
-Với hàm số y = f(x), BẮT BUỘC đánh dấu ĐẦY ĐỦ 3 loại điểm sau (nếu tồn tại):
+Ví dụ ĐÚNG:
+a = 1
+b = -4
+c = 3
+import plotly.graph_objects as go
+import numpy as np
+...
+y = a*x**2 + b*x + c
 
-a) ĐIỂM CỰC TRỊ (đỉnh parabol, cực đại, cực tiểu):
-   - Chấm tròn ĐỎ (#d62728), size 8
-   - Nét đứt ĐỎ từ điểm xuống trục Ox và sang trục Oy
-   - Ghi tọa độ "(x; y)" màu đỏ, in đậm
-   - Với parabol y = ax² + bx + c: đỉnh I(-b/2a; -Δ/4a)
-   - Với hàm bậc 3, bậc 4: tìm nghiệm của f'(x) = 0
+Ví dụ SAI: `coeffs = [1, -4, 3]` HOẶC `a, b, c = 1, -4, 3` HOẶC `a=1`
 
-b) GIAO ĐIỂM VỚI TRỤC TUNG Oy (x = 0):
-   - Tính y₀ = f(0)
-   - Chấm tròn XANH LÁ ĐẬM (#2ca02c), size 8
-   - Nét đứt XANH từ điểm sang trục Oy
-   - Ghi tọa độ "(0; y₀)" màu xanh, in đậm
-   - LUÔN LUÔN có điểm này (trừ hàm không xác định tại x=0)
+Nếu hàm không có hệ số (y = sin(x), y = ln(x)) → KHÔNG khai báo biến hệ số.
 
-c) GIAO ĐIỂM VỚI TRỤC HOÀNH Ox (y = 0):
-   - Giải f(x) = 0 để tìm nghiệm thực
-   - Với đa thức bậc ≤ 4: dùng np.roots([hệ số]) rồi lọc nghiệm thực
-   - Với hàm khác: dùng np.linspace + đổi dấu để detect nghiệm gần đúng
-   - Mỗi nghiệm x₀: CHẤM TRÒN XANH LÁ ĐẬM (#2ca02c), size 8
-   - Ghi tọa độ "(x₀; 0)" màu xanh, in đậm (làm tròn 2 chữ số thập phân nếu số vô tỉ)
-   - Nếu vô nghiệm: ghi chú trong phần mô tả text "Đồ thị không cắt trục Ox"
+=== STYLE 2D PLOTLY (BẮT BUỘC) ===
+Đồ thị 2D dùng Plotly với style hiện đại, tương tác được:
+- Trục Ox, Oy có MŨI TÊN (dùng annotation)
+- Lưới mịn, màu xám nhạt (#e0e0e0)
+- Đường cong xanh đậm #1f4e9c, width 3
+- Nền trắng (plot_bgcolor='white')
+- Nhãn O, x, y rõ ràng
+- Điểm đặc biệt: chấm tròn màu + nhãn tọa độ
+- Tiêu đề trên cùng, căn giữa
 
-=== MẪU 2D HOÀN CHỈNH (tuân theo đúng cấu trúc này) ===
+=== MẪU 2D PLOTLY CHUẨN ===
 <PLOT_2D>
-import matplotlib.pyplot as plt
+a = 1
+b = -4
+c = 3
+import plotly.graph_objects as go
 import numpy as np
 
-fig, ax = plt.subplots(figsize=(8, 5.5))
+fig = go.Figure()
 
-# Hàm số
-coeffs = [1, -2, -1]  # y = x² - 2x - 1
-x = np.linspace(-2, 4, 400)
-y = coeffs[0]*x**2 + coeffs[1]*x + coeffs[2]
-ax.plot(x, y, color='#1f4e9c', linewidth=2)
+x = np.linspace(-1.5, 5.5, 400)
+y = a*x**2 + b*x + c
+fig.add_trace(go.Scatter(x=x, y=y, mode='lines',
+    line=dict(color='#1f4e9c', width=3), showlegend=False, hoverinfo='skip'))
 
-# Trục tọa độ kiểu SGK
-ax.spines['left'].set_position('zero')
-ax.spines['bottom'].set_position('zero')
-ax.spines['right'].set_color('none')
-ax.spines['top'].set_color('none')
-ax.spines['left'].set_linewidth(1.2)
-ax.spines['bottom'].set_linewidth(1.2)
-ax.plot(1, 0, ">k", transform=ax.get_yaxis_transform(), clip_on=False, markersize=8)
-ax.plot(0, 1, "^k", transform=ax.get_xaxis_transform(), clip_on=False, markersize=8)
-ax.text(-0.15, -0.3, 'O', fontsize=14, fontweight='bold')
-ax.text(4.15, -0.3, 'x', fontsize=14, fontweight='bold', style='italic')
-ax.text(-0.3, 5.5, 'y', fontsize=14, fontweight='bold', style='italic')
+# Điểm cực trị
+if a != 0:
+    vx = -b / (2*a)
+    vy = a*vx**2 + b*vx + c
+    fig.add_trace(go.Scatter(x=[vx], y=[vy], mode='markers',
+        marker=dict(color='#d62728', size=12, line=dict(color='white', width=1.5)),
+        showlegend=False, hovertemplate='Đỉnh I(' + str(round(vx,2)) + '; ' + str(round(vy,2)) + ')<extra></extra>'))
+    fig.add_annotation(x=vx, y=vy, text="I(" + str(round(vx,2)) + "; " + str(round(vy,2)) + ")",
+        showarrow=False, xshift=0, yshift=-25, font=dict(color='#d62728', size=12))
 
-# Lưới ô vuông
-ax.set_xticks(np.arange(-3, 6, 1))
-ax.set_yticks(np.arange(-4, 7, 1))
-ax.grid(True, which='both', color='gray', linestyle='-', linewidth=0.5, alpha=0.4)
-ax.set_axisbelow(True)
+# Giao Oy
+fig.add_trace(go.Scatter(x=[0], y=[c], mode='markers',
+    marker=dict(color='#2ca02c', size=10, line=dict(color='white', width=1.5)),
+    showlegend=False, hovertemplate='(0; ' + str(round(c,2)) + ')<extra></extra>'))
+fig.add_annotation(x=0, y=c, text="(0; " + str(round(c,2)) + ")",
+    showarrow=False, xshift=35, yshift=0, font=dict(color='#2ca02c', size=12))
 
-# === (a) ĐIỂM CỰC TRỊ ===
-vx = -coeffs[1] / (2*coeffs[0])
-vy = coeffs[0]*vx**2 + coeffs[1]*vx + coeffs[2]
-ax.plot([vx, vx], [0, vy], color='#d62728', linestyle='--', linewidth=1.2)
-ax.plot([0, vx], [vy, vy], color='#d62728', linestyle='--', linewidth=1.2)
-ax.plot(vx, vy, 'o', color='#d62728', markersize=8, zorder=5)
-ax.text(vx + 0.15, vy - 0.4, "(" + str(round(vx,2)) + "; " + str(round(vy,2)) + ")",
-        fontsize=11, color='#d62728', fontweight='bold')
+# Giao Ox
+if a != 0:
+    roots = np.roots([a, b, c])
+    for r in roots:
+        if abs(r.imag) < 1e-6:
+            xr = r.real
+            fig.add_trace(go.Scatter(x=[xr], y=[0], mode='markers',
+                marker=dict(color='#2ca02c', size=10, line=dict(color='white', width=1.5)),
+                showlegend=False, hovertemplate='(' + str(round(xr,2)) + '; 0)<extra></extra>'))
+            fig.add_annotation(x=xr, y=0, text="(" + str(round(xr,2)) + "; 0)",
+                showarrow=False, xshift=0, yshift=20, font=dict(color='#2ca02c', size=11))
 
-# === (b) GIAO ĐIỂM VỚI Oy (x=0) ===
-y_at_0 = coeffs[2]
-ax.plot(0, y_at_0, 'o', color='#2ca02c', markersize=8, zorder=5)
-ax.text(0.15, y_at_0 + 0.2, "(0; " + str(round(y_at_0,2)) + ")",
-        fontsize=11, color='#2ca02c', fontweight='bold')
+# Mũi tên trục
+fig.add_annotation(x=6.2, y=0, ax=5.7, ay=0, xref="x", yref="y",
+    axref="x", ayref="y", showarrow=True, arrowhead=3, arrowsize=1.8,
+    arrowwidth=2.5, arrowcolor='#333')
+fig.add_annotation(x=0, y=10, ax=0, ay=9.5, xref="x", yref="y",
+    axref="x", ayref="y", showarrow=True, arrowhead=3, arrowsize=1.8,
+    arrowwidth=2.5, arrowcolor='#333')
 
-# === (c) GIAO ĐIỂM VỚI Ox (y=0) ===
-roots = np.roots(coeffs)
-real_roots = [r.real for r in roots if abs(r.imag) < 1e-6]
-for xr in real_roots:
-    ax.plot(xr, 0, 'o', color='#2ca02c', markersize=8, zorder=5)
-    ax.text(xr + 0.1, 0.3, "(" + str(round(xr,2)) + "; 0)",
-            fontsize=11, color='#2ca02c', fontweight='bold')
+# Nhãn O, x, y
+fig.add_annotation(x=-0.35, y=-0.6, text='O', showarrow=False, font=dict(size=15, color='#333'))
+fig.add_annotation(x=6.4, y=-0.6, text='x', showarrow=False, font=dict(size=15, color='#333'))
+fig.add_annotation(x=-0.35, y=10.2, text='y', showarrow=False, font=dict(size=15, color='#333'))
 
-ax.set_xlim(-2.5, 4.5)
-ax.set_ylim(-3, 6)
-plt.figtext(0.5, 0.02, 'Hình 1. Đồ thị hàm số y = x² - 2x - 1',
-            ha='center', fontsize=11, style='italic')
-plt.tight_layout(rect=[0, 0.05, 1, 1])
+fig.update_layout(
+    title=dict(text='Đồ thị hàm số bậc hai y = ax² + bx + c', x=0.5,
+        font=dict(size=14, color='#333')),
+    xaxis=dict(range=[-1.8, 6.8], zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
+        showgrid=True, gridcolor='#e0e0e0', gridwidth=0.5,
+        showline=False, ticks='outside', tickfont=dict(size=11)),
+    yaxis=dict(range=[-1, 10], zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
+        showgrid=True, gridcolor='#e0e0e0', gridwidth=0.5,
+        showline=False, ticks='outside', tickfont=dict(size=11)),
+    plot_bgcolor='white',
+    height=520,
+    margin=dict(l=20, r=20, t=50, b=30)
+)
 </PLOT_2D>
 
-Lưu ý: KHÔNG cần gọi fig.savefig() — hệ thống tự lưu.
+Lưu ý: KHÔNG gọi fig.show(). KHÔNG savefig. Hệ thống tự xử lý.
 
-=== STYLE 3D (BẮT BUỘC) ===
-a) Cạnh nhìn thấy: line=dict(color='#1f77b4', width=6)
-b) Cạnh khuất: line=dict(color='#1f77b4', width=4, dash='dash')
-c) Mặt phẳng: go.Mesh3d với opacity=0.3, màu nhạt (lightblue, lightgray)
-d) Đỉnh: Scatter3d mode='text', font size 14, màu đen
-e) Trục Oxyz: 3 mũi tên Scatter3d mode='lines', đỏ (x), xanh lá (y), xanh dương (z)
-f) Layout BẮT BUỘC có: height=520, margin=dict(l=0,r=0,t=40,b=0), scene.aspectmode='cube'
-
-=== MẪU 3D — HÌNH CHÓP ===
+=== MẪU 3D PLOTLY ===
 <PLOT_3D>
 import plotly.graph_objects as go
 
@@ -504,7 +503,7 @@ fig.update_layout(
     margin=dict(l=0, r=0, t=40, b=0), height=520)
 </PLOT_3D>
 
-=== MẪU 3D — TRỤC Oxyz ===
+=== MẪU TRỤC Oxyz ===
 <PLOT_3D>
 import plotly.graph_objects as go
 
@@ -525,10 +524,11 @@ fig.update_layout(
 </PLOT_3D>
 
 LƯU Ý CUỐI:
-- 2D: dùng matplotlib, KHÔNG cần gọi savefig (hệ thống tự lưu)
-- 2D: BẮT BUỘC đánh dấu ĐỦ 3 loại điểm: cực trị (đỏ), giao Oy (xanh), giao Ox (xanh)
-- 3D: dùng plotly, KHÔNG gọi fig.show(), KHÔNG set width (để tự co dãn)
-- CHỈ dùng: matplotlib.pyplot, numpy, math, plotly.graph_objects, plotly.express
+- 2D: dùng PLOTLY (KHÔNG dùng matplotlib)
+- 2D: khai báo a, b, c trên dòng riêng TRƯỚC import
+- 2D: KHÔNG dùng list coeffs
+- KHÔNG gọi fig.show()
+- CHỈ dùng: plotly.graph_objects, numpy, math
 - Không đọc file ngoài"""
 
     return template.replace("__LAB_REQUEST__", lab_request).replace("__SUBJECT__", subject).replace("__GRADE__", grade)
@@ -994,7 +994,6 @@ def render_main_interface(grade, subject, api_key_to_use):
                     if lab_response:
                         str_app.session_state["lab_result"] = lab_response
                         str_app.session_state["lab_request_name"] = lab_request
-                        # Tăng version → reset sliders cũ khi có lab mới
                         str_app.session_state["lab_version"] = str_app.session_state.get("lab_version", 0) + 1
                     else:
                         str_app.error(f"Không thể kết nối AI. Lỗi chi tiết: `{lab_error}`")
@@ -1033,49 +1032,102 @@ def render_main_interface(grade, subject, api_key_to_use):
 
             if plot_code:
                 try:
-                    # ========== XỬ LÝ THANH TRƯỢT HỆ SỐ (chỉ với 2D) ==========
+                    # ========== 2D CÓ HỆ SỐ → LAYOUT 2 CỘT ==========
                     if is_2d:
                         coeffs = extract_coefficients(plot_code)
+                    else:
+                        coeffs = {}
 
-                        if coeffs and 1 <= len(coeffs) <= 5:
-                            str_app.markdown("#### 🎛️ Điều chỉnh hệ số — kéo thanh trượt để xem đồ thị thay đổi")
+                    if coeffs and 1 <= len(coeffs) <= 5:
+                        col_left, col_right = str_app.columns([1, 2.5])
+
+                        with col_left:
+                            # ===== TIÊU ĐỀ =====
+                            coeff_names = ", ".join(coeffs.keys())
+                            str_app.markdown(
+                                f"<h4 style='color:#4a90e2; margin-bottom: 20px;'>⚙️ Hệ số hàm số (theo {coeff_names}):</h4>",
+                                unsafe_allow_html=True
+                            )
 
                             lab_id = str_app.session_state.get("lab_request_name", "lab")
                             lab_version = str_app.session_state.get("lab_version", 0)
 
                             user_coeffs = {}
-                            cols = str_app.columns(min(len(coeffs), 3))
-
-                            for idx, (name, init_val) in enumerate(coeffs.items()):
+                            for name, init_val in coeffs.items():
                                 slider_key = f"coeff_v{lab_version}_{lab_id}_{name}"
-
-                                # Xác định khoảng slider hợp lý
                                 min_v = min(-10.0, init_val - 5.0)
                                 max_v = max(10.0, init_val + 5.0)
 
-                                with cols[idx % min(len(coeffs), 3)]:
-                                    user_coeffs[name] = str_app.slider(
-                                        f"Hệ số {name}",
-                                        min_value=float(min_v),
-                                        max_value=float(max_v),
-                                        value=float(init_val),
-                                        step=0.1,
-                                        key=slider_key
-                                    )
+                                str_app.markdown(f"**Hệ số {name}:**")
+                                user_coeffs[name] = str_app.slider(
+                                    f"Chọn {name}",
+                                    min_value=float(min_v),
+                                    max_value=float(max_v),
+                                    value=float(init_val),
+                                    step=0.1,
+                                    key=slider_key,
+                                    label_visibility="collapsed"
+                                )
 
-                            # Thay giá trị mới vào code
+                            # ===== CÔNG THỨC ĐỘNG =====
+                            formula_parts = []
+                            if "a" in user_coeffs:
+                                formula_parts.append(f"{user_coeffs['a']:.1f}x²")
+                            if "b" in user_coeffs:
+                                formula_parts.append(f"({user_coeffs['b']:.1f})x")
+                            if "c" in user_coeffs:
+                                formula_parts.append(f"({user_coeffs['c']:.1f})")
+
+                            if formula_parts:
+                                formula_text = "y = " + " + ".join(formula_parts).replace("+ (-", "- (").replace("+ (-", "- (")
+                                str_app.markdown(
+                                    f"<div style='background: linear-gradient(135deg, #4a90e2, #357abd); color: white; "
+                                    f"padding: 14px 18px; border-radius: 10px; font-size: 1.05rem; "
+                                    f"font-weight: 600; margin: 20px 0; text-align: center;'>"
+                                    f"<i>{formula_text}</i></div>",
+                                    unsafe_allow_html=True
+                                )
+
+                            # ===== ĐỈNH + TRỤC ĐỐI XỨNG (nếu có a, b) =====
+                            if "a" in user_coeffs and "b" in user_coeffs and user_coeffs["a"] != 0:
+                                a_v = user_coeffs["a"]
+                                b_v = user_coeffs["b"]
+                                c_v = user_coeffs.get("c", 0)
+
+                                vx = -b_v / (2 * a_v)
+                                vy = a_v * vx ** 2 + b_v * vx + c_v
+
+                                str_app.markdown(
+                                    f"<p style='color: #d62728; font-weight: 600; margin: 10px 0;'>"
+                                    f"📐 <b>Đỉnh:</b> I({vx:.2f}; {vy:.2f})</p>",
+                                    unsafe_allow_html=True
+                                )
+                                str_app.markdown(
+                                    f"<p style='color: #d62728; font-weight: 600; margin: 10px 0;'>"
+                                    f"📏 <b>Trục đối xứng:</b> x = {vx:.2f}</p>",
+                                    unsafe_allow_html=True
+                                )
+
+                        with col_right:
                             plot_code = substitute_coefficients(plot_code, user_coeffs)
-
-                    # ========== CHẠY CODE VẼ ==========
-                    kind, data = run_plot_code(plot_code)
-                    if kind == "png" and data:
-                        str_app.markdown(plot_label)
-                        str_app.image(data, use_container_width=True)
-                    elif kind == "plotly" and data is not None:
-                        str_app.markdown(plot_label)
-                        str_app.plotly_chart(data, use_container_width=True)
+                            kind, data = run_plot_code(plot_code)
+                            if kind == "plotly" and data is not None:
+                                str_app.plotly_chart(data, use_container_width=True)
+                            elif kind == "png" and data:
+                                str_app.image(data, use_container_width=True)
+                            else:
+                                str_app.warning("AI đã sinh code vẽ nhưng không tạo được đồ thị.")
                     else:
-                        str_app.warning("AI đã sinh code vẽ nhưng không tạo được đồ thị.")
+                        # ========== KHÔNG CÓ HỆ SỐ → RENDER BÌNH THƯỜNG ==========
+                        kind, data = run_plot_code(plot_code)
+                        if kind == "png" and data:
+                            str_app.markdown(plot_label)
+                            str_app.image(data, use_container_width=True)
+                        elif kind == "plotly" and data is not None:
+                            str_app.markdown(plot_label)
+                            str_app.plotly_chart(data, use_container_width=True)
+                        else:
+                            str_app.warning("AI đã sinh code vẽ nhưng không tạo được đồ thị.")
                 except Exception as plot_err:
                     str_app.warning(f"Không vẽ được đồ thị: `{plot_err}`")
 
@@ -1195,6 +1247,7 @@ Cuối bài chèn khối: <DIAGNOSTIC>{{"topic":"...","error_type":"...","evalua
                             str_app.session_state.socratic_messages.append({"role": "assistant", "content": rep_clean})
                     except Exception as e:
                         str_app.error(f"Lỗi phản hồi: {e}")
+
 # ============================================================
 # 8. KHỞI CHẠY ỨNG DỤNG CHÍNH
 # ============================================================
