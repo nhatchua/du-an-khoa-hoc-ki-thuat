@@ -534,6 +534,47 @@ LƯU Ý CUỐI:
     return template.replace("__LAB_REQUEST__", lab_request).replace("__SUBJECT__", subject).replace("__GRADE__", grade)
 
 # ============================================================
+# 4B2. TRÍCH XUẤT HỆ SỐ TỪ CODE AI SINH
+# ============================================================
+def extract_coefficients(code_str: str) -> dict:
+    """
+    Trích xuất các hệ số dạng 'a = 1.5' ở đầu code.
+    Chỉ lấy dòng khớp chính xác: tên_biến = giá_trị_số (có thể có comment cuối).
+    Trả về dict {tên: giá_trị}.
+    """
+    coeffs = {}
+    pattern = re.compile(
+        r"^([a-zA-Z_][a-zA-Z0-9_]*)\s*=\s*(-?\d+(?:\.\d+)?)\s*(?:#.*)?$"
+    )
+    for line in code_str.split("\n"):
+        m = pattern.match(line.strip())
+        if m:
+            name = m.group(1)
+            # Bỏ qua các biến đặc biệt không phải hệ số
+            if name in ("dpi", "height", "width", "size", "n"):
+                continue
+            try:
+                coeffs[name] = float(m.group(2))
+            except ValueError:
+                continue
+    return coeffs
+
+# ============================================================
+# 4B3. THAY THẾ HỆ SỐ TRONG CODE
+# ============================================================
+def substitute_coefficients(code_str: str, coeff_values: dict) -> str:
+    """Thay giá trị hệ số trong code bằng giá trị mới từ slider."""
+    for name, value in coeff_values.items():
+        # Format gọn: bỏ .0 nếu là số nguyên
+        val_str = str(int(value)) if value == int(value) else str(round(value, 4))
+        pattern = re.compile(
+            rf"^(\s*{re.escape(name)}\s*=\s*)(-?\d+(?:\.\d+)?)(\s*(?:#.*)?)$",
+            re.MULTILINE
+        )
+        code_str = pattern.sub(rf"\g<1>{val_str}\g<3>", code_str)
+    return code_str
+
+# ============================================================
 # 4C. CHẠY CODE VẼ ĐỒ THỊ AN TOÀN
 # ============================================================
 def run_plot_code(code_str: str):
