@@ -385,20 +385,22 @@ import numpy as np
 
 Ví dụ SAI: `coeffs = [1, -4, 3]` HOẶC `a, b, c = 1, -4, 3` HOẶC `a=1`
 
-=== ⚠️ QUY TẮC QUAN TRỌNG VỀ RANGE TRỤC (BẮT BUỘC) ===
-- TUYỆT ĐỐI KHÔNG set `range=[...]` cứng cho yaxis (để Plotly tự auto-scale theo giá trị a, b, c)
-- CHỈ set range cho xaxis nếu cần giới hạn vùng vẽ (ví dụ: x nhỏ hơn 5.5)
-- KHÔNG hard-code bất kỳ giá trị nào phụ thuộc vào a, b, c trong annotation hoặc text
+=== ⚠️ QUY TẮC CỰC KỲ QUAN TRỌNG VỀ RANGE VÀ MŨI TÊN TRỤC ===
+1. MŨI TÊN TRỤC: KHÔNG dùng `axref="paper"` hoặc `ayref="paper"` cho annotation mũi tên (Plotly KHÔNG cho phép).
+   → Mũi tên phải dùng DATA COORDS hoàn toàn: `xref="x", yref="y", axref="x", ayref="y"`.
 
-=== ⚠️ QUY TẮC VỀ TIỆM CẬN (NẾU HÀM CÓ TIỆM CẬN) ===
-Nếu hàm có tiệm cận (y = a/x, y = (ax+b)/(cx+d), ...):
-- PHẢI tính tiệm cận từ biến a, b, c (KHÔNG hard-code số)
-- Ví dụ hàm y = (ax+b)/(cx+d): tiệm cận đứng x = -d/c, tiệm cận ngang y = a/c
-- Vẽ tiệm cận bằng go.Scatter với mode='lines', line=dict(dash='dash', color='#999', width=1.5)
-- Cập nhật annotation nhãn tiệm cận theo giá trị tính được
+2. RANGE TRỤC: PHẢI set range cho CẢ xaxis và yaxis (không để auto) để tính trước vị trí mũi tên.
+   → xaxis range CỐ ĐỊNH: [-1.8, 6.8]
+   → yaxis range TÍNH TỪ dữ liệu y: y_range = [min(y_data) - pad, max(y_data) + pad]
+   → pad = (max - min) * 0.1 + 1
+
+3. MŨI TÊN PHẢI ĐẶT Ở CUỐI TRỤC (dùng giá trị từ range):
+   → Mũi tên Ox: x = x_range_max, y = 0 (đuôi: ax = x_range_max - 0.5)
+   → Mũi tên Oy: x = 0, y = y_range_max (đuôi: ay = y_range_max * 0.9)
+
+4. Nhãn O, x, y đặt bằng data coords tại (0, 0), (x_range_max, 0), (0, y_range_max).
 
 === STYLE 2D PLOTLY (BẮT BUỘC) ===
-- Trục Ox, Oy có MŨI TÊN (dùng annotation với paper coords)
 - Lưới mịn màu #e0e0e0
 - Đường cong xanh đậm #1f4e9c, width 3
 - Nền trắng (plot_bgcolor='white')
@@ -454,37 +456,44 @@ if a != 0:
                 text="(" + str(round(xr,2)) + "; 0)",
                 showarrow=False, yshift=20, font=dict(color='#2ca02c', size=11))
 
-# MŨI TÊN TRỤC (dùng paper coords để luôn ở đúng vị trí)
-# Mũi tên Ox - ở y=0 data, đuôi ở paper 0.94, đầu ở paper 0.99
+# TÍNH RANGE ĐỘNG TỪ DỮ LIỆU
+x_range = [-1.8, 6.8]
+y_min_d = float(np.min(y))
+y_max_d = float(np.max(y))
+y_pad = (y_max_d - y_min_d) * 0.1 + 1
+y_range = [y_min_d - y_pad, y_max_d + y_pad]
+
+# MŨI TÊN TRỤC (data coords hoàn toàn)
 fig.add_annotation(
-    x=1.0, y=0, xref="paper", yref="y",
-    ax=0.94, ay=0, axref="paper", ayref="y",
+    x=x_range[1], y=0,
+    ax=x_range[1] - 0.5, ay=0,
+    xref="x", yref="y", axref="x", ayref="y",
     showarrow=True, arrowhead=3, arrowsize=1.8,
     arrowwidth=2.5, arrowcolor='#333'
 )
-# Mũi tên Oy - ở x=0 data, đuôi ở paper y 0.94, đầu ở paper y 0.99
 fig.add_annotation(
-    x=0, y=1.0, xref="x", yref="paper",
-    ax=0, ay=0.94, axref="x", ayref="paper",
+    x=0, y=y_range[1],
+    ax=0, ay=y_range[1] * 0.92,
+    xref="x", yref="y", axref="x", ayref="y",
     showarrow=True, arrowhead=3, arrowsize=1.8,
     arrowwidth=2.5, arrowcolor='#333'
 )
 
 # Nhãn O, x, y
-fig.add_annotation(x=0, y=0, xref="x", yref="y", text='O',
-    showarrow=False, xshift=-14, yshift=-14, font=dict(size=15, color='#333'))
-fig.add_annotation(x=1.0, y=0, xref="paper", yref="y", text='x',
-    showarrow=False, xshift=8, yshift=-18, font=dict(size=15, color='#333'))
-fig.add_annotation(x=0, y=1.0, xref="x", yref="paper", text='y',
-    showarrow=False, xshift=-18, yshift=8, font=dict(size=15, color='#333'))
+fig.add_annotation(x=0, y=0, text='O', showarrow=False,
+    xshift=-14, yshift=-14, font=dict(size=15, color='#333'))
+fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
+    xshift=-6, yshift=-18, font=dict(size=15, color='#333'))
+fig.add_annotation(x=0, y=y_range[1], text='y', showarrow=False,
+    xshift=-18, yshift=-8, font=dict(size=15, color='#333'))
 
 fig.update_layout(
     title=dict(text='Đồ thị hàm số bậc hai y = ax² + bx + c', x=0.5,
         font=dict(size=14, color='#333')),
-    xaxis=dict(range=[-1.8, 6.8], zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
+    xaxis=dict(range=x_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
         showgrid=True, gridcolor='#e0e0e0', gridwidth=0.5,
         showline=False, ticks='outside', tickfont=dict(size=11)),
-    yaxis=dict(zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
+    yaxis=dict(range=y_range, zeroline=True, zerolinewidth=1.5, zerolinecolor='#333',
         showgrid=True, gridcolor='#e0e0e0', gridwidth=0.5,
         showline=False, ticks='outside', tickfont=dict(size=11)),
     plot_bgcolor='white',
@@ -493,7 +502,7 @@ fig.update_layout(
 )
 </PLOT_2D>
 
-Lưu ý: KHÔNG set range cho yaxis. KHÔNG gọi fig.show().
+Lưu ý: KHÔNG dùng axref="paper". KHÔNG gọi fig.show().
 
 === MẪU 3D PLOTLY ===
 <PLOT_3D>
@@ -525,8 +534,10 @@ fig.update_layout(
 </PLOT_3D>
 
 LƯU Ý CUỐI:
-- 2D: dùng PLOTLY, KHÔNG set range cho yaxis
+- 2D: dùng PLOTLY, KHÔNG dùng axref="paper" hay ayref="paper"
 - 2D: khai báo a, b, c trên dòng riêng TRƯỚC import
+- 2D: PHẢI set range cả 2 trục, tính y_range từ dữ liệu y
+- 2D: mũi tên trục đặt ở data coords cuối trục
 - Tiệm cận (nếu có) phải tính từ biến a, b, c
 - KHÔNG gọi fig.show(), KHÔNG savefig
 - CHỈ dùng: plotly.graph_objects, numpy, math"""
