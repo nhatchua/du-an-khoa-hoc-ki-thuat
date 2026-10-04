@@ -1970,15 +1970,19 @@ def render_main_interface(grade, subject, api_key_to_use):
         # === PHÂN LOẠI HÀM ===
         is_fractional = ("d" in coeffs_dict and "e" in coeffs_dict and "/" in code_str)
 
-        is_quadratic = (not is_fractional
+        # Kiểm tra hàm lượng giác TRƯỚC để loại trừ khỏi nhóm đa thức
+        is_trig = ("sin" in code_lower or "cos" in code_lower
+                   or "tan" in code_lower or "cot" in code_lower)
+
+        is_quadratic = (not is_fractional and not is_trig
                         and "a" in coeffs_dict and "b" in coeffs_dict and "c" in coeffs_dict
                         and "d" not in coeffs_dict and "e" not in coeffs_dict)
 
-        is_cubic = (not is_fractional
+        is_cubic = (not is_fractional and not is_trig
                     and "a" in coeffs_dict and "b" in coeffs_dict and "c" in coeffs_dict
                     and "d" in coeffs_dict and "e" not in coeffs_dict)
 
-        is_quartic = (not is_fractional
+        is_quartic = (not is_fractional and not is_trig
                       and "a" in coeffs_dict and "b" in coeffs_dict and "c" in coeffs_dict
                       and "d" in coeffs_dict and "e" in coeffs_dict)
 
