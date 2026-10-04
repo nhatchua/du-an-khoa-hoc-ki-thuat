@@ -336,6 +336,7 @@ def _postprocess_figure(fig):
     - Bật grid nhạt 2 chiều
     - Ép đường trục Ox/Oy luôn hiện rõ (zeroline)
     - Đảm bảo range không bị đảo (min < max)
+    - Ép tỉ lệ trục 1:1 cho đồ thị hình học (tròn, elip, tam giác, vector)
     - Xóa annotation công thức góc phải (xref=paper VÀ yref=paper)
     - Annotation: nền trắng mờ + chữ đậm
     - Tự thêm mũi tên trục nếu thiếu
@@ -369,6 +370,21 @@ def _postprocess_figure(fig):
             if getattr(ax, "autorange", None) == "reversed":
                 ax.autorange = True
 
+        # ÉP TỈ LỆ TRỤC 1:1 nếu 2 trục có cùng khoảng (hình học: tròn, elip, tam giác, vector)
+        try:
+            xr = fig.layout.xaxis.range
+            yr = fig.layout.yaxis.range
+            if (xr and yr and len(xr) == 2 and len(yr) == 2
+                    and xr[0] is not None and xr[1] is not None
+                    and yr[0] is not None and yr[1] is not None):
+                x_span = abs(float(xr[1]) - float(xr[0]))
+                y_span = abs(float(yr[1]) - float(yr[0]))
+                if x_span > 0 and abs(x_span - y_span) / max(x_span, y_span) < 0.15:
+                    fig.layout.yaxis.scaleanchor = "x"
+                    fig.layout.yaxis.scaleratio = 1
+        except Exception:
+            pass
+
         # XÓA ANNOTATION CÔNG THỨC GÓC PHẢI (xref=paper VÀ yref=paper, không phải mũi tên)
         if fig.layout.annotations:
             fig.layout.annotations = tuple(
@@ -378,9 +394,10 @@ def _postprocess_figure(fig):
                         and not ann.showarrow)
             )
 
+        # LÀM ĐẬM NHÃN + NỀN CHO ANNOTATION CÒN LẠI
         if fig.layout.annotations:
             for ann in fig.layout.annotations:
-                # Làm đậm nhãn O, x, y
+                # Nhãn O, x, y
                 if ann.text in ("O", "x", "y") and not ann.showarrow:
                     if ann.font is None:
                         ann.font = dict(color="#333", size=15)
