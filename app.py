@@ -2381,7 +2381,7 @@ def render_main_interface(grade, subject, api_key_to_use):
 
                 clean_text = clean_ai_response(text_part)
                 render_lab_text_block(clean_text)
-                
+
                 plot_code = None
                 plot_label = ""
                 is_2d = False
@@ -2404,8 +2404,16 @@ def render_main_interface(grade, subject, api_key_to_use):
                         else:
                             coeffs = {}
 
-                        # Chỉ hiển thị sliders khi có từ 1-5 hệ số VÀ môn là Toán
-                        if coeffs and 1 <= len(coeffs) <= 5 and subject == "Toán học":
+                        # Kiểm tra trước: với giá trị AI sinh, công thức có xác định không?
+                        _is_invalid_formula = False
+                        if coeffs and subject == "Toán học":
+                            _pre_formula = _format_formula(coeffs, plot_code)
+                            _is_invalid_formula = "không xác định" in _pre_formula
+
+                        # Chỉ hiển thị sliders khi có từ 1-5 hệ số, môn Toán, VÀ công thức xác định
+                        if (coeffs and 1 <= len(coeffs) <= 5
+                                and subject == "Toán học"
+                                and not _is_invalid_formula):
                             col_left, col_right = str_app.columns([1, 2.5])
 
                             with col_left:
@@ -2468,7 +2476,7 @@ def render_main_interface(grade, subject, api_key_to_use):
                                 else:
                                     str_app.warning("AI đã sinh code vẽ nhưng không tạo được đồ thị.")
                         else:
-                            # Các môn khác: render bình thường, không sliders
+                            # Các môn khác HOẶC hàm không xác định: chỉ render đồ thị
                             kind, data = run_plot_code(plot_code)
                             if kind == "png" and data:
                                 str_app.markdown(plot_label)
