@@ -1158,7 +1158,6 @@ def render_main_interface(grade, subject, api_key_to_use):
         "📊 Thống Kê & Đánh Giá"
     ])
 
-    # ===== CONFIG KHÓA TƯƠNG TÁC KÉO CHO PLOTLY =====
     PLOTLY_CONFIG = {
         "scrollZoom": False,
         "displayModeBar": True,
@@ -1171,9 +1170,17 @@ def render_main_interface(grade, subject, api_key_to_use):
         "doubleClick": "reset",
     }
 
-    # ===== HÀM FORMAT CÔNG THỨC NỘI BỘ =====
+    # ===== KHỞI TẠO SESSION STATE MỘT LẦN =====
+    if "cached_lesson_result" not in str_app.session_state:
+        str_app.session_state.cached_lesson_result = None
+    if "lab_result" not in str_app.session_state:
+        str_app.session_state.lab_result = None
+    if "lab_version" not in str_app.session_state:
+        str_app.session_state.lab_version = 0
+    if "lab_request_name" not in str_app.session_state:
+        str_app.session_state.lab_request_name = ""
+
     def _fmt_num(v, suffix=""):
-        """Format số: bỏ .0 nếu nguyên, bỏ 1 nếu có suffix."""
         v_abs = abs(v)
         if v_abs == 1 and suffix:
             return suffix
@@ -1182,9 +1189,7 @@ def render_main_interface(grade, subject, api_key_to_use):
         return f"{v_abs:.1f}{suffix}"
 
     def _format_formula(coeffs_dict, code_str=""):
-        """Format công thức đẹp: bỏ ngoặc, gộp dấu, bỏ số 1 trước biến."""
         is_frac = ("d" in coeffs_dict and "e" in coeffs_dict and "/" in code_str)
-
         if is_frac:
             num_parts = []
             for name, suffix in [("a", "x²"), ("b", "x"), ("c", "")]:
@@ -1256,17 +1261,17 @@ def render_main_interface(grade, subject, api_key_to_use):
 
                     if response_text:
                         final_text = clean_ai_response(response_text)
-                        str_app.session_state["cached_lesson_result"] = final_text
-                        str_app.session_state["cached_model_used"] = model_used
-                        str_app.session_state["cached_lesson_name"] = lesson_input
+                        str_app.session_state.cached_lesson_result = final_text
+                        str_app.session_state.cached_model_used = model_used
+                        str_app.session_state.cached_lesson_name = lesson_input
                     else:
                         str_app.error(f"Không thể kết nối AI. Lỗi chi tiết: `{error}`")
 
-        if "cached_lesson_result" in str_app.session_state:
+        if str_app.session_state.cached_lesson_result:
             str_app.success(f"Đã hoàn thành tổng hợp kiến thức bài: **{str_app.session_state.get('cached_lesson_name', '')}**")
             str_app.caption(f"Model kết nối thành công: `{str_app.session_state.get('cached_model_used', '')}`")
             str_app.markdown("---")
-            render_interactive_quizzes(str_app.session_state["cached_lesson_result"], subject)
+            render_interactive_quizzes(str_app.session_state.cached_lesson_result, subject)
             trigger_mathjax()
 
         # ========== PHÒNG THÍ NGHIỆM ẢO ==========
@@ -1301,14 +1306,15 @@ def render_main_interface(grade, subject, api_key_to_use):
                     lab_response, _, lab_error = call_gemini(lab_prompt, api_key_to_use)
 
                     if lab_response:
-                        str_app.session_state["lab_result"] = lab_response
-                        str_app.session_state["lab_request_name"] = lab_request
-                        str_app.session_state["lab_version"] = str_app.session_state.get("lab_version", 0) + 1
+                        str_app.session_state.lab_result = lab_response
+                        str_app.session_state.lab_request_name = lab_request
+                        str_app.session_state.lab_version = str_app.session_state.lab_version + 1
                     else:
                         str_app.error(f"Không thể kết nối AI. Lỗi chi tiết: `{lab_error}`")
 
-        if "lab_result" in str_app.session_state:
-            raw_lab = str_app.session_state["lab_result"]
+        # ===== RENDER KẾT QUẢ LAB (dùng session_state, KHÔNG phụ thuộc btn_lab) =====
+        if str_app.session_state.lab_result:
+            raw_lab = str_app.session_state.lab_result
 
             plot_2d_match = re.search(r"<PLOT_2D>(.*?)</PLOT_2D>", raw_lab, re.DOTALL | re.IGNORECASE)
             plot_3d_match = re.search(r"<PLOT_3D>(.*?)</PLOT_3D>", raw_lab, re.DOTALL | re.IGNORECASE)
@@ -1341,7 +1347,6 @@ def render_main_interface(grade, subject, api_key_to_use):
 
             if plot_code:
                 try:
-                    # ========== 2D CÓ HỆ SỐ → LAYOUT 2 CỘT ==========
                     if is_2d:
                         coeffs = extract_coefficients(plot_code)
                     else:
@@ -1351,21 +1356,31 @@ def render_main_interface(grade, subject, api_key_to_use):
                         col_left, col_right = str_app.columns([1, 2.5])
 
                         with col_left:
-                            # ===== TIÊU ĐỀ =====
                             coeff_names = ", ".join(coeffs.keys())
                             str_app.markdown(
                                 f"<h4 style='color:#4a90e2; margin-bottom: 20px;'>⚙️ Hệ số hàm số (theo {coeff_names}):</h4>",
                                 unsafe_allow_html=True
                             )
 
-                            lab_id = str_app.session_state.get("lab_request_name", "lab")
-                            lab_version = str_app.session_state.get("lab_version", 0)
+                            lab_id_safe = re.sub(r"[^a-zA-Z0-9_]", "_", str_app.session_state.lab_request_name)[:30]
+                            lab_version = str_app.session_state.lab_version
 
                             user_coeffs = {}
                             for name, init_val in coeffs.items():
-                                slider_key = f"coeff_v{lab_version}_{lab_id}_{name}"
+                                slider_key = f"coeff_v{lab_version}_{lab_id_safe}_{name}"
+
+                                # Đảm bảo giá trị khởi tạo nằm trong range
                                 min_v = min(-10.0, init_val - 5.0)
                                 max_v = max(10.0, init_val + 5.0)
+
+                                # Nếu đã có giá trị trong session_state, dùng nó
+                                if slider_key in str_app.session_state:
+                                    current_val = str_app.session_state[slider_key]
+                                    if current_val < min_v:
+                                        min_v = current_val - 1.0
+                                    if current_val > max_v:
+                                        max_v = current_val + 1.0
+                                    init_val = current_val
 
                                 str_app.markdown(f"**Hệ số {name}:**")
                                 user_coeffs[name] = str_app.slider(
@@ -1378,7 +1393,7 @@ def render_main_interface(grade, subject, api_key_to_use):
                                     label_visibility="collapsed"
                                 )
 
-                            # ===== CÔNG THỨC ĐỘNG — FORMAT ĐẸP =====
+                            # Công thức động
                             formula_text = _format_formula(user_coeffs, plot_code)
                             str_app.markdown(
                                 f"<div style='background: linear-gradient(135deg, #4a90e2, #357abd); color: white; "
@@ -1388,7 +1403,7 @@ def render_main_interface(grade, subject, api_key_to_use):
                                 unsafe_allow_html=True
                             )
 
-                            # ===== ĐỈNH + TRỤC ĐỐI XỨNG (chỉ khi PARABOL) =====
+                            # Đỉnh + Trục đối xứng (chỉ khi parabol)
                             is_quadratic = (
                                 "a" in user_coeffs
                                 and "b" in user_coeffs
@@ -1416,8 +1431,8 @@ def render_main_interface(grade, subject, api_key_to_use):
                                 )
 
                         with col_right:
-                            plot_code = substitute_coefficients(plot_code, user_coeffs)
-                            kind, data = run_plot_code(plot_code)
+                            new_plot_code = substitute_coefficients(plot_code, user_coeffs)
+                            kind, data = run_plot_code(new_plot_code)
                             if kind == "plotly" and data is not None:
                                 str_app.plotly_chart(data, use_container_width=True, config=PLOTLY_CONFIG)
                             elif kind == "png" and data:
@@ -1425,7 +1440,6 @@ def render_main_interface(grade, subject, api_key_to_use):
                             else:
                                 str_app.warning("AI đã sinh code vẽ nhưng không tạo được đồ thị.")
                     else:
-                        # ========== KHÔNG CÓ HỆ SỐ → RENDER BÌNH THƯỜNG ==========
                         kind, data = run_plot_code(plot_code)
                         if kind == "png" and data:
                             str_app.markdown(plot_label)
