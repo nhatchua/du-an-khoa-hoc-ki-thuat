@@ -86,6 +86,41 @@ def clean_ai_response(text: str) -> str:
     result = re.sub(r'\n{3,}', '\n\n', result)
     return result
 
+def render_lab_text_block(text: str):
+    """
+    Render text Phòng Lab: tách heading riêng (KHÔNG dùng dấu #),
+    style bằng HTML, phần nội dung render markdown riêng để LaTeX + xuống dòng chuẩn.
+    """
+    if not text or not text.strip():
+        return
+
+    # Nhận diện heading: "1. ...", "2. ...", "I. ...", "II. ..."
+    heading_re = re.compile(r"^(?:\d{1,2}|[IVX]{1,4})\.\s+\S")
+
+    with str_app.container(border=True):
+        buffer = []
+
+        def flush():
+            if buffer:
+                block = "\n".join(buffer).strip()
+                if block:
+                    str_app.markdown(block)  # markdown thật → LaTeX + xuống dòng OK
+                buffer.clear()
+
+        for line in text.split("\n"):
+            s = line.strip()
+            # Heading = dòng ngắn, bắt đầu bằng "số." hoặc "I."
+            if s and len(s) < 100 and heading_re.match(s):
+                flush()
+                str_app.markdown(
+                    f"<div style='font-size:1.02rem; font-weight:700;"
+                    f"color:#1f4e9c; margin:14px 0 4px 0;'>{s}</div>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                buffer.append(line)
+        flush()
+
 def trigger_mathjax():
     import streamlit.components.v1 as components
     components.html("""
@@ -2229,8 +2264,8 @@ def render_main_interface(grade, subject, api_key_to_use):
                 text_part = re.sub(r"<PLOT>.*?</PLOT>", "", text_part, flags=re.DOTALL | re.IGNORECASE).strip()
 
                 clean_text = clean_ai_response(text_part)
-                str_app.markdown(f"<div class='content-box'>{clean_text}</div>", unsafe_allow_html=True)
-
+                render_lab_text_block(clean_text)
+                
                 plot_code = None
                 plot_label = ""
                 is_2d = False
