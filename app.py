@@ -2292,8 +2292,11 @@ def render_main_interface(grade, subject, api_key_to_use):
 
         # === HÀM PHÂN THỨC (ĐÃ THÊM CỰC TRỊ) ===
         if is_fractional:
-            a = coeffs_dict["a"]; b = coeffs_dict["b"]; c = coeffs_dict["c"]
-            d = coeffs_dict["d"]; e = coeffs_dict["e"]
+            a = coeffs_dict.get("a", 0)
+            b = coeffs_dict.get("b", 0)
+            c = coeffs_dict.get("c", 0)
+            d = coeffs_dict.get("d", 0)
+            e = coeffs_dict.get("e", 0)
             if d != 0:
                 # Tiệm cận đứng
                 x_tcd = -e / d
@@ -2608,7 +2611,12 @@ def render_main_interface(grade, subject, api_key_to_use):
                                     unsafe_allow_html=True
                                 )
 
-                                features = _analyze_features(user_coeffs, plot_code)
+                                features = []
+                                if func_info.get("degree_num", 2) == 2:
+                                    try:
+                                        features = _analyze_features(user_coeffs, plot_code)
+                                    except Exception:
+                                        features = []
                                 if features:
                                     str_app.markdown(
                                         "<div class='feature-title'>📋 Đặc trưng đồ thị:</div>",
