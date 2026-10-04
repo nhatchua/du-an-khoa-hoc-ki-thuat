@@ -348,12 +348,33 @@ def build_virtual_lab_prompt(lab_request: str, subject: str, grade: str) -> str:
 YÊU CẦU CỦA HỌC SINH: __LAB_REQUEST__
 
 QUY TẮC BẮT BUỘC:
-1. TOÀN BỘ nội dung bằng TIẾNG VIỆT, không suy luận nội tâm, không bản nháp.
+1. TOÀN BỘ nội dung bằng TIẾNG VIỆT.
 2. LaTeX đặt trong cặp dấu đô la cho mọi công thức.
 3. KHÔNG DÙNG DẤU #.
 4. Code Python vẽ đồ thị PHẢI ngắn gọn, tối ưu.
 
-CẤU TRÚC ĐẦU RA BẮT BUỘC:
+=== ⚠️ CẢNH BÁO QUAN TRỌNG VỀ PLOTLY (BẮT BUỘC ĐỌC) ===
+Plotly KHÁC matplotlib. Các lỗi thường gặp PHẢI TRÁNH:
+
+1. Font bold: DÙNG `weight='bold'` (KHÔNG dùng `bold=True`)
+   ĐÚNG: font=dict(size=14, color='#333', weight='bold')
+   SAI:  font=dict(size=14, color='#333', bold=True)
+
+2. Title: DÙNG `title=dict(text='...', font=dict(...))` (KHÔNG dùng `title='...', title_font=dict(...)`)
+   ĐÚNG: title=dict(text='Đồ thị', x=0.5, font=dict(size=14, weight='bold'))
+   SAI:  title='Đồ thị', title_font=dict(bold=True)
+
+3. Marker: DÙNG `marker=dict(size=12, color='#d62728')` (KHÔNG dùng `marker_size=12`)
+   ĐÚNG: marker=dict(size=12, color='#d62728', line=dict(color='white', width=1.5))
+   SAI:  marker_size=12, marker_color='#d62728'
+
+4. Line: DÙNG `line=dict(color='#1f4e9c', width=3)` (KHÔNG dùng `line_color`, `line_width`)
+
+5. Annotation: DÙNG `showarrow=False` (KHÔNG dùng `show_arrow=False`, `arrow=False`)
+
+6. KHÔNG dùng `axref="paper"` hoặc `ayref="paper"` cho mũi tên annotation.
+
+=== CẤU TRÚC ĐẦU RA BẮT BUỘC ===
 
 1. MÔ TẢ THÍ NGHIỆM / HIỆN TƯỢNG
 [Mô tả chi tiết.]
@@ -399,7 +420,7 @@ A) TÊN ĐỒ THỊ — Đặt ở GÓC DƯỚI PHẢI (vùng paper 0.98, 0.02):
        text="<công thức tổng quát>",
        showarrow=False,
        xanchor='right', yanchor='bottom',
-       font=dict(size=13, color='#1f4e9c', family='Arial'),
+       font=dict(size=13, color='#1f4e9c'),
        bgcolor='rgba(255,255,255,0.85)',
        bordercolor='#1f4e9c', borderwidth=1.5, borderpad=6
    )
@@ -408,40 +429,12 @@ A) TÊN ĐỒ THỊ — Đặt ở GÓC DƯỚI PHẢI (vùng paper 0.98, 0.02):
    - Hàm bậc 2: "y = ax² + bx + c"
    - Hàm bậc 3: "y = ax³ + bx² + cx + d"
    - Hàm phân thức: "y = (ax + b)/(cx + d)"
-   - Hàm mũ: "y = a^x"
-   - Hàm logarit: "y = log_a(x)"
-   - Hàm căn: "y = √(ax + b)"
-   - Hàm lượng giác: "y = sin(x)" hoặc "y = a·sin(bx + c)"
    → LUÔN ghi dạng TỔNG QUÁT (có a, b, c), KHÔNG ghi số cụ thể.
 
-B) TIỆM CẬN — Mỗi tiệm cận phải có NHÃN TÊN theo chuẩn SGK:
-   - Tiệm cận ĐỨNG x = a: vẽ đường dọc tại x = a, nhãn "x = a" đặt gần đường, xoay dọc nếu cần
-   - Tiệm cận NGANG y = a: vẽ đường ngang tại y = a, nhãn "y = a" đặt ở đầu phải đường
-   - Tiệm cận XIÊN y = ax + b: vẽ đường chéo, nhãn "y = ax + b" đặt gần đầu phải đường
-
-   Mẫu code cho tiệm cận:
-   # Tiệm cận đứng x = 3
-   fig.add_trace(go.Scatter(x=[3, 3], y=[y_range[0], y_range[1]],
-       mode='lines', line=dict(color='#999', width=1.5, dash='dash'),
-       showlegend=False, hoverinfo='skip'))
-   fig.add_annotation(x=3, y=y_range[1]*0.85, text="x = 3",
-       showarrow=False, xshift=5, font=dict(color='#666', size=11))
-
-   # Tiệm cận ngang y = 2
-   fig.add_trace(go.Scatter(x=[x_range[0], x_range[1]], y=[2, 2],
-       mode='lines', line=dict(color='#999', width=1.5, dash='dash'),
-       showlegend=False, hoverinfo='skip'))
-   fig.add_annotation(x=x_range[1]*0.95, y=2, text="y = 2",
-       showarrow=False, yshift=8, xanchor='right', font=dict(color='#666', size=11))
-
-   # Tiệm cận xiên y = 2x + 1
-   x_tc = np.array([x_range[0], x_range[1]])
-   y_tc = 2*x_tc + 1
-   fig.add_trace(go.Scatter(x=x_tc, y=y_tc, mode='lines',
-       line=dict(color='#999', width=1.5, dash='dash'),
-       showlegend=False, hoverinfo='skip'))
-   fig.add_annotation(x=x_range[1]*0.9, y=2*x_range[1]*0.9 + 1, text="y = 2x + 1",
-       showarrow=False, yshift=8, font=dict(color='#666', size=11))
+B) TIỆM CẬN — Mỗi tiệm cận phải có NHÃN TÊN:
+   - Tiệm cận ĐỨNG x = a: đường dọc dash, nhãn "x = a" đặt gần đường
+   - Tiệm cận NGANG y = a: đường ngang dash, nhãn "y = a" ở đầu phải
+   - Tiệm cận XIÊN y = ax + b: đường chéo dash, nhãn "y = ax + b" ở đầu phải
 
 === STYLE 2D PLOTLY (BẮT BUỘC) ===
 - Lưới mịn màu #e0e0e0
@@ -474,7 +467,7 @@ if a != 0:
         hovertemplate='Đỉnh I(' + str(round(vx,2)) + '; ' + str(round(vy,2)) + ')<extra></extra>'))
     fig.add_annotation(x=vx, y=vy,
         text="I(" + str(round(vx,2)) + "; " + str(round(vy,2)) + ")",
-        showarrow=False, yshift=-25, font=dict(color='#d62728', size=12))
+        showarrow=False, yshift=-25, font=dict(color='#d62728', size=12, weight='bold'))
 
 # Giao Oy
 fig.add_trace(go.Scatter(x=[0], y=[c], mode='markers',
@@ -483,7 +476,7 @@ fig.add_trace(go.Scatter(x=[0], y=[c], mode='markers',
     hovertemplate='(0; ' + str(round(c,2)) + ')<extra></extra>'))
 fig.add_annotation(x=0, y=c,
     text="(0; " + str(round(c,2)) + ")",
-    showarrow=False, xshift=35, font=dict(color='#2ca02c', size=12))
+    showarrow=False, xshift=35, font=dict(color='#2ca02c', size=12, weight='bold'))
 
 # Giao Ox
 if a != 0:
@@ -497,7 +490,7 @@ if a != 0:
                 hovertemplate='(' + str(round(xr,2)) + '; 0)<extra></extra>'))
             fig.add_annotation(x=xr, y=0,
                 text="(" + str(round(xr,2)) + "; 0)",
-                showarrow=False, yshift=20, font=dict(color='#2ca02c', size=11))
+                showarrow=False, yshift=20, font=dict(color='#2ca02c', size=11, weight='bold'))
 
 # TÍNH RANGE ĐỘNG
 x_range = [-1.8, 6.8]
@@ -530,7 +523,7 @@ fig.add_annotation(x=x_range[1], y=0, text='x', showarrow=False,
 fig.add_annotation(x=0, y=y_range[1], text='y', showarrow=False,
     xshift=-18, yshift=-8, font=dict(size=15, color='#333'))
 
-# TÊN ĐỒ THỊ Ở GÓC DƯỚI PHẢI (vùng khoanh đỏ)
+# TÊN ĐỒ THỊ Ở GÓC DƯỚI PHẢI
 fig.add_annotation(
     x=0.98, y=0.02, xref="paper", yref="paper",
     text="y = ax² + bx + c",
@@ -574,7 +567,6 @@ y = (a*x + b) / (c*x + d)
 fig.add_trace(go.Scatter(x=x, y=y, mode='lines',
     line=dict(color='#1f4e9c', width=3), showlegend=False, hoverinfo='skip'))
 
-# Range
 x_range = [-6, 6]
 y_range = [-10, 10]
 
@@ -665,9 +657,11 @@ fig.update_layout(
 </PLOT_3D>
 
 LƯU Ý CUỐI:
-- 2D: dùng PLOTLY, KHÔNG dùng axref="paper"
-- 2D: BẮT BUỘC đặt TÊN ĐỒ THỊ ở góc dưới phải (paper 0.98, 0.02), dạng công thức tổng quát có a, b, c
-- 2D: Mỗi tiệm cận PHẢI có nhãn tên (x = a cho đứng, y = a cho ngang, y = ax + b cho xiên)
+- 2D: dùng PLOTLY
+- 2D: KHÔNG dùng `bold=True` — DÙNG `weight='bold'`
+- 2D: KHÔNG dùng `title_font=`, `marker_size=`, `line_color=`, `show_arrow=`
+- 2D: BẮT BUỘC đặt TÊN ĐỒ THỊ ở góc dưới phải (paper 0.98, 0.02)
+- 2D: Mỗi tiệm cận PHẢI có nhãn tên
 - KHÔNG gọi fig.show(), KHÔNG savefig"""
 
     return template.replace("__LAB_REQUEST__", lab_request).replace("__SUBJECT__", subject).replace("__GRADE__", grade)
