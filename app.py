@@ -47,6 +47,8 @@ def clean_ai_response(text: str) -> str:
     match = pattern.search(text)
     if match:
         text = text[match.start():]
+    # BỎ MỌI DẤU # Ở ĐẦU DÒNG (###, ##, #)
+    text = re.sub(r"^\s*#{1,6}\s*", "", text, flags=re.MULTILINE)
     text = re.sub(r'(#+ [^\n]*?)"\s*$', r'\1', text, flags=re.MULTILINE)
     lines = text.split('\n')
     filtered = []
@@ -83,7 +85,6 @@ def clean_ai_response(text: str) -> str:
     result = '\n'.join(filtered).strip()
     result = re.sub(r'\n{3,}', '\n\n', result)
     return result
-
 
 def trigger_mathjax():
     import streamlit.components.v1 as components
