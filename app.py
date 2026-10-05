@@ -670,22 +670,32 @@ def _fmt_coef_smart(v):
 
 def _format_formula_smart(dtype, c):
     """Sinh công thức đẹp theo dtype. c: dict hệ số."""
+    def _num(v):
+        """Format số thuần (dùng cho hằng số tự do)."""
+        if abs(v - round(v)) < 1e-9:
+            return str(int(round(v)))
+        return f"{v:.2f}".rstrip('0').rstrip('.')
+
     def term(v, suf, first=False):
         if abs(v) < 1e-9:
             return ""
-        prefix = "" if first else (" + " if v > 0 else " - ")
         abs_v = abs(v)
-        if suf == "":
-            if first:
-                return f"{_fmt_coef_smart(v)}"
-            return f"{prefix}{_fmt_coef_smart(abs_v)}"
-        if abs_v == 1:
-            coef_str = suf
-        else:
-            coef_str = f"{_fmt_coef_smart(abs_v)}{suf}"
+        # Xác định dấu
         if first:
-            return ("-" if v < 0 else "") + coef_str
-        return prefix + coef_str
+            sign = "-" if v < 0 else ""
+        else:
+            sign = " + " if v > 0 else " - "
+
+        if suf == "":
+            # Hằng số tự do: LUÔN in đầy đủ số (kể cả 1, -1)
+            return f"{sign}{_num(abs_v)}"
+
+        # Hệ số của biến: bỏ "1" nếu |v| == 1 (viết x² thay vì 1x²)
+        if abs_v == 1:
+            body = suf
+        else:
+            body = f"{_num(abs_v)}{suf}"
+        return f"{sign}{body}"
 
     if dtype == "func_3":
         parts = []
