@@ -285,8 +285,10 @@ QUY TẮC PHÂN LOẠI MÔ HÌNH:
 - BÁM SÁT 100% NGỮ LIỆU KNTT 2018.
 - MÔ PHỎNG NÂNG CAO: BẮT BUỘC gọi `setup_pedagogical_oxy(fig, [x_min, x_max], [y_min, y_max])` ở cuối.
 - BIẾN "func" TRONG JSON: KHÔNG DÙNG LATEX. Viết dạng Python (VD: (x**2 - 3*x + 2)/(x - 1)).
-- QUY TẮC MERMAID: Dùng `graph LR`. Nhãn trong ngoặc vuông BẮT BUỘC bọc trong ngoặc kép. Không kèm giải thích ngoài JSON."""
-
+- QUY TẮC TRÌNH DIỄN SƠ ĐỒ MERMAID: Dùng cấu trúc `graph LR`. Nút con chứa 3-6 từ xúc tích. 
+  Toàn bộ nhãn trong ngoặc vuông BẮT BUỘC bọc trong ngoặc kép [\"...\"]. 
+  *** BẮT BUỘC: Mọi công thức toán học trong nhãn phải bọc trong cặp $...$ (ví dụ: $\frac{a}{b}$, $ax^2+bx+c$). ***
+  Không kèm giải thích thừa ngoài JSON."""
 
 # ==============================================================================
 # HÀM CHÍNH: RENDER TAB 1
