@@ -1037,6 +1037,70 @@ def render_lab_text_block(text):
                 buffer.append(line)
         flush()
 
+def clean_ai_response(text: str) -> str:
+    """Lọc sạch phản hồi AI: bỏ dấu #, bỏ suy luận nội tâm, bỏ tiếng Anh."""
+    if not text:
+        return ""
+    pattern = re.compile(
+        r"(#{1,3}\s*)?📌?\s*1\.\s*KIẾN\s*THỨC\s*CỐT\s*LÕI",
+        re.IGNORECASE | re.UNICODE
+    )
+    match = pattern.search(text)
+    if match:
+        text = text[match.start():]
+
+    # Bỏ dấu # ở đầu dòng
+    text = re.sub(r"^[ \t]*#{1,6}[ \t]*", "", text, flags=re.MULTILINE)
+    text = re.sub(r'(#+ [^\n]*?)"\s*$', r'\1', text, flags=re.MULTILINE)
+
+    lines = text.split('\n')
+    filtered = []
+
+    draft_patterns = re.compile(
+        r"^\s*[\*\-\s]*("
+        r"note\s*:|section\s+[ivx]+|theory|concepts|formulas|"
+        r"common mistakes|interactive exercises|multiple choice\s*:|"
+        r"short answer\s*:|refining|final polish|wait,|drafting|"
+        r"check against|role\s*:|curriculum\s*:|topic\s*:|"
+        r"no internal|let'?s go|thinking|reasoning|analysis\s*:|"
+        r"step\s+\d+\s*:|here'?s|let me|i will|i'?ll"
+        r")",
+        re.IGNORECASE
+    )
+    english_paren = re.compile(r"\([A-Za-z][A-Za-z\s,;:\-]{4,}\)")
+
+    for line in lines:
+        stripped = line.strip()
+        if not stripped:
+            filtered.append(line)
+            continue
+
+        if draft_patterns.match(stripped):
+            continue
+
+        if english_paren.search(stripped) and len(stripped) < 200:
+            cleaned = english_paren.sub("", stripped).rstrip(".,;: ")
+            if cleaned:
+                filtered.append(cleaned)
+            continue
+
+        if len(stripped) > 15:
+            has_vietnamese = bool(re.search(
+                r"[àáảãạăâđêôơưèéẻẽẹìíỉĩịòóỏõọùúủũụỳýỷỹỵ]",
+                stripped, re.IGNORECASE
+            ))
+            latin_ratio = sum(
+                c.isascii() and c.isalpha() for c in stripped
+            ) / max(len(stripped), 1)
+            if not has_vietnamese and latin_ratio > 0.5:
+                continue
+
+        filtered.append(line)
+
+    result = '\n'.join(filtered).strip()
+    result = re.sub(r'\n{3,}', '\n\n', result)
+    return result
+
 def strip_plot_section_from_text(text):
     """Cắt bỏ mục 'MÃ VẼ ĐỒ THỊ' và mọi nội dung sau nó (phòng AI vẫn sinh)."""
     if not text:
