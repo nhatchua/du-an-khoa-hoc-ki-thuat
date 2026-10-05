@@ -104,7 +104,27 @@ st.markdown("""
         background: rgba(56, 189, 248, 0.15) !important; color: #38bdf8 !important; 
         border-bottom: 3px solid #38bdf8 !important; box-shadow: inset 0 -3px 10px rgba(56, 189, 248, 0.1);
     }
-
+    /* ===== PANEL ĐẶC TRƯNG ĐỒ THỊ ===== */
+    .feature-title {
+        color: #38bdf8 !important;
+        margin: 20px 0 10px 0;
+        font-size: 0.95rem;
+        font-weight: 600;
+    }
+    .feature-item {
+        margin: 5px 0;
+        padding: 8px 12px;
+        background: rgba(56, 189, 248, 0.12);
+        border-left: 3px solid #38bdf8;
+        border-radius: 4px;
+        font-size: 0.88rem;
+        color: #cbd5e1 !important;
+        line-height: 1.5;
+    }
+    .feature-item b {
+        color: #38bdf8 !important;
+        font-weight: 700;
+    }
     .lab-box-container { 
         background: linear-gradient(145deg, #0f172a, #1e293b); 
         border: 2px solid #0ea5e9; 
@@ -123,6 +143,64 @@ st.markdown("""
     
     .stRadio > div { background-color: rgba(30, 41, 59, 0.6); padding: 15px; border-radius: 10px; border: 1px solid #334155; }
     .short-link-badge { background-color: #1e293b; border: 1px dashed #38bdf8; padding: 8px 12px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-size: 0.8rem; color: #38bdf8; text-align: center; margin: 10px 0; word-break: break-all; }
+    /* ============================================================
+       RESPONSIVE MOBILE — Áp dụng cho màn hình < 768px
+       ============================================================ */
+    @media (max-width: 768px) {
+        /* Tab: chia 2 dòng */
+        .stTabs [data-baseweb="tab-list"] {
+            flex-wrap: wrap !important;
+            gap: 4px !important;
+        }
+        .stTabs [data-baseweb="tab-list"] > button {
+            flex: 1 1 calc(50% - 4px) !important;
+            font-size: 0.72rem !important;
+            padding: 8px 4px !important;
+            white-space: normal !important;
+            line-height: 1.2 !important;
+            min-height: 48px !important;
+        }
+        /* 2 cột → xếp dọc */
+        [data-testid="stHorizontalBlock"] { flex-wrap: wrap !important; }
+        [data-testid="column"], [data-testid="stColumn"] {
+            width: 100% !important;
+            flex: 1 1 100% !important;
+            min-width: 100% !important;
+            margin-bottom: 12px !important;
+        }
+        /* Tiêu đề gọn hơn */
+        .main-title { font-size: 1.4rem !important; line-height: 1.3 !important; }
+        .sub-title { font-size: 0.9rem !important; }
+        h1 { font-size: 1.3rem !important; }
+        h2 { font-size: 1.1rem !important; }
+        h3 { font-size: 1.0rem !important; }
+        /* Đặc trưng đồ thị gọn */
+        .feature-item { font-size: 0.82rem !important; padding: 6px 10px !important; }
+        .feature-title { font-size: 0.9rem !important; margin: 12px 0 6px 0 !important; }
+        /* Slider dễ kéo */
+        [data-testid="stSlider"] [role="slider"] {
+            width: 22px !important; height: 22px !important;
+        }
+        /* Input + Button full width */
+        [data-testid="stTextInput"] input { font-size: 0.9rem !important; }
+        [data-testid="stButton"] button {
+            font-size: 0.85rem !important;
+            width: 100% !important;
+        }
+        /* Chat gọn hơn */
+        [data-testid="stChatMessage"] {
+            font-size: 0.9rem !important;
+            padding: 10px !important;
+        }
+        /* Đồ thị Plotly bo góc */
+        [data-testid="stPlotlyChart"] {
+            border-radius: 8px !important;
+            overflow: hidden !important;
+        }
+        /* Tiêu đề sidebar */
+        .main-header { padding: 0 !important; }
+        .badge-tag { font-size: 0.7rem !important; padding: 4px 10px !important; }
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -574,7 +652,226 @@ def setup_pedagogical_oxy(fig, x_range, y_range):
         margin=dict(l=15, r=15, t=30, b=15),
         showlegend=False
     )
+# ============================================================
+# 4B. HELPER CHO SLIDER HỆ SỐ THÔNG MINH
+# ============================================================
+def _fmt_coef_smart(v):
+    """Format hệ số: 1 → '', -1 → '-', 2.5 → '2.5'."""
+    if abs(v) < 1e-9:
+        return "0"
+    if abs(v - 1) < 1e-9:
+        return ""
+    if abs(v + 1) < 1e-9:
+        return "-"
+    if abs(v - round(v)) < 1e-9:
+        return str(int(round(v)))
+    return f"{v:.2f}".rstrip('0').rstrip('.')
 
+
+def _format_formula_smart(dtype, c):
+    """Sinh công thức đẹp theo dtype. c: dict hệ số."""
+    def term(v, suf, first=False):
+        if abs(v) < 1e-9:
+            return ""
+        prefix = "" if first else (" + " if v > 0 else " - ")
+        abs_v = abs(v)
+        if suf == "":
+            if first:
+                return f"{_fmt_coef_smart(v)}"
+            return f"{prefix}{_fmt_coef_smart(abs_v)}"
+        if abs_v == 1:
+            coef_str = suf
+        else:
+            coef_str = f"{_fmt_coef_smart(abs_v)}{suf}"
+        if first:
+            return ("-" if v < 0 else "") + coef_str
+        return prefix + coef_str
+
+    if dtype == "func_3":
+        parts = []
+        for v, suf in [(c.get("a", 0), "x³"), (c.get("b", 0), "x²"),
+                       (c.get("c", 0), "x"), (c.get("d", 0), "")]:
+            if abs(v) < 1e-9:
+                continue
+            parts.append(term(v, suf, first=(len(parts) == 0)))
+        return "y = " + "".join(parts) if parts else "y = 0"
+
+    if dtype == "parabola":
+        parts = []
+        for v, suf in [(c.get("a", 1), "x²"), (c.get("b", 0), "x"), (c.get("c", 0), "")]:
+            if abs(v) < 1e-9:
+                continue
+            parts.append(term(v, suf, first=(len(parts) == 0)))
+        return "y = " + "".join(parts) if parts else "y = 0"
+
+    if dtype == "func_1_1":
+        num_parts = []
+        for v, suf in [(c.get("a", 0), "x"), (c.get("b", 0), "")]:
+            if abs(v) < 1e-9:
+                continue
+            num_parts.append(term(v, suf, first=(len(num_parts) == 0)))
+        num_str = "".join(num_parts) if num_parts else "0"
+
+        den_parts = []
+        for v, suf in [(c.get("c", 0), "x"), (c.get("d", 0), "")]:
+            if abs(v) < 1e-9:
+                continue
+            den_parts.append(term(v, suf, first=(len(den_parts) == 0)))
+        den_str = "".join(den_parts) if den_parts else "0"
+
+        return f"y = ({num_str}) / ({den_str})"
+
+    if dtype == "func_2_1":
+        num_parts = []
+        for v, suf in [(c.get("a", 0), "x²"), (c.get("b", 0), "x"), (c.get("c", 0), "")]:
+            if abs(v) < 1e-9:
+                continue
+            num_parts.append(term(v, suf, first=(len(num_parts) == 0)))
+        num_str = "".join(num_parts) if num_parts else "0"
+
+        den_parts = []
+        for v, suf in [(c.get("d", 0), "x"), (c.get("e", 0), "")]:
+            if abs(v) < 1e-9:
+                continue
+            den_parts.append(term(v, suf, first=(len(den_parts) == 0)))
+        den_str = "".join(den_parts) if den_parts else "0"
+
+        return f"y = ({num_str}) / ({den_str})"
+
+    return "y = ?"
+
+def _analyze_features_smart(dtype, c):
+    """Trả về list (icon, label, value) đặc trưng đồ thị."""
+    feats = []
+
+    def fmt(v):
+        if abs(v) < 1e-9:
+            return "0"
+        if abs(v - round(v)) < 1e-9:
+            return str(int(round(v)))
+        return f"{v:.2f}".rstrip('0').rstrip('.')
+
+    if dtype == "func_3":
+        a, b, cc, d = c.get("a", 1), c.get("b", 0), c.get("c", 0), c.get("d", 0)
+        if abs(a) < 1e-9:
+            return feats
+        xi = -b / (3 * a)
+        yi = a * xi**3 + b * xi**2 + cc * xi + d
+        feats.append(("🔄", "Điểm uốn", f"I({fmt(xi)}; {fmt(yi)})"))
+
+        delta = 4 * b * b - 12 * a * cc
+        if delta > 1e-9:
+            x1 = (-2 * b + np.sqrt(delta)) / (6 * a)
+            x2 = (-2 * b - np.sqrt(delta)) / (6 * a)
+            y1 = a * x1**3 + b * x1**2 + cc * x1 + d
+            y2 = a * x2**3 + b * x2**2 + cc * x2 + d
+            if a > 0:
+                feats.append(("🔴", "Cực đại", f"({fmt(x2)}; {fmt(y2)})"))
+                feats.append(("🔴", "Cực tiểu", f"({fmt(x1)}; {fmt(y1)})"))
+            else:
+                feats.append(("🔴", "Cực đại", f"({fmt(x1)}; {fmt(y1)})"))
+                feats.append(("🔴", "Cực tiểu", f"({fmt(x2)}; {fmt(y2)})"))
+        else:
+            feats.append(("🔴", "Cực trị", "Không có cực trị"))
+        feats.append(("🟢", "Giao Oy", f"(0; {fmt(d)})"))
+
+    elif dtype == "parabola":
+        a, b, cc = c.get("a", 1), c.get("b", 0), c.get("c", 0)
+        if abs(a) < 1e-9:
+            return feats
+        xd = -b / (2 * a)
+        yd = a * xd**2 + b * xd + cc
+        feats.append(("📐", "Đỉnh", f"I({fmt(xd)}; {fmt(yd)})"))
+        feats.append(("📏", "Trục đối xứng", f"x = {fmt(xd)}"))
+
+        delta = b * b - 4 * a * cc
+        feats.append(("🎯", "Delta (Δ)", fmt(delta)))
+        if delta > 1e-9:
+            x1 = (-b + np.sqrt(delta)) / (2 * a)
+            x2 = (-b - np.sqrt(delta)) / (2 * a)
+            feats.append(("⚫", "Giao Ox", f"x₁ = {fmt(x1)}, x₂ = {fmt(x2)}"))
+        elif abs(delta) < 1e-9:
+            feats.append(("⚫", "Giao Ox", f"x = {fmt(xd)} (nghiệm kép)"))
+        else:
+            feats.append(("⚫", "Giao Ox", "Không cắt trục Ox"))
+        feats.append(("🟢", "Giao Oy", f"(0; {fmt(cc)})"))
+        feats.append(("📊", "Bề lõm",
+                      "Hướng lên (a > 0)" if a > 0 else "Hướng xuống (a < 0)"))
+
+    elif dtype == "func_1_1":
+        a, b = c.get("a", 0), c.get("b", 0)
+        cc, d = c.get("c", 0), c.get("d", 0)
+        if abs(cc) < 1e-9:
+            feats.append(("⚠️", "Lưu ý", "Hệ số c ≠ 0 để hàm xác định!"))
+            return feats
+        x_tcd = -d / cc
+        feats.append(("🔵", "Tiệm cận đứng", f"x = {fmt(x_tcd)}"))
+        y_tcn = a / cc
+        feats.append(("🔵", "Tiệm cận ngang", f"y = {fmt(y_tcn)}"))
+        if abs(d) > 1e-9:
+            feats.append(("🟢", "Giao Oy", f"(0; {fmt(b/d)})"))
+        if abs(a) > 1e-9:
+            x_ox = -b / a
+            if abs(cc * x_ox + d) > 1e-9:
+                feats.append(("⚫", "Giao Ox", f"x = {fmt(x_ox)}"))
+        det = a * d - b * cc
+        feats.append(("📊", "Đơn điệu",
+                      "Nghịch biến trên từng khoảng" if det < 0
+                      else "Đồng biến trên từng khoảng"))
+
+    elif dtype == "func_2_1":
+        a, b, cc = c.get("a", 0), c.get("b", 0), c.get("c", 0)
+        d, e = c.get("d", 0), c.get("e", 0)
+        if abs(d) < 1e-9:
+            feats.append(("⚠️", "Lưu ý", "Hệ số d ≠ 0 để hàm xác định!"))
+            return feats
+        x_tcd = -e / d
+        feats.append(("🔵", "Tiệm cận đứng", f"x = {fmt(x_tcd)}"))
+
+        m = a / d
+        n = (b * d - a * e) / (d * d)
+        if abs(m) < 1e-9:
+            feats.append(("🔵", "Tiệm cận ngang", f"y = {fmt(n)}"))
+        else:
+            m_str = "" if abs(m - 1) < 1e-9 else ("-" if abs(m + 1) < 1e-9 else fmt(m))
+            if abs(n) < 1e-9:
+                tc_str = f"y = {m_str}x"
+            elif n > 0:
+                tc_str = f"y = {m_str}x + {fmt(n)}"
+            else:
+                tc_str = f"y = {m_str}x - {fmt(abs(n))}"
+            feats.append(("🔵", "Tiệm cận xiên", tc_str))
+
+        A2 = a * d
+        B2 = 2 * a * e
+        C2 = b * e - cc * d
+        if abs(A2) > 1e-9:
+            delta = B2 * B2 - 4 * A2 * C2
+            if delta > 1e-9:
+                x1 = (-B2 + np.sqrt(delta)) / (2 * A2)
+                x2 = (-B2 - np.sqrt(delta)) / (2 * A2)
+                y1 = (a * x1 * x1 + b * x1 + cc) / (d * x1 + e)
+                y2 = (a * x2 * x2 + b * x2 + cc) / (d * x2 + e)
+                if x1 < x2:
+                    p1, p2 = (x1, y1), (x2, y2)
+                else:
+                    p1, p2 = (x2, y2), (x1, y1)
+                ypp1 = 2 * a / (d * p1[0] + e)
+                if ypp1 > 0:
+                    feats.append(("🔴", "Cực tiểu", f"({fmt(p1[0])}; {fmt(p1[1])})"))
+                    feats.append(("🔴", "Cực đại", f"({fmt(p2[0])}; {fmt(p2[1])})"))
+                else:
+                    feats.append(("🔴", "Cực đại", f"({fmt(p1[0])}; {fmt(p1[1])})"))
+                    feats.append(("🔴", "Cực tiểu", f"({fmt(p2[0])}; {fmt(p2[1])})"))
+            else:
+                feats.append(("🔴", "Cực trị", "Không có cực trị"))
+        else:
+            feats.append(("🔴", "Cực trị", "Không có cực trị (bậc 1/1)"))
+        if abs(e) > 1e-9:
+            feats.append(("🟢", "Giao Oy", f"(0; {fmt(cc/e)})"))
+
+    return feats
+    
 def render_dynamic_python_lab(python_code: str):
     try:
         clean_code = re.sub(r'st\.plotly_chart\(.*?\)', '', python_code)
@@ -754,6 +1051,27 @@ def render_smart_lab(data):
 
     fig = go.Figure()
 
+    # ========== HELPER NỘI BỘ ==========
+    def _render_formula_and_features(_dtype, _coeffs):
+        """Render hộp công thức + panel đặc trưng cho cột trái."""
+        _formula = _format_formula_smart(_dtype, _coeffs)
+        st.markdown(
+            f"<div style='background: linear-gradient(135deg, #4a90e2, #357abd); color: white; "
+            f"padding: 14px 18px; border-radius: 10px; font-size: 1.05rem; "
+            f"font-weight: 600; margin: 20px 0; text-align: center;'>"
+            f"<i>{_formula}</i></div>",
+            unsafe_allow_html=True
+        )
+        _feats = _analyze_features_smart(_dtype, _coeffs)
+        if _feats:
+            st.markdown("<div class='feature-title'>📋 Đặc trưng đồ thị:</div>",
+                        unsafe_allow_html=True)
+            for _icon, _label, _value in _feats:
+                st.markdown(
+                    f"<div class='feature-item'>{_icon} <b>{_label}:</b> {_value}</div>",
+                    unsafe_allow_html=True)
+
+    # ========== HÀM BẬC 3 ==========
     if dtype == "func_3":
         c1, c2 = st.columns([1.2, 2.8])
         with c1:
@@ -763,7 +1081,9 @@ def render_smart_lab(data):
             fb = st.slider("Hệ số b:", -5.0, 5.0, float(data.get("b", -3.0)), 0.5, key="lab_f3_b")
             fc = st.slider("Hệ số c:", -5.0, 5.0, float(data.get("c", 0.0)), 0.5, key="lab_f3_c")
             fd = st.slider("Hệ số d:", -5.0, 5.0, float(data.get("d", 2.0)), 0.5, key="lab_f3_d")
-            st.info(f"**$y = {fa}x^3 + ({fb})x^2 + ({fc})x + ({fd})$**")
+
+            _render_formula_and_features("func_3", {"a": fa, "b": fb, "c": fc, "d": fd})
+
         with c2:
             x_vals = np.linspace(-6, 6, 800)
             y_vals = fa * (x_vals**3) + fb * (x_vals**2) + fc * x_vals + fd
@@ -776,6 +1096,7 @@ def render_smart_lab(data):
             fig.update_layout(title="Đồ thị Hàm số Bậc 3", height=500)
             st.plotly_chart(fig, use_container_width=True)
 
+    # ========== HÀM PHÂN THỨC 1/1 ==========
     elif dtype == "func_1_1":
         c1, c2 = st.columns([1.2, 2.8])
         with c1:
@@ -785,12 +1106,12 @@ def render_smart_lab(data):
             fc = st.slider("Hệ số c:", -4.0, 4.0, float(data.get("c", 1.0)), 0.5, key="lab_f11_c")
             if fc == 0: fc = 1.0
             fd = st.slider("Hệ số d:", -5.0, 5.0, float(data.get("d", -1.0)), 0.5, key="lab_f11_d")
-            
+
+            _render_formula_and_features("func_1_1", {"a": fa, "b": fb, "c": fc, "d": fd})
+
+        with c2:
             x_tc_dung = -fd / fc
             y_tc_ngang = fa / fc
-            st.info(f"**$y = \\frac{{{fa}x + {fb}}}{{{fc}x + {fd}}}$**")
-            st.caption(f"📌 **Tiệm cận đứng:** $x = {x_tc_dung:.2f}$<br>📌 **Tiệm cận ngang:** $y = {y_tc_ngang:.2f}$", unsafe_allow_html=True)
-        with c2:
             x_left = np.linspace(-7, x_tc_dung - 0.05, 400)
             x_right = np.linspace(x_tc_dung + 0.05, 7, 400)
             y_left = (fa * x_left + fb) / (fc * x_left + fd)
@@ -806,6 +1127,7 @@ def render_smart_lab(data):
             fig.update_layout(title="Đồ thị Hàm phân thức Bậc 1 / Bậc 1 (Kèm Tiệm cận)", height=500)
             st.plotly_chart(fig, use_container_width=True)
 
+    # ========== HÀM PHÂN THỨC 2/1 ==========
     elif dtype == "func_2_1":
         c1, c2 = st.columns([1.2, 2.8])
         with c1:
@@ -817,13 +1139,13 @@ def render_smart_lab(data):
             fd = st.slider("d:", -3.0, 3.0, float(data.get("d", 1.0)), 0.5, key="lab_f21_d")
             if fd == 0: fd = 1.0
             fe = st.slider("e:", -5.0, 5.0, float(data.get("e", -1.0)), 0.5, key="lab_f21_e")
-            
+
+            _render_formula_and_features("func_2_1", {"a": fa, "b": fb, "c": fc, "d": fd, "e": fe})
+
+        with c2:
             x_tc_dung = -fe / fd
             m_slope = fa / fd
             n_intercept = (fb - m_slope * fe) / fd
-            st.info(f"**$y = \\frac{{{fa}x^2 + {fb}x + {fc}}}{{{fd}x + {fe}}}$**")
-            st.caption(f"📌 **Tiệm cận đứng:** $x = {x_tc_dung:.2f}$<br>📌 **Tiệm cận xiên:** $y = {m_slope:.2f}x + ({n_intercept:.2f})$", unsafe_allow_html=True)
-        with c2:
             x_left = np.linspace(-7, x_tc_dung - 0.05, 400)
             x_right = np.linspace(x_tc_dung + 0.05, 7, 400)
             y_left = (fa * x_left**2 + fb * x_left + fc) / (fd * x_left + fe)
@@ -842,6 +1164,7 @@ def render_smart_lab(data):
             fig.update_layout(title="Đồ thị Hàm phân thức Bậc 2 / Bậc 1 (Kèm Tiệm cận xiên)", height=500)
             st.plotly_chart(fig, use_container_width=True)
 
+    # ========== PARABOL BẬC 2 ==========
     elif dtype in ["parabola", "func_2"]:
         c1, c2 = st.columns([1.2, 2.8])
         with c1:
@@ -850,12 +1173,12 @@ def render_smart_lab(data):
             if fa == 0: fa = 1.0
             fb = st.slider("Hệ số b:", -6.0, 6.0, float(data.get("b", -2.0)), 0.5, key="lab_p2_b")
             fc = st.slider("Hệ số c:", -6.0, 6.0, float(data.get("c", -1.0)), 0.5, key="lab_p2_c")
-            
+
+            _render_formula_and_features("parabola", {"a": fa, "b": fb, "c": fc})
+
+        with c2:
             x_dinh = -fb / (2 * fa)
             y_dinh = fa * x_dinh**2 + fb * x_dinh + fc
-            st.info(f"**$y = {fa}x^2 + ({fb})x + ({fc})$**")
-            st.caption(f"📌 **Đỉnh:** $I({x_dinh:.2f}; {y_dinh:.2f})$<br>📌 **Trục đối xứng:** $x = {x_dinh:.2f}$", unsafe_allow_html=True)
-        with c2:
             x_vals = np.linspace(-6, 6, 600)
             y_vals = fa * x_vals**2 + fb * x_vals + fc
             fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', line=dict(color='#38bdf8', width=3), name='Parabol'))
@@ -869,6 +1192,7 @@ def render_smart_lab(data):
             fig.update_layout(title="Đồ thị Parabol Bậc 2 (Toán Lớp 10)", height=500)
             st.plotly_chart(fig, use_container_width=True)
 
+    # ========== KHÔNG GIAN OXYZ ==========
     elif dtype == "oxyz":
         c1, c2 = st.columns([1, 3])
         with c1:
@@ -951,6 +1275,172 @@ def parse_quiz_questions(text):
     return questions
 
 # ==============================================================================
+# 4C. TIỆN ÍCH XỬ LÝ ẢNH + PARSE DIAGNOSTIC (NÂNG CẤP CHO TRẠM 2)
+# ==============================================================================
+def _preprocess_upload_image(uploaded_file, max_side: int = 1600):
+    """Đọc ảnh, sửa EXIF orientation, resize cạnh dài về max_side."""
+    from PIL import ImageOps
+    img = Image.open(uploaded_file)
+    try:
+        img = ImageOps.exif_transpose(img)
+    except Exception:
+        pass
+    if img.mode not in ("RGB", "L"):
+        img = img.convert("RGB")
+    try:
+        resample = Image.Resampling.LANCZOS
+    except AttributeError:
+        resample = Image.LANCZOS
+    w, h = img.size
+    if max(w, h) > max_side:
+        img.thumbnail((max_side, max_side), resample)
+    return img
+
+
+def _image_to_bytes(img) -> bytes:
+    """Chuyển PIL Image -> bytes JPEG để lưu vào session_state."""
+    import io
+    buf = io.BytesIO()
+    img.save(buf, format="JPEG", quality=85)
+    return buf.getvalue()
+
+
+def _parse_diagnostic(full_res: str) -> dict:
+    """Parse khối <DIAGNOSTIC>...</DIAGNOSTIC> an toàn."""
+    if "<DIAGNOSTIC>" not in full_res:
+        return {}
+    try:
+        raw = full_res.split("<DIAGNOSTIC>", 1)[1]
+        raw = raw.split("</DIAGNOSTIC>", 1)[0].strip()
+        raw = re.sub(r"^```(?:json)?\s*", "", raw, flags=re.IGNORECASE)
+        raw = re.sub(r"\s*```$", "", raw)
+        return json.loads(raw)
+    except Exception:
+        return {}
+
+
+def _build_socratic_system_prompt(subject, grade_num, student_name, is_essay):
+    """System prompt rẽ nhánh theo đặc thù môn học."""
+    if is_essay:
+        subject_focus = (
+            "Đây là môn TỰ LUẬN (Ngữ văn / Lịch sử & Địa lý). "
+            "Chẩn đoán tập trung vào: lập luận (luận điểm — luận cứ — dẫn chứng), "
+            "bố cục đoạn văn, diễn đạt — dùng từ — ngữ pháp, tính liên kết, "
+            "tính thuyết phục, sắc thái biểu cảm."
+        )
+    elif subject == "Tiếng Anh":
+        subject_focus = (
+            "Đây là môn Tiếng Anh. Chẩn đoán tập trung vào: ngữ pháp "
+            "(thì, cấu trúc câu, sự hòa hợp chủ — vị), từ vựng (dùng sai nghĩa, "
+            "sai dạng từ, sai giới từ), chính tả, cách diễn đạt tự nhiên."
+        )
+    else:
+        subject_focus = (
+            "Đây là môn TỰ NHIÊN (Toán / Lý / Hóa / Sinh / Tin). "
+            "Chẩn đoán tập trung vào: công thức áp dụng, điều kiện xác định, "
+            "đơn vị đo, tính toán số học, logic biến đổi, lập luận kết quả, "
+            "đọc sai đề, thiếu trường hợp."
+        )
+
+    return f"""Bạn là Thầy giáo Gia Sư AI tại Trường THPT Tân Hiệp & Trung tâm Bồi dưỡng Văn hóa Thiện Nhân (An Giang).
+Học sinh: "{student_name}" — Môn {subject} — Lớp {grade_num} ({'Cấp THCS' if grade_num <= 9 else 'Cấp THPT'}) — SGK Kết Nối Tri Thức.
+
+{subject_focus}
+
+NGUYÊN TẮC BẤT DI BẤT DỊCH:
+- TUYỆT ĐỐI KHÔNG giải hộ, KHÔNG đưa ra đáp án cuối cùng, KHÔNG viết bài mẫu.
+- Khen ngợi CỤ THỂ bước học sinh làm ĐÚNG (chỉ ra chính xác bước nào, vì sao đúng).
+- Với bước SAI: đặt 1–2 câu hỏi gợi mở để học sinh TỰ nhận ra lỗi, không chỉ thẳng.
+- Xưng hô: gọi học sinh là "em", tự xưng "thầy/cô" (chọn 1 và giữ nhất quán suốt bài).
+- Ngôn ngữ: tiếng Việt bình dân, dễ hiểu, tuyệt đối không hàn lâm, không dùng từ tiếng Anh.
+
+Cuối bài LUÔN chèn khối (không thêm chữ nào sau khối này):
+<DIAGNOSTIC>{{"topic":"...","error_type":"...","evaluation":"..."}}</DIAGNOSTIC>"""
+
+# ==============================================================================
+# 4D. PROMPT RIÊNG CHO MÔN TEXT-ONLY (HÓA / SINH / SỬ-ĐỊA)
+# ==============================================================================
+def _build_text_only_prompt(lab_request, subject, grade_num):
+    """Prompt riêng cho Hóa, Sinh, Sử-Địa: chỉ trả về văn bản, KHÔNG sinh code plot."""
+    if subject == "Hóa học":
+        structure = """1. PHƯƠNG TRÌNH PHẢN ỨNG
+Viết phương trình hóa học đầy đủ (đã cân bằng), ghi rõ điều kiện phản ứng (nhiệt độ, xúc tác, ánh sáng...). Dùng LaTeX trong cặp dấu $...$ cho công thức.
+
+2. TÊN GỌI CÁC CHẤT
+Liệt kê từng chất tham gia và sản phẩm: tên thường gọi, tên khoa học, công thức phân tử, vai trò trong phản ứng.
+
+3. CÁC BƯỚC TIẾN HÀNH THÍ NGHIỆM
+Mô tả chi tiết từng bước theo trình tự chuẩn phòng thí nghiệm: chuẩn bị dụng cụ, hóa chất, tiến hành, quan sát.
+
+4. HIỆN TƯỢNG QUAN SÁT ĐƯỢC
+Mô tả hiện tượng cụ thể: kết tủa (màu gì), sủi bọt khí, đổi màu dung dịch, tỏa nhiệt, phát sáng, mùi đặc trưng...
+
+5. GIẢI THÍCH BẢN CHẤT
+Giải thích hiện tượng bằng kiến thức hóa học, viết phương trình ion thu gọn (nếu có)."""
+
+    elif subject == "Sinh học":
+        structure = """1. KHÁI NIỆM / ĐỊNH NGHĨA
+Nêu rõ khái niệm, định nghĩa chuẩn theo SGK Kết Nối Tri Thức.
+
+2. CƠ CHẾ / DIỄN BIẾN
+Mô tả chi tiết cơ chế, các giai đoạn, các yếu tố tham gia, mối quan hệ nhân quả.
+
+3. Ý NGHĨA SINH HỌC
+Ý nghĩa của quá trình / cấu trúc đối với sinh vật, đối với hệ sinh thái.
+
+4. ỨNG DỤNG / LIÊN HỆ THỰC TẾ
+Ứng dụng trong đời sống, y học, nông nghiệp, công nghệ sinh học..."""
+
+    else:  # Lịch sử & Địa lý
+        structure = """1. BỐI CẢNH / ĐIỀU KIỆN
+Trình bày bối cảnh lịch sử hoặc điều kiện tự nhiên - kinh tế - xã hội liên quan.
+
+2. DIỄN BIẾN CHÍNH
+Trình bày diễn biến theo trình tự thời gian hoặc không gian rõ ràng, có mốc cụ thể.
+
+3. KẾT QUẢ / Ý NGHĨA
+Nêu kết quả và ý nghĩa của sự kiện / hiện tượng.
+
+4. LIÊN HỆ MỞ RỘNG
+Liên hệ với kiến thức liên quan, bài học kinh nghiệm, xu hướng hiện nay."""
+
+    return f"""Bạn là giáo viên chuyên môn cao, soạn tài liệu theo chuẩn chương trình giáo dục phổ thông mới nhất bộ sách "Kết Nối Tri Thức Với Cuộc Sống".
+
+YÊU CẦU CỦA HỌC SINH: {lab_request}
+MÔN: {subject} - Lớp {grade_num}
+
+QUY TẮC BẮT BUỘC:
+1. TOÀN BỘ nội dung bằng TIẾNG VIỆT chuẩn xác, không có từ tiếng Anh xen lẫn.
+2. KHÔNG DÙNG DẤU #.
+3. Công thức hóa học, ký hiệu khoa học: dùng LaTeX đặt trong cặp dấu $...$.
+4. TUYỆT ĐỐI KHÔNG sinh code Python, KHÔNG sinh thẻ <PLOT_2D>, <PLOT_3D> hay <PLOT>.
+5. KHÔNG vẽ đồ thị, không vẽ hình — chỉ trả về nội dung văn bản thuần.
+6. KHÔNG có mục "MÃ VẼ ĐỒ THỊ" hay bất kỳ mục nào liên quan đến code vẽ. Chỉ có ĐÚNG các mục đã liệt kê ở CẤU TRÚC ĐẦU RA, không thêm mục mới.
+7. Kiến thức phải cực kỳ chính xác, khoa học, sư phạm theo đúng sách Kết Nối Tri Thức.
+
+CẤU TRÚC ĐẦU RA BẮT BUỘC:
+
+{structure}
+
+LƯU Ý CUỐI:
+- Chỉ trả lời bằng văn bản, KHÔNG có code Python, KHÔNG có thẻ XML nào.
+- Trình bày rõ ràng, có xuống dòng giữa các mục lớn."""
+
+
+def strip_plot_section_from_text(text):
+    """Cắt bỏ mục 'MÃ VẼ ĐỒ THỊ' và mọi nội dung sau nó (phòng AI vẫn sinh)."""
+    if not text:
+        return text
+    pattern = re.compile(
+        r"^\s*\d+\.\s*(MÃ\s*VẼ\s*ĐỒ\s*THỊ|VẼ\s*ĐỒ\s*THỊ|CODE\s*VẼ|PLOT|SƠ\s*ĐỒ\s*CODE|MÃ\s*PLOT)[^\n]*$",
+        re.IGNORECASE | re.MULTILINE | re.UNICODE,
+    )
+    m = pattern.search(text)
+    if m:
+        text = text[:m.start()].rstrip()
+    return text
+
+# ==============================================================================
 # 5. TIÊU ĐỀ TRANG VÀ BANNER CHÍNH
 # ==============================================================================
 st.markdown('<div class="main-header"><div class="main-title">🏫 GIA SƯ AI - HỆ SINH THÁI LỚP HỌC ĐẢO NGƯỢC</div><div class="sub-title">Trường THPT Tân Hiệp & Trung tâm Thiện Nhân • Đồng hành từ Lớp 6 đến Lớp 12</div><div style="margin-top: 8px;"><span class="badge-tag">Bộ sách: Kết Nối Tri Thức Với Cuộc Sống</span><span class="badge-tag" style="border-color: #34d399; color: #34d399; margin-left: 8px;">Chuẩn CT GDPT 2018 & Quy chế 2026</span></div></div>', unsafe_allow_html=True)
@@ -961,8 +1451,15 @@ tab1, tab2, tab3, tab4 = st.tabs(["💡 Trạm 1: Học Tập & Phòng Lab", "�
 # TRẠM 1: LÝ THUYẾT & PHÒNG LAB 
 # ------------------------------------------------------------------------------
 with tab1:
-    st.markdown("<br>", unsafe_allow_html=True)
-    st.subheader(f"📖 Tự học & Chiếm lĩnh kiến thức môn {subject} - Lớp {grade_num}")
+    if "last_subject_seen" not in st.session_state:
+        st.session_state.last_subject_seen = subject
+    elif st.session_state.last_subject_seen != subject:
+        st.session_state.lab_data = None
+        st.session_state.lab_text_result = None
+        st.session_state.current_lesson = ""
+        st.session_state.last_subject_seen = subject
+        st.markdown("<br>", unsafe_allow_html=True)
+        st.subheader(f"📖 Tự học & Chiếm lĩnh kiến thức môn {subject} - Lớp {grade_num}")
     
     topic_input = st.text_input("📝 Nhập bài học cần chiếm lĩnh kiến thức:", placeholder="Ví dụ: Khảo sát hàm số, Hình chóp, Nhị thức Newton...")
     
@@ -1054,13 +1551,28 @@ TIÊU ĐỀ BẮT BUỘC (Phải giữ đúng text này để hệ thống nhậ
     
     lab_command = st.text_input("Lệnh mô phỏng:", placeholder="Ví dụ Toán: Vẽ miền nghiệm... Diện tích hình phẳng... Lý/Hóa: Mô phỏng lực...", label_visibility="collapsed")
     
+    # ========== PHÒNG LAB THÔNG MINH — RẼ NHÁNH THEO MÔN ==========
+    TEXT_ONLY_SUBJECTS = {"Hóa học", "Sinh học", "Lịch sử", "Địa lý", "Lịch sử & Địa lý", "Giáo dục công dân", "Giáo dục kinh tế và pháp luật"}
+
     if st.button("✨ Khởi chạy Phòng Lab") and lab_command.strip():
         st.session_state.tram1_count += 1
         with st.spinner("AI đang phân tích ngữ cảnh liên môn và dựng mô hình..."):
-            
+
             context_text = st.session_state.current_lesson if st.session_state.get("current_lesson") else "Không có ngữ cảnh bài học trước đó."
-            
-            lab_prompt = f"""[HỆ TRI THỨC SƯ PHẠM QUỐC GIA - CHUẨN CT GDPT 2018 & QUY CHẾ THI 2026 (Cập nhật QĐ 764/QĐ-BGDĐT & TT 13/2026/TT-BGDĐT)]
+
+            # ========== NHÁNH 1: MÔN TEXT-ONLY (HÓA / SINH / SỬ-ĐỊA) ==========
+            if subject in TEXT_ONLY_SUBJECTS:
+                try:
+                    text_prompt = _build_text_only_prompt(lab_command, subject, grade_num)
+                    st.session_state.lab_text_result = call_gemini_with_fallback(text_prompt)
+                    st.session_state.lab_data = None
+                except Exception as e:
+                    st.error(f"Lỗi sinh nội dung: {e}")
+                    st.session_state.lab_text_result = None
+
+            # ========== NHÁNH 2: MÔN CÓ ĐỒ THỊ (TOÁN / LÝ / TIN) ==========
+            else:
+                lab_prompt = f"""[HỆ TRI THỨC SƯ PHẠM QUỐC GIA - CHUẨN CT GDPT 2018 & QUY CHẾ THI 2026 (Cập nhật QĐ 764/QĐ-BGDĐT & TT 13/2026/TT-BGDĐT)]
 Môn học: {subject} | Khối lớp: {grade_num}. 
 NGỮ CẢNH BÀI HỌC HIỆN TẠI (Để tham chiếu nếu học sinh yêu cầu "bài ở trên", "câu số 1"...):
 {context_text}
@@ -1084,26 +1596,35 @@ QUY TẮC PHÂN LOẠI MÔ HÌNH:
    {{"type": "parabola", "a": 1, "b": -2, "c": 1}}
 7. KHÔNG GIAN OXYZ:
    {{"type": "oxyz", "x": 2, "y": 3, "z": 4}}
-8. MÔ PHỎNG NÂNG CAO PYTHON PLOTLY (Miền nghiệm BPT, Vật lý, Hóa học...):
+8. MÔ PHỎNG NÂNG CAO PYTHON PLOTLY (Miền nghiệm BPT, Vật lý...):
    {{"type": "dynamic_code", "python_code": "fig = go.Figure()\\n# Code vẽ đồ thị\\nsetup_pedagogical_oxy(fig, [-5, 5], [-5, 5])"}}
-9. SƠ ĐỒ TƯ DUY TƯƠNG TÁC THUYẾT TRÌNH (CHO TẤT CẢ CÁC MÔN VÀ CÁC KHỐI LỚP 6-12 CHUẨN KNTT):
+9. SƠ ĐỒ TƯ DUY TƯƠNG TÁC THUYẾT TRÌNH:
    {{"type": "mermaid", "code": "graph LR\\n   Root[\\"🎯 TIÊU ĐỀ CHỦ ĐỀ CHÍNH\\"] --> A[\\"1. Nhánh trọng tâm 1\\"]\\n   Root --> B[\\"2. Nhánh trọng tâm 2\\"]\\n   Root --> C[\\"3. Nhánh trọng tâm 3\\"]\\n   A --> A1[\\"Từ khóa chi tiết 1.1\\"]\\n   A --> A2[\\"Từ khóa chi tiết 1.2\\"]\\n   B --> B1[\\"Từ khóa chi tiết 2.1\\"]\\n   B --> B2[\\"Từ khóa chi tiết 2.2\\"]\\n   C --> C1[\\"Từ khóa chi tiết 3.1\\"]"}}
 
 *RÀO CHẮN THÉP HỌC THUẬT & SƯ PHẠM BẮT BUỘC:*
 - BÁM SÁT 100% NGỮ LIỆU KNTT 2018. TUYỆT ĐỐI CẤM CÁC KIẾN THỨC CŨ 2006.
-- MÔ PHỎNG NÂNG CAO (dynamic_code): BẮT BUỘC gọi hàm `setup_pedagogical_oxy(fig, [x_min, x_max], [y_min, y_max])` ở cuối mã Python để khởi tạo hệ trục tọa độ sư phạm.
-- VỚI BIẾN "func" TRONG JSON: TUYỆT ĐỐI KHÔNG DÙNG LATEX. Phải viết dưới dạng biểu thức Python (VD: (x**2 - 3*x + 2)/(x - 1), np.sin(x), np.exp(x)).
-- TỰ ĐỘNG PHÂN TÍCH NGỮ CẢNH: Nếu học sinh yêu cầu vẽ đồ thị của một hàm số đang nằm trong bài tự luận phía trên, hãy tự động trích xuất đúng phương trình hàm số đó.
-- QUY TẮC TRÌNH DIỄN SƠ ĐỒ MERMAID: Dùng cấu trúc `graph LR`. Mỗi nút con chứa 3-6 từ xúc tích. Không để nhãn là placeholder. Toàn bộ nhãn bên trong ngoặc vuông BẮT BUỘC bọc trong ngoặc kép [\\"...\\"]. Không kèm giải thích thừa ngoài JSON."""
+- MÔ PHỎNG NÂNG CAO (dynamic_code): BẮT BUỘC gọi hàm `setup_pedagogical_oxy(fig, [x_min, x_max], [y_min, y_max])` ở cuối mã Python.
+- VỚI BIẾN "func" TRONG JSON: TUYỆT ĐỐI KHÔNG DÙNG LATEX. Viết dạng Python (VD: (x**2 - 3*x + 2)/(x - 1), np.sin(x), np.exp(x)).
+- QUY TẮC TRÌNH DIỄN SƠ ĐỒ MERMAID: Dùng cấu trúc `graph LR`. Nút con chứa 3-6 từ xúc tích. Toàn bộ nhãn trong ngoặc vuông BẮT BUỘC bọc trong ngoặc kép [\\"...\\"]. Không kèm giải thích thừa ngoài JSON."""
 
-            try:
-                raw_json = call_gemini_with_fallback(lab_prompt, json_mode=True)
-                raw_json = raw_json.strip()
-                if raw_json.startswith("```json"): raw_json = raw_json[7:-3].strip()
-                elif raw_json.startswith("```"): raw_json = raw_json[3:-3].strip()
-                st.session_state.lab_data = json.loads(raw_json)
-            except Exception:
-                st.session_state.lab_data = {"type": "func_3", "a": 1, "b": -3, "c": 0, "d": 2}
+                try:
+                    raw_json = call_gemini_with_fallback(lab_prompt, json_mode=True)
+                    raw_json = raw_json.strip()
+                    if raw_json.startswith("```json"): raw_json = raw_json[7:-3].strip()
+                    elif raw_json.startswith("```"): raw_json = raw_json[3:-3].strip()
+                    st.session_state.lab_data = json.loads(raw_json)
+                    st.session_state.lab_text_result = None
+                except Exception:
+                    st.session_state.lab_data = {"type": "func_3", "a": 1, "b": -3, "c": 0, "d": 2}
+                    st.session_state.lab_text_result = None
+
+    # ========== RENDER KẾT QUẢ ==========
+    if st.session_state.get("lab_text_result"):
+        text_content = st.session_state.lab_text_result
+        text_content = strip_plot_section_from_text(text_content)
+        st.success("✨ Đã khởi tạo nội dung Phòng Lab thành công!")
+        with st.container(border=True):
+            st.markdown(text_content)
 
     if st.session_state.get("lab_data"):
         data = st.session_state.lab_data
@@ -1115,102 +1636,193 @@ QUY TẮC PHÂN LOẠI MÔ HÌNH:
 # ------------------------------------------------------------------------------
 with tab2:
     st.markdown("<br>", unsafe_allow_html=True)
-    st.subheader(f"✍️ Gia Sư Socratic Môn: {subject} - Lớp {grade_num}")
-    st.caption("Khung Tri Thức Chuẩn Hóa CT GDPT 2018 & SGK Kết Nối Tri Thức (NXBGDVN) • Vấn đáp Socratic • Dẫn dắt tư duy, không giải hộ.")
 
-    if st.button("🔄 Xóa đối thoại cũ"): 
+    # ========== KHỞI TẠO SESSION STATE ==========
+    if "messages" not in st.session_state:
         st.session_state.messages = []
-        st.session_state.chat = None
-        st.rerun()
+    if "socratic_uploader_key" not in st.session_state:
+        st.session_state.socratic_uploader_key = 0
+    if "socratic_analyzed_keys" not in st.session_state:
+        st.session_state.socratic_analyzed_keys = set()
+    if "analytics_logs" not in st.session_state:
+        st.session_state.analytics_logs = []
 
-    socratic_system_instruction = f"""Bạn là Thầy giáo Gia Sư AI tại Trường THPT Tân Hiệp & Trung tâm Bồi dưỡng Văn hóa Thiện Nhân (An Giang).
-Học sinh đang học: Môn {subject} - Khối lớp: {grade_num} ({'Cấp THCS' if grade_num <= 9 else 'Cấp THPT'}). Tên của học sinh là: {student_name}.
+    is_essay = subject in ["Ngữ văn", "Lịch sử & Địa lý", "Lịch sử", "Địa lý"]
 
-TRIẾT LÝ HỌC THUẬT BẮT BUỘC: "NÚT THẮT CỔ CHAI CHUẨN HÓA TRI THỨC"
-Mọi tri thức nhân loại khi hướng dẫn cho học sinh BẮT BUỘC phải đi qua bộ lọc của Chương trình GDPT 2018 (Thông tư 32/2018/TT-BGDĐT), Quy chế thi 2026 và SGK Kết Nối Tri Thức Với Cuộc Sống (NXB Giáo Dục Việt Nam). TUYỆT ĐỐI KHÔNG đem kiến thức vượt khung (đại học, tài liệu ngoài luồng) ra áp đặt cho học sinh.
+    st.subheader(f"✍️ Gia Sư Socratic Môn: {subject} - Lớp {grade_num}")
+    st.caption(
+        "Khung Tri Thức Chuẩn Hóa CT GDPT 2018 & SGK Kết Nối Tri Thức • "
+        "Vấn đáp Socratic • Dẫn dắt tư duy, không giải hộ."
+    )
 
-QUY TẮC PHÂN TẦNG THEO CẤP HỌC:
-1. KHỐI THCS (LỚP 6 ĐẾN LỚP 9):
-   - Môn KHTN: Tích hợp Lý - Hóa - Sinh theo đúng mạch chủ đề KNTT. BẮT BUỘC dùng danh pháp IUPAC quốc tế từ Lớp 7.
-   - Môn Toán 6-9: Bám sát kiến thức số học, đại số trực quan, hình học trực quan & phẳng.
-   - Môn Ngữ văn 6-9: Tiếp cận theo thể loại văn bản.
-   - Lịch sử & Địa lý 6-9: Tiếp cận theo tiến trình thời gian và không gian địa lý trực quan.
+    has_chat = len(st.session_state.messages) > 0
 
-2. KHỐI THPT (LỚP 10 ĐẾN LỚP 12):
-   - Môn Toán: Đúng chuẩn Giải tích và Hình học không gian KNTT. TUYỆT ĐỐI CẤM dùng các kiến thức đã xóa bỏ (Tích phân từng phần, Tích phân đổi biến, Hàm số bậc 4 trùng phương). Riêng Khảo sát hàm số (Lớp 12) CHỈ ĐƯỢC DÙNG 3 BƯỚC SGK Bài 4 (1. TXĐ -> 2. Biến thiên -> 3. Đồ thị). CẤM dùng từ "Chuẩn bị", CẤM xét "chẵn lẻ, tuần hoàn".
-   - Môn Hóa học: BẮT BUỘC 100% IUPAC (alkane, alkene, alkyne, ester, amine, amino acid...). TUYỆT ĐỐI CẤM danh pháp cũ 2006.
-   - Môn Vật lý & Sinh học: Bản chất mô hình nhiệt động, sóng, hạt nhân, di truyền phân tử, tiến hóa theo đúng SGK KNTT.
-   - Môn Ngữ văn: Đọc hiểu thi pháp thể loại nâng cao. Ngữ liệu ngoài SGK. TUYỆT ĐỐI KHÔNG chia khổ thơ cơ học.
+    # ========== 2 NÚT ĐIỀU KHIỂN ==========
+    col_btn1, col_btn2, _spacer = st.columns([1.1, 1.8, 2])
+    with col_btn1:
+        if st.button("🔄 Làm bài mới", use_container_width=True, key="soc_btn_new"):
+            st.session_state.messages = []
+            st.session_state.socratic_uploader_key += 1
+            st.session_state.socratic_analyzed_keys = set()
+            st.rerun()
+    with col_btn2:
+        if has_chat and st.button(
+            "📎 Nộp bài khác (giữ hội thoại)",
+            use_container_width=True, key="soc_btn_more"
+        ):
+            st.session_state.socratic_uploader_key += 1
+            st.rerun()
 
-QUY TẮC SƯ PHẠM SOCRATIC:
-- TUYỆT ĐỐI KHÔNG giải hộ, KHÔNG viết toàn bộ lời giải sẵn, KHÔNG đưa ngay đáp số cuối cùng.
-- Khen ngợi phần học sinh đã làm đúng để tạo động lực. Gọi tên học sinh thân thiện: {student_name}.
-- Chỉ ra nút thắt hoặc chỗ nhầm lẫn công thức.
-- Đặt từ 1 đến 2 câu hỏi gợi mở ngắn (Scaffolding) để học sinh tự mình tư duy và sửa lại bài.
-- Giữ vững phong thái người thầy: Mẫu mực, ấm áp, kiên nhẫn.
+    current_key = st.session_state.socratic_uploader_key
 
-ĐỊNH DẠNG CHẨN ĐOÁN BẮT BUỘC (Khi nhận xét ảnh bài làm):
-Cuối phản hồi PHẢI có khối JSON:
-<DIAGNOSTIC>{{"topic":"Tên bài học SGK KNTT Lớp {grade_num}","error_type":"Lỗi khái niệm/Lỗi tính toán/Lỗi phương pháp/Lỗi diễn đạt","evaluation":"Đạt/Cần rèn luyện thêm"}}</DIAGNOSTIC>"""
+    # ========== UPLOAD ẢNH ==========
+    uploaded_file = st.file_uploader(
+        "📸 Tải ảnh bài làm của em (JPG, PNG)",
+        type=["jpg", "png", "jpeg"],
+        key=f"socratic_uploader_{current_key}"
+    )
 
-    uploaded_file = st.file_uploader("📸 Tải ảnh bài làm (JPG, PNG)", type=["jpg", "png", "jpeg"])
-    if uploaded_file:
-        st.image(Image.open(uploaded_file), caption="Bài làm của em", use_container_width=True)
-        if st.button("🚀 Bắt đầu nhận xét"):
-            st.session_state.tram2_count += 1
-            with st.spinner(f"Thầy đang đối chiếu chuẩn kiến thức SGK KNTT Lớp {grade_num} và soi từng bước làm của {student_name}..."):
-                try:
-                    full_res = call_gemini_with_fallback(
-                        [f"Học sinh {student_name} nộp ảnh bài làm môn {subject} Lớp {grade_num}. Thầy hãy soi kỹ bài làm và nhận xét Socratic:", Image.open(uploaded_file)], 
-                        system_instruction=socratic_system_instruction
-                    )
-                    student_fb = full_res.split("<DIAGNOSTIC>")[0].strip() if "<DIAGNOSTIC>" in full_res else full_res
-                    if "<DIAGNOSTIC>" in full_res:
+    # ========== XỬ LÝ ẢNH MỚI ==========
+    if uploaded_file is not None:
+        img_processed = _preprocess_upload_image(uploaded_file)
+        img_bytes = _image_to_bytes(img_processed)
+        st.image(img_bytes, caption="Bài làm của em", use_container_width=True)
+
+        already_analyzed = current_key in st.session_state.socratic_analyzed_keys
+
+        if not already_analyzed:
+            if st.button("🚀 Bắt đầu nhận xét bài làm", type="primary", key="soc_btn_analyze"):
+                if not active_keys_pool:
+                    st.error("Chưa phát hiện Mã Kết Nối! Vui lòng dán API Key ở thanh bên trái.")
+                else:
+                    with st.spinner("Gia Sư AI đang đối chiếu chuẩn kiến thức GDPT 2018 (SGK KNTT)..."):
                         try:
-                            diag = json.loads(full_res.split("<DIAGNOSTIC>")[1].split("</DIAGNOSTIC>")[0].strip())
-                            entry = {
-                                "time": get_vn_time(), 
-                                "name": student_name,
-                                "grade": grade, 
-                                "subject": subject, 
-                                "topic": diag.get("topic", "Kiến thức SGK KNTT"), 
-                                "error_type": diag.get("error_type", "Chưa rõ"),
-                                "evaluation": diag.get("evaluation", "Cần theo dõi"),
-                                "type": "SOCRATIC_DIAGNOSTIC"
-                            }
-                            st.session_state.analytics_logs.append(entry)
-                            if sheet_webhook_url: 
-                                requests.post(sheet_webhook_url, json=entry, timeout=5)
-                        except Exception: 
-                            pass
-                    st.session_state.messages = [{"role": "user", "content": "*(Em đã nộp ảnh bài làm)*"}, {"role": "assistant", "content": student_fb}]
-                    st.rerun()
-                except Exception as e: 
-                    st.error(f"Lỗi phân tích bài làm: {e}")
+                            sys_prompt = _build_socratic_system_prompt(
+                                subject, grade_num, student_name, is_essay
+                            )
+                            full_res = call_gemini_with_fallback(
+                                [f"Học sinh {student_name} nộp ảnh bài làm môn {subject} Lớp {grade_num}. Thầy hãy soi kỹ từng bước và nhận xét Socratic:", img_processed],
+                                system_instruction=sys_prompt
+                            )
 
-    for m in st.session_state.get("messages", []):
-        with st.chat_message(m["role"]): 
+                            if not full_res:
+                                st.error("Không thể kết nối AI. Vui lòng thử lại sau.")
+                            else:
+                                student_fb = (
+                                    full_res.split("<DIAGNOSTIC>")[0].strip()
+                                    if "<DIAGNOSTIC>" in full_res else full_res
+                                )
+                                diag = _parse_diagnostic(full_res)
+                                if diag:
+                                    entry = {
+                                        "time": get_vn_time(),
+                                        "name": student_name,
+                                        "grade": grade,
+                                        "subject": subject,
+                                        "topic": diag.get("topic", "Chung"),
+                                        "error_type": diag.get("error_type", "Chưa rõ"),
+                                        "evaluation": diag.get("evaluation", ""),
+                                        "type": "SOCRATIC_DIAGNOSTIC",
+                                    }
+                                    st.session_state.analytics_logs.append(entry)
+                                    if sheet_webhook_url:
+                                        try:
+                                            requests.post(sheet_webhook_url, json=entry, timeout=5)
+                                        except Exception:
+                                            pass
+
+                                st.session_state.messages.append({
+                                    "role": "user",
+                                    "content": "*(Em đã nộp ảnh bài làm)*",
+                                    "image": img_bytes,
+                                })
+                                st.session_state.messages.append({
+                                    "role": "assistant",
+                                    "content": student_fb,
+                                })
+                                st.session_state.socratic_analyzed_keys.add(current_key)
+                                st.rerun()
+                        except Exception as e:
+                            st.error(f"Lỗi: {e}")
+
+    # ========== RENDER LỊCH SỬ CHAT ==========
+    for m in st.session_state.messages:
+        with st.chat_message(m["role"]):
+            if m.get("image"):
+                st.image(m["image"], use_container_width=True)
             st.markdown(m["content"])
-        
-    if len(st.session_state.get("messages", [])) > 0:
-        if q := st.chat_input("Em chưa hiểu chỗ nào, hãy hỏi Thầy nhé..."):
-            st.session_state.tram2_count += 1
+
+    # ========== NÚT GỢI Ý + CHAT INPUT ==========
+    if has_chat:
+        if st.button("💡 Em cần gợi ý cụ thể hơn (thầy/cô sẽ không giải hộ)", key="soc_btn_hint"):
+            with st.spinner("Gia Sư AI đang nghĩ cách gợi mở khác..."):
+                try:
+                    prompt_hint = (
+                        f"Học sinh {student_name} vẫn đang bí sau khi thầy/cô đã gợi mở. "
+                        f"Hãy đưa ra MỘT ví dụ TƯƠNG TỰ (khác số liệu, cùng dạng) "
+                        f"hoặc MỘT gợi ý bậc thang cụ thể hơn. "
+                        f"TUYỆT ĐỐI vẫn không giải hộ bài của em. "
+                        f"Ngắn gọn, tiếng Việt bình dân, dễ hiểu."
+                    )
+                    sys_prompt_hint = _build_socratic_system_prompt(
+                        subject, grade_num, student_name, is_essay
+                    )
+                    rep = call_gemini_with_fallback(
+                        prompt_hint, system_instruction=sys_prompt_hint
+                    )
+                    rep_clean = (
+                        rep.split("<DIAGNOSTIC>")[0].strip()
+                        if "<DIAGNOSTIC>" in rep else rep
+                    )
+                    if not rep_clean:
+                        st.error("Không nhận được phản hồi. Vui lòng thử lại.")
+                    else:
+                        st.session_state.messages.append({
+                            "role": "assistant", "content": rep_clean
+                        })
+                        st.rerun()
+                except Exception as e:
+                    st.error(f"Lỗi phản hồi: {e}")
+
+        if q := st.chat_input(
+            "Em chưa hiểu chỗ nào, hãy hỏi Thầy nhé...",
+            key="socratic_chat_input"
+        ):
             st.session_state.messages.append({"role": "user", "content": q})
-            with st.chat_message("user"): 
+            with st.chat_message("user"):
                 st.markdown(q)
             with st.chat_message("assistant"):
-                with st.spinner("Thầy đang suy ngẫm câu hỏi của em..."):
-                    try:
-                        history_context = "\n".join([f"{m['role']}: {m['content']}" for m in st.session_state.messages[-4:]])
-                        rep = call_gemini_with_fallback(
-                            f"Lịch sử đối thoại trước đó:\n{history_context}\nHọc sinh {student_name} hỏi: {q}\nThầy phản hồi gợi mở Socratic (tuyệt đối không giải hộ, bám sát SGK KNTT Lớp {grade_num}):",
-                            system_instruction=socratic_system_instruction
-                        )
-                        clean_rep = rep.split("<DIAGNOSTIC>")[0].strip()
-                        st.markdown(clean_rep)
-                        st.session_state.messages.append({"role": "assistant", "content": clean_rep})
-                    except Exception as e: 
-                        st.error(f"Lỗi phản hồi: {e}")
+                try:
+                    history = st.session_state.messages[-8:]
+                    dialogue_context = "\n".join([
+                        f"{msg['role']}: {msg['content']}"
+                        for msg in history if msg.get("content")
+                    ])
+                    sys_prompt_chat = _build_socratic_system_prompt(
+                        subject, grade_num, student_name, is_essay
+                    )
+                    prompt_chat = (
+                        f"Ngữ cảnh hội thoại trước:\n{dialogue_context}\n\n"
+                        f"Học sinh hỏi tiếp: {q}\n"
+                        f"Hãy tiếp tục phương pháp gợi mở Socratic, "
+                        f"giải thích bình dân học vụ, không giải hộ:"
+                    )
+                    rep = call_gemini_with_fallback(
+                        prompt_chat, system_instruction=sys_prompt_chat
+                    )
+                    rep_clean = (
+                        rep.split("<DIAGNOSTIC>")[0].strip()
+                        if "<DIAGNOSTIC>" in rep else rep
+                    )
+                    if not rep_clean:
+                        st.error("Không nhận được phản hồi. Vui lòng thử lại.")
+                    else:
+                        st.markdown(rep_clean)
+                        st.session_state.messages.append({
+                            "role": "assistant", "content": rep_clean
+                        })
+                except Exception as e:
+                    st.error(f"Lỗi phản hồi: {e}")
 
 # ==============================================================================
 # NGÂN HÀNG MA TRẬN CHUYÊN ĐỀ KNTT (TỐI ƯU BỘ NHỚ - KHỞI TẠO 1 LẦN)
