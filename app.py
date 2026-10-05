@@ -1095,14 +1095,33 @@ def render_smart_lab(data):
             _render_formula_and_features("func_3", {"a": fa, "b": fb, "c": fc, "d": fd})
 
         with c2:
-            x_vals = np.linspace(-6, 6, 800)
+            # ===== TỰ ĐỘNG ZOOM QUANH CỰC TRỊ / ĐIỂM UỐN =====
+            delta_cp = 4 * fb * fb - 12 * fa * fc
+            xu = -fb / (3 * fa)
+            if delta_cp > 1e-9:
+                # Có 2 cực trị → mở rộng quanh 2 cực trị + điểm uốn
+                x1 = (-2 * fb + np.sqrt(delta_cp)) / (6 * fa)
+                x2 = (-2 * fb - np.sqrt(delta_cp)) / (6 * fa)
+                x_min_view = min(x1, x2, xu) - 2.5
+                x_max_view = max(x1, x2, xu) + 2.5
+            else:
+                # Không có cực trị → quanh điểm uốn ±4
+                x_min_view = xu - 4
+                x_max_view = xu + 4
+
+            x_vals = np.linspace(x_min_view, x_max_view, 800)
             y_vals = fa * (x_vals**3) + fb * (x_vals**2) + fc * x_vals + fd
-            fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', line=dict(color='#38bdf8', width=3), name='Đồ thị'))
-            
-            y_pad = (max(y_vals) - min(y_vals)) * 0.15
-            y_min, y_max = min(y_vals) - y_pad, max(y_vals) + y_pad
-            
-            setup_pedagogical_oxy(fig, [-6, 6], [y_min, y_max])
+
+            y_min_plot = float(np.min(y_vals))
+            y_max_plot = float(np.max(y_vals))
+            y_pad = max((y_max_plot - y_min_plot) * 0.12, 1.0)
+            y_min_view = y_min_plot - y_pad
+            y_max_view = y_max_plot + y_pad
+
+            fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines',
+                                      line=dict(color='#38bdf8', width=3), name='Đồ thị'))
+
+            setup_pedagogical_oxy(fig, [x_min_view, x_max_view], [y_min_view, y_max_view])
             fig.update_layout(title="Đồ thị Hàm số Bậc 3", height=500)
             st.plotly_chart(fig, use_container_width=True)
 
@@ -1189,16 +1208,47 @@ def render_smart_lab(data):
         with c2:
             x_dinh = -fb / (2 * fa)
             y_dinh = fa * x_dinh**2 + fb * x_dinh + fc
-            x_vals = np.linspace(-6, 6, 600)
+
+            # ===== TỰ ĐỘNG ZOOM VỪA PHẢI QUANH ĐỈNH =====
+            delta = fb**2 - 4*fa*fc
+            if delta > 1e-9:
+                # Có 2 nghiệm → mở rộng 1.5 đơn vị quanh 2 nghiệm
+                x1 = (-fb - np.sqrt(delta)) / (2*fa)
+                x2 = (-fb + np.sqrt(delta)) / (2*fa)
+                x_min_view = min(x1, x2) - 1.5
+                x_max_view = max(x1, x2) + 1.5
+            else:
+                # Không có nghiệm → mở rộng ±3 đơn vị quanh đỉnh
+                x_min_view = x_dinh - 3
+                x_max_view = x_dinh + 3
+
+            # Đảm bảo width tối thiểu 5 đơn vị để đồ thị không quá hẹp
+            if (x_max_view - x_min_view) < 5:
+                center = (x_max_view + x_min_view) / 2
+                x_min_view = center - 2.5
+                x_max_view = center + 2.5
+
+            x_vals = np.linspace(x_min_view, x_max_view, 500)
             y_vals = fa * x_vals**2 + fb * x_vals + fc
-            fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines', line=dict(color='#38bdf8', width=3), name='Parabol'))
-            fig.add_trace(go.Scatter(x=[x_dinh, x_dinh], y=[-12, 12], mode='lines', line=dict(color='#f59e0b', width=1.5, dash='dash'), name='Trục đối xứng'))
-            fig.add_trace(go.Scatter(x=[x_dinh], y=[y_dinh], mode='markers+text', marker=dict(size=8, color='gold'), text=[f'I({x_dinh:.1f}; {y_dinh:.1f})'], textposition="top center"))
-            
-            y_pad = (max(y_vals) - min(y_vals)) * 0.15
-            y_min, y_max = min(y_vals) - y_pad, max(y_vals) + y_pad
-            
-            setup_pedagogical_oxy(fig, [-6, 6], [y_min, y_max])
+
+            # Y range bao quanh đỉnh + 2 biên
+            y_min_plot = min(y_dinh, float(np.min(y_vals)))
+            y_max_plot = max(y_dinh, float(np.max(y_vals)))
+            y_pad = max((y_max_plot - y_min_plot) * 0.15, 0.5)
+            y_min_view = y_min_plot - y_pad
+            y_max_view = y_max_plot + y_pad
+
+            fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines',
+                                      line=dict(color='#38bdf8', width=3), name='Parabol'))
+            fig.add_trace(go.Scatter(x=[x_dinh, x_dinh], y=[y_min_view, y_max_view],
+                                      mode='lines', line=dict(color='#f59e0b', width=1.5, dash='dash'),
+                                      name='Trục đối xứng'))
+            fig.add_trace(go.Scatter(x=[x_dinh], y=[y_dinh], mode='markers+text',
+                                      marker=dict(size=8, color='gold'),
+                                      text=[f'I({x_dinh:.1f}; {y_dinh:.1f})'],
+                                      textposition="top center"))
+
+            setup_pedagogical_oxy(fig, [x_min_view, x_max_view], [y_min_view, y_max_view])
             fig.update_layout(title="Đồ thị Parabol Bậc 2 (Toán Lớp 10)", height=500)
             st.plotly_chart(fig, use_container_width=True)
 
