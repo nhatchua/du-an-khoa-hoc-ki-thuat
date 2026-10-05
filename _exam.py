@@ -7,6 +7,7 @@ import numpy as np
 import re
 import json
 import random
+import requests
 from datetime import datetime
 from _config import VN_TZ, get_vn_time
 from _ai_client import call_gemini_with_fallback
