@@ -109,13 +109,42 @@ def render_mermaid(code: str):
         return build(rootId, 0);
     }
 
+        // ===== TỰ ĐỘNG WRAP CÔNG THỨC NẾU AI QUÊN $...$ =====
+    function autoWrapMath(text) {
+        if (!text) return text;
+        // Nếu đã có $...$ → giữ nguyên
+        if (/\$[^\$]+\$/.test(text)) return text;
+
+        // Nhận diện dấu hiệu công thức toán
+        const mathHint = /(\^|\\frac|\\sqrt|\\int|\\sum|\\lim|\\sin|\\cos|\\tan|\\log|\\ln)/;
+        if (!mathHint.test(text)) return text;
+
+        // Tách "label:" và phần công thức phía sau
+        const colonIdx = text.indexOf(':');
+        if (colonIdx > 0 && colonIdx < 40) {
+            const label = text.substring(0, colonIdx + 1);
+            let formula = text.substring(colonIdx + 1).trim();
+            formula = formula.replace(/\{/g, '\\{').replace(/\}/g, '\\}');
+            return label + ' $' + formula + '$';
+        }
+
+        // Không có dấu ":" → wrap toàn bộ
+        const escaped = text.replace(/\{/g, '\\{').replace(/\}/g, '\\}');
+        return '$' + escaped + '$';
+    }
+
+    // ===== RENDER LATEX TRONG LABEL (dùng KaTeX) =====
     function renderMathInLabel(text) {
         if (!text) return '';
+        // Bước 1: tự động wrap nếu AI quên
+        text = autoWrapMath(text);
+        // Bước 2: escape HTML
         const escaped = text
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;');
-        return escaped.replace(/\\$([^\\$]+)\\$/g, function(m, formula) {
+        // Bước 3: render $...$ bằng KaTeX
+        return escaped.replace(/\$([^\$]+)\$/g, function(m, formula) {
             try {
                 return katex.renderToString(formula, {
                     throwOnError: false,
