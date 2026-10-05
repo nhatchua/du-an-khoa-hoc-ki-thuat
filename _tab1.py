@@ -229,6 +229,26 @@ def _smart_fallback(lab_command):
     cmd_norm = re.sub(r'x\s*\*\*\s*2|x\s*\^\s*2|x2\b', 'x²', cmd_lower)
     cmd_norm = re.sub(r'x\s*\*\*\s*3|x\s*\^\s*3|x3\b', 'x³', cmd_norm)
 
+    # ===== THÊM MỚI: Nhận diện sơ đồ tư duy / mindmap / flowchart =====
+    mindmap_keywords = ["sơ đồ tư duy", "mindmap", "mind map", "flowchart",
+                        "lưu đồ", "sơ đồ khối", "sơ đồ cây", "sơ đồ"]
+    if any(kw in cmd_lower for kw in mindmap_keywords):
+        return {
+            "type": "mermaid",
+            "code": (
+                'graph LR\n'
+                '   Root["🎯 SƠ ĐỒ TƯ DUY"] --> A["📌 Nhánh 1: Khái niệm"]\n'
+                '   Root --> B["📌 Nhánh 2: Công thức"]\n'
+                '   Root --> C["📌 Nhánh 3: Ứng dụng"]\n'
+                '   A --> A1["Từ khóa 1.1"]\n'
+                '   A --> A2["Từ khóa 1.2"]\n'
+                '   B --> B1["Từ khóa 2.1"]\n'
+                '   B --> B2["Từ khóa 2.2"]\n'
+                '   C --> C1["Từ khóa 3.1"]\n'
+                '   C --> C2["Từ khóa 3.2"]'
+            )
+        }
+
     if 'x³' in cmd_norm or 'bậc 3' in cmd_norm or 'bậc ba' in cmd_norm:
         return {"type": "func_3", "a": 1, "b": -3, "c": 0, "d": 2}
     elif 'x²' in cmd_norm or 'parabol' in cmd_norm or 'bậc 2' in cmd_norm or 'bậc hai' in cmd_norm:
@@ -238,7 +258,6 @@ def _smart_fallback(lab_command):
     elif 'sin' in cmd_lower or 'cos' in cmd_lower or 'lượng giác' in cmd_lower:
         return {"type": "func_3", "a": 1, "b": -3, "c": 0, "d": 2}
     return None
-
 
 def _build_lab_prompt(lab_request, subject, grade_num, context_text):
     """Sinh prompt Lab cho môn có đồ thị."""
