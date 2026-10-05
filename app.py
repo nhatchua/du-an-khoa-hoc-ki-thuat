@@ -251,14 +251,25 @@ if not st.session_state.global_stats_loaded and sheet_webhook_url:
     except Exception:
         pass
 
-admin_keys_pool = [k.strip() for k in raw_api_key.split(",")] if raw_api_key else []
-active_keys_pool = [user_custom_key.strip()] if user_custom_key.strip() else admin_keys_pool
+# ===== FIX CỨNG: CHỈ DÙNG API KEY CÁ NHÂN — KHÔNG FALLBACK VỀ KEY ADMIN =====
+active_keys_pool = [user_custom_key.strip()] if user_custom_key.strip() else []
 
 if not active_keys_pool:
-    st.error("⚠️ Hệ thống chưa tìm thấy API Key nào khả dụng!")
+    st.error(
+        "### ⚠️ BẮT BUỘC NHẬP MÃ KẾT NỐI AI CÁ NHÂN\n\n"
+        "Để đảm bảo công bằng và tránh quá tải đường truyền chung của Trường, "
+        "hệ thống yêu cầu **mỗi học sinh tự lấy API Key riêng** "
+        "(hoàn toàn miễn phí, chỉ mất 15 giây).\n\n"
+        "**Hướng dẫn 3 bước:**\n"
+        "1. 👉 Bấm nút **'Lấy Key riêng miễn phí (15s)'** ở thanh bên trái\n"
+        "2. 🔑 Đăng nhập Google → Bấm **'Create API key'** → Copy mã `AIzaSy...`\n"
+        "3. 📋 Dán mã vào ô **'Dán mã API Key của em vào đây'** ở thanh bên trái\n\n"
+        "*💡 Mã này là của riêng em, miễn phí vĩnh viễn, không chia sẻ cho ai.*\n\n"
+        "**Sau khi dán mã xong, app sẽ tự động chạy lại và cho em sử dụng bình thường.**"
+    )
     st.stop()
-elif user_custom_key.strip(): st.sidebar.success("🟢 Em đang dùng đường truyền riêng siêu tốc!")
-else: st.sidebar.info("🔵 Đang dùng đường truyền chung của Trường")
+
+st.sidebar.success("🟢 Em đang dùng đường truyền AI Cá nhân!")
 
 # THÔNG TIN HỌC SINH ĐỂ LƯU LOGS
 st.sidebar.markdown("---")
