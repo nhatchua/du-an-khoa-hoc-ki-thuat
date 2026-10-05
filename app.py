@@ -1505,14 +1505,14 @@ def render_lab_text_block(text):
     # Nhận diện heading: "1. ...", "2. ...", "I. ...", "II. ..."
     heading_re = re.compile(r"^(?:\d{1,2}|[IVX]{1,4})\.\s+\S")
 
-    with str_app.container(border=True):
+    with st.container(border=True):
         buffer = []
 
         def flush():
             if buffer:
                 block = "\n".join(buffer).strip()
                 if block:
-                    str_app.markdown(block)
+                    st.markdown(block)
                 buffer.clear()
 
         for line in text.split("\n"):
@@ -1520,7 +1520,7 @@ def render_lab_text_block(text):
             # Heading = dòng ngắn, bắt đầu bằng "số." hoặc "I."
             if s and len(s) < 100 and heading_re.match(s):
                 flush()
-                str_app.markdown(
+                st.markdown(
                     f"<div style='background: linear-gradient(135deg, #0ea5e9, #38bdf8); "
                     f"color: white; padding: 12px 18px; border-radius: 10px; "
                     f"font-weight: 800; font-size: 1.05rem; margin: 22px 0 12px 0; "
