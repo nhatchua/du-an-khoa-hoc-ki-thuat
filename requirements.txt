@@ -1,5 +1,8 @@
 streamlit
-google-generativeai
-matplotlib
+pandas
 numpy
 plotly
+scipy
+Pillow
+requests
+google-genai>=1.0.0
