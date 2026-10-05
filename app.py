@@ -1619,7 +1619,14 @@ TIÊU ĐỀ BẮT BUỘC (Phải giữ đúng text này để hệ thống nhậ
         with st.spinner("AI đang phân tích ngữ cảnh liên môn và dựng mô hình..."):
 
             context_text = st.session_state.current_lesson if st.session_state.get("current_lesson") else "Không có ngữ cảnh bài học trước đó."
-
+            
+            # ===== CHUẨN HÓA CÂU LỆNH NGƯỜI DÙNG =====
+            # Chuyển "x2" → "x²", "x3" → "x³", "x^2" → "x²"
+            lab_command_norm = re.sub(r'x\s*\*\*\s*2|x\s*\^\s*2|x2\b', 'x²', lab_command)
+            lab_command_norm = re.sub(r'x\s*\*\*\s*3|x\s*\^\s*3|x3\b', 'x³', lab_command_norm)
+            # Loại bỏ ký tự lạ ở cuối (như dấu | sau khi paste)
+            lab_command_norm = lab_command_norm.rstrip('|').strip()
+            
             # ========== NHÁNH 1: MÔN TEXT-ONLY (HÓA / SINH / SỬ-ĐỊA) ==========
             if subject in TEXT_ONLY_SUBJECTS:
                 try:
@@ -1675,7 +1682,27 @@ QUY TẮC PHÂN LOẠI MÔ HÌNH:
                     st.session_state.lab_data = json.loads(raw_json)
                     st.session_state.lab_text_result = None
                 except Exception:
-                    st.session_state.lab_data = {"type": "func_3", "a": 1, "b": -3, "c": 0, "d": 2}
+                    # ===== FALLBACK THÔNG MINH: Đoán loại đồ thị từ câu lệnh =====
+                    cmd_lower = lab_command.lower()
+                    # Chuẩn hóa: x2 → x², x3 → x³
+                    cmd_norm = re.sub(r'x\s*\*\*\s*2|x\s*\^\s*2|x2\b', 'x²', cmd_lower)
+                    cmd_norm = re.sub(r'x\s*\*\*\s*3|x\s*\^\s*3|x3\b', 'x³', cmd_norm)
+
+                    fallback_data = None
+                    if 'x³' in cmd_norm or 'bậc 3' in cmd_norm or 'bậc ba' in cmd_norm:
+                        fallback_data = {"type": "func_3", "a": 1, "b": -3, "c": 0, "d": 2}
+                    elif 'x²' in cmd_norm or 'parabol' in cmd_norm or 'bậc 2' in cmd_norm or 'bậc hai' in cmd_norm:
+                        fallback_data = {"type": "parabola", "a": 1, "b": -2, "c": 1}
+                    elif '/' in lab_command and 'x' in cmd_lower:
+                        fallback_data = {"type": "func_1_1", "a": 1, "b": 1, "c": 1, "d": -1}
+                    elif 'sin' in cmd_lower or 'cos' in cmd_lower or 'lượng giác' in cmd_lower:
+                        fallback_data = {"type": "func_3", "a": 1, "b": -3, "c": 0, "d": 2}
+
+                    if fallback_data:
+                        st.session_state.lab_data = fallback_data
+                    else:
+                        st.session_state.lab_data = None
+                        st.warning("⚠️ Không nhận diện được yêu cầu. Vui lòng nhập rõ hơn, ví dụ: *'Vẽ parabol y = x² - 2x + 1'* hoặc *'Vẽ hàm bậc 3'*")
                     st.session_state.lab_text_result = None
 
     # ========== RENDER KẾT QUẢ ==========
