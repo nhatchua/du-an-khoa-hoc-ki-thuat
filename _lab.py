@@ -1001,134 +1001,51 @@ LƯU Ý CUỐI:
 - Chỉ trả lời bằng văn bản, KHÔNG có code Python, KHÔNG có thẻ XML nào.
 - Trình bày rõ ràng, có xuống dòng giữa các mục lớn."""
 
-def _build_text_only_prompt(lab_request, subject, grade_num):
-    """Prompt riêng cho Hóa, Sinh, Sử-Địa: chỉ trả về văn bản, KHÔNG sinh code plot."""
-    if subject == "Hóa học":
-        structure = """1. PHƯƠNG TRÌNH PHẢN ỨNG
-Viết phương trình hóa học đầy đủ (đã cân bằng), ghi rõ điều kiện phản ứng (nhiệt độ, xúc tác, ánh sáng...). Dùng LaTeX trong cặp dấu $...$ cho công thức.
+def render_lab_text_block(text):
+    """Render text Phòng Lab: tách heading riêng, style nổi bật."""
+    if not text or not text.strip():
+        return
 
-2. TÊN GỌI CÁC CHẤT
-Liệt kê từng chất tham gia và sản phẩm: tên thường gọi, tên khoa học, công thức phân tử, vai trò trong phản ứng.
+    # Nhận diện heading: "1. ...", "2. ...", "I. ...", "II. ..."
+    heading_re = re.compile(r"^(?:\d{1,2}|[IVX]{1,4})\.\s+\S")
 
-3. CÁC BƯỚC TIẾN HÀNH THÍ NGHIỆM
-Mô tả chi tiết từng bước theo trình tự chuẩn phòng thí nghiệm: chuẩn bị dụng cụ, hóa chất, tiến hành, quan sát.
+    with st.container(border=True):
+        buffer = []
 
-4. HIỆN TƯỢNG QUAN SÁT ĐƯỢC
-Mô tả hiện tượng cụ thể: kết tủa (màu gì), sủi bọt khí, đổi màu dung dịch, tỏa nhiệt, phát sáng, mùi đặc trưng...
+        def flush():
+            if buffer:
+                block = "\n".join(buffer).strip()
+                if block:
+                    st.markdown(block)
+                buffer.clear()
 
-5. GIẢI THÍCH BẢN CHẤT
-Giải thích hiện tượng bằng kiến thức hóa học, viết phương trình ion thu gọn (nếu có)."""
+        for line in text.split("\n"):
+            s = line.strip()
+            # Heading = dòng ngắn, bắt đầu bằng "số." hoặc "I."
+            if s and len(s) < 100 and heading_re.match(s):
+                flush()
+                st.markdown(
+                    f"<div style='background: linear-gradient(135deg, #0ea5e9, #38bdf8); "
+                    f"color: white; padding: 12px 18px; border-radius: 10px; "
+                    f"font-weight: 800; font-size: 1.05rem; margin: 22px 0 12px 0; "
+                    f"border-left: 6px solid #0284c7; "
+                    f"box-shadow: 0 3px 10px rgba(14,165,233,0.25); "
+                    f"letter-spacing: 0.3px;'>{s}</div>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                buffer.append(line)
+        flush()
 
-    elif subject == "Sinh học":
-        structure = """1. KHÁI NIỆM / ĐỊNH NGHĨA
-Nêu rõ khái niệm, định nghĩa chuẩn theo SGK Kết Nối Tri Thức.
-
-2. CƠ CHẾ / DIỄN BIẾN
-Mô tả chi tiết cơ chế, các giai đoạn, các yếu tố tham gia, mối quan hệ nhân quả.
-
-3. Ý NGHĨA SINH HỌC
-Ý nghĩa của quá trình / cấu trúc đối với sinh vật, đối với hệ sinh thái.
-
-4. ỨNG DỤNG / LIÊN HỆ THỰC TẾ
-Ứng dụng trong đời sống, y học, nông nghiệp, công nghệ sinh học..."""
-
-    else:  # Lịch sử & Địa lý
-        structure = """1. BỐI CẢNH / ĐIỀU KIỆN
-Trình bày bối cảnh lịch sử hoặc điều kiện tự nhiên - kinh tế - xã hội liên quan.
-
-2. DIỄN BIẾN CHÍNH
-Trình bày diễn biến theo trình tự thời gian hoặc không gian rõ ràng, có mốc cụ thể.
-
-3. KẾT QUẢ / Ý NGHĨA
-Nêu kết quả và ý nghĩa của sự kiện / hiện tượng.
-
-4. LIÊN HỆ MỞ RỘNG
-Liên hệ với kiến thức liên quan, bài học kinh nghiệm, xu hướng hiện nay."""
-
-    return f"""Bạn là giáo viên chuyên môn cao, soạn tài liệu theo chuẩn chương trình giáo dục phổ thông mới nhất bộ sách "Kết Nối Tri Thức Với Cuộc Sống".
-
-YÊU CẦU CỦA HỌC SINH: {lab_request}
-MÔN: {subject} - Lớp {grade_num}
-
-QUY TẮC BẮT BUỘC:
-1. TOÀN BỘ nội dung bằng TIẾNG VIỆT chuẩn xác, không có từ tiếng Anh xen lẫn.
-2. KHÔNG DÙNG DẤU #.
-3. Công thức hóa học, ký hiệu khoa học: dùng LaTeX đặt trong cặp dấu $...$.
-4. TUYỆT ĐỐI KHÔNG sinh code Python, KHÔNG sinh thẻ <PLOT_2D>, <PLOT_3D> hay <PLOT>.
-5. KHÔNG vẽ đồ thị, không vẽ hình — chỉ trả về nội dung văn bản thuần.
-6. KHÔNG có mục "MÃ VẼ ĐỒ THỊ" hay bất kỳ mục nào liên quan đến code vẽ. Chỉ có ĐÚNG các mục đã liệt kê ở CẤU TRÚC ĐẦU RA, không thêm mục mới.
-7. Kiến thức phải cực kỳ chính xác, khoa học, sư phạm theo đúng sách Kết Nối Tri Thức.
-
-CẤU TRÚC ĐẦU RA BẮT BUỘC:
-
-{structure}
-
-LƯU Ý CUỐI:
-- Chỉ trả lời bằng văn bản, KHÔNG có code Python, KHÔNG có thẻ XML nào.
-- Trình bày rõ ràng, có xuống dòng giữa các mục lớn."""
-
-def _build_text_only_prompt(lab_request, subject, grade_num):
-    """Prompt riêng cho Hóa, Sinh, Sử-Địa: chỉ trả về văn bản, KHÔNG sinh code plot."""
-    if subject == "Hóa học":
-        structure = """1. PHƯƠNG TRÌNH PHẢN ỨNG
-Viết phương trình hóa học đầy đủ (đã cân bằng), ghi rõ điều kiện phản ứng (nhiệt độ, xúc tác, ánh sáng...). Dùng LaTeX trong cặp dấu $...$ cho công thức.
-
-2. TÊN GỌI CÁC CHẤT
-Liệt kê từng chất tham gia và sản phẩm: tên thường gọi, tên khoa học, công thức phân tử, vai trò trong phản ứng.
-
-3. CÁC BƯỚC TIẾN HÀNH THÍ NGHIỆM
-Mô tả chi tiết từng bước theo trình tự chuẩn phòng thí nghiệm: chuẩn bị dụng cụ, hóa chất, tiến hành, quan sát.
-
-4. HIỆN TƯỢNG QUAN SÁT ĐƯỢC
-Mô tả hiện tượng cụ thể: kết tủa (màu gì), sủi bọt khí, đổi màu dung dịch, tỏa nhiệt, phát sáng, mùi đặc trưng...
-
-5. GIẢI THÍCH BẢN CHẤT
-Giải thích hiện tượng bằng kiến thức hóa học, viết phương trình ion thu gọn (nếu có)."""
-
-    elif subject == "Sinh học":
-        structure = """1. KHÁI NIỆM / ĐỊNH NGHĨA
-Nêu rõ khái niệm, định nghĩa chuẩn theo SGK Kết Nối Tri Thức.
-
-2. CƠ CHẾ / DIỄN BIẾN
-Mô tả chi tiết cơ chế, các giai đoạn, các yếu tố tham gia, mối quan hệ nhân quả.
-
-3. Ý NGHĨA SINH HỌC
-Ý nghĩa của quá trình / cấu trúc đối với sinh vật, đối với hệ sinh thái.
-
-4. ỨNG DỤNG / LIÊN HỆ THỰC TẾ
-Ứng dụng trong đời sống, y học, nông nghiệp, công nghệ sinh học..."""
-
-    else:  # Lịch sử & Địa lý
-        structure = """1. BỐI CẢNH / ĐIỀU KIỆN
-Trình bày bối cảnh lịch sử hoặc điều kiện tự nhiên - kinh tế - xã hội liên quan.
-
-2. DIỄN BIẾN CHÍNH
-Trình bày diễn biến theo trình tự thời gian hoặc không gian rõ ràng, có mốc cụ thể.
-
-3. KẾT QUẢ / Ý NGHĨA
-Nêu kết quả và ý nghĩa của sự kiện / hiện tượng.
-
-4. LIÊN HỆ MỞ RỘNG
-Liên hệ với kiến thức liên quan, bài học kinh nghiệm, xu hướng hiện nay."""
-
-    return f"""Bạn là giáo viên chuyên môn cao, soạn tài liệu theo chuẩn chương trình giáo dục phổ thông mới nhất bộ sách "Kết Nối Tri Thức Với Cuộc Sống".
-
-YÊU CẦU CỦA HỌC SINH: {lab_request}
-MÔN: {subject} - Lớp {grade_num}
-
-QUY TẮC BẮT BUỘC:
-1. TOÀN BỘ nội dung bằng TIẾNG VIỆT chuẩn xác, không có từ tiếng Anh xen lẫn.
-2. KHÔNG DÙNG DẤU #.
-3. Công thức hóa học, ký hiệu khoa học: dùng LaTeX đặt trong cặp dấu $...$.
-4. TUYỆT ĐỐI KHÔNG sinh code Python, KHÔNG sinh thẻ <PLOT_2D>, <PLOT_3D> hay <PLOT>.
-5. KHÔNG vẽ đồ thị, không vẽ hình — chỉ trả về nội dung văn bản thuần.
-6. KHÔNG có mục "MÃ VẼ ĐỒ THỊ" hay bất kỳ mục nào liên quan đến code vẽ. Chỉ có ĐÚNG các mục đã liệt kê ở CẤU TRÚC ĐẦU RA, không thêm mục mới.
-7. Kiến thức phải cực kỳ chính xác, khoa học, sư phạm theo đúng sách Kết Nối Tri Thức.
-
-CẤU TRÚC ĐẦU RA BẮT BUỘC:
-
-{structure}
-
-LƯU Ý CUỐI:
-- Chỉ trả lời bằng văn bản, KHÔNG có code Python, KHÔNG có thẻ XML nào.
-- Trình bày rõ ràng, có xuống dòng giữa các mục lớn."""
+def strip_plot_section_from_text(text):
+    """Cắt bỏ mục 'MÃ VẼ ĐỒ THỊ' và mọi nội dung sau nó (phòng AI vẫn sinh)."""
+    if not text:
+        return text
+    pattern = re.compile(
+        r"^\s*\d+\.\s*(MÃ\s*VẼ\s*ĐỒ\s*THỊ|VẼ\s*ĐỒ\s*THỊ|CODE\s*VẼ|PLOT|SƠ\s*ĐỒ\s*CODE|MÃ\s*PLOT)[^\n]*$",
+        re.IGNORECASE | re.MULTILINE | re.UNICODE,
+    )
+    m = pattern.search(text)
+    if m:
+        text = text[:m.start()].rstrip()
+    return text
