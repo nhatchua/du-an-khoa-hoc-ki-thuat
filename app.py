@@ -1497,6 +1497,41 @@ LƯU Ý CUỐI:
 - Chỉ trả lời bằng văn bản, KHÔNG có code Python, KHÔNG có thẻ XML nào.
 - Trình bày rõ ràng, có xuống dòng giữa các mục lớn."""
 
+def render_lab_text_block(text):
+    """Render text Phòng Lab: tách heading riêng, style nổi bật."""
+    if not text or not text.strip():
+        return
+
+    # Nhận diện heading: "1. ...", "2. ...", "I. ...", "II. ..."
+    heading_re = re.compile(r"^(?:\d{1,2}|[IVX]{1,4})\.\s+\S")
+
+    with str_app.container(border=True):
+        buffer = []
+
+        def flush():
+            if buffer:
+                block = "\n".join(buffer).strip()
+                if block:
+                    str_app.markdown(block)
+                buffer.clear()
+
+        for line in text.split("\n"):
+            s = line.strip()
+            # Heading = dòng ngắn, bắt đầu bằng "số." hoặc "I."
+            if s and len(s) < 100 and heading_re.match(s):
+                flush()
+                str_app.markdown(
+                    f"<div style='background: linear-gradient(135deg, #0ea5e9, #38bdf8); "
+                    f"color: white; padding: 12px 18px; border-radius: 10px; "
+                    f"font-weight: 800; font-size: 1.05rem; margin: 22px 0 12px 0; "
+                    f"border-left: 6px solid #0284c7; "
+                    f"box-shadow: 0 3px 10px rgba(14,165,233,0.25); "
+                    f"letter-spacing: 0.3px;'>{s}</div>",
+                    unsafe_allow_html=True,
+                )
+            else:
+                buffer.append(line)
+        flush()
 
 def strip_plot_section_from_text(text):
     """Cắt bỏ mục 'MÃ VẼ ĐỒ THỊ' và mọi nội dung sau nó (phòng AI vẫn sinh)."""
@@ -1721,8 +1756,7 @@ QUY TẮC PHÂN LOẠI MÔ HÌNH:
         text_content = st.session_state.lab_text_result
         text_content = strip_plot_section_from_text(text_content)
         st.success("✨ Đã khởi tạo nội dung Phòng Lab thành công!")
-        with st.container(border=True):
-            st.markdown(text_content)
+        render_lab_text_block(text_content)
 
     if st.session_state.get("lab_data"):
         data = st.session_state.lab_data
