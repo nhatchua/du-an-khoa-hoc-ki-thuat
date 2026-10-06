@@ -106,6 +106,20 @@ def render_tab_socratic(grade, subject):
         "Vấn đáp Socratic • Dẫn dắt tư duy, không giải hộ."
     )
 
+    # ========== KHỞI TẠO STATE ==========
+    if "messages" not in st.session_state:
+        st.session_state.messages = []
+    if "socratic_uploader_key" not in st.session_state:
+        st.session_state.socratic_uploader_key = 0
+    if "socratic_analyzed_keys" not in st.session_state:
+        st.session_state.socratic_analyzed_keys = set()
+    if "analytics_logs" not in st.session_state:
+        st.session_state.analytics_logs = []
+    if "current_diagnostic" not in st.session_state:
+        st.session_state.current_diagnostic = {}
+    if "first_feedback" not in st.session_state:
+        st.session_state.first_feedback = ""
+
     has_chat = len(st.session_state.messages) > 0
 
     # ========== 2 NÚT ĐIỀU KHIỂN ==========
@@ -115,6 +129,8 @@ def render_tab_socratic(grade, subject):
             st.session_state.messages = []
             st.session_state.socratic_uploader_key += 1
             st.session_state.socratic_analyzed_keys = set()
+            st.session_state.current_diagnostic = {}
+            st.session_state.first_feedback = ""
             st.rerun()
     with col_btn2:
         if has_chat and st.button(
@@ -164,6 +180,11 @@ def render_tab_socratic(grade, subject):
                                     if "<DIAGNOSTIC>" in full_res else full_res
                                 )
                                 diag = _parse_diagnostic(full_res)
+
+                                # ✅ LƯU DIAGNOSTIC + NHẬN XÉT GỐC ĐỂ DÙNG CHO CÁC CÂU HỎI TIẾP
+                                st.session_state.current_diagnostic = diag if diag else {}
+                                st.session_state.first_feedback = student_fb
+
                                 if diag:
                                     entry = {
                                         "time": get_vn_time(),
@@ -203,17 +224,18 @@ def render_tab_socratic(grade, subject):
                 st.image(m["image"], use_container_width=True)
             st.markdown(m["content"])
 
-    # ========== NÚT GỢI Ý + CHAT INPUT ==========
-    # Nút gợi ý chỉ hiện khi đã có chat
+    # ========== NÚT GỢI Ý (chỉ hiện khi có chat) ==========
     if has_chat:
         if st.button("💡 Em cần gợi ý cụ thể hơn (thầy/cô sẽ không giải hộ)", key="soc_btn_hint"):
             with st.spinner("Gia Sư AI đang nghĩ cách gợi mở khác..."):
                 try:
+                    diag = st.session_state.get("current_diagnostic", {})
                     prompt_hint = (
                         f"Học sinh {student_name} vẫn đang bí sau khi thầy/cô đã gợi mở. "
+                        f"CHỦ ĐỀ GỐC: {diag.get('topic', 'bài làm')}. "
                         f"Hãy đưa ra MỘT ví dụ TƯƠNG TỰ (khác số liệu, cùng dạng) "
                         f"hoặc MỘT gợi ý bậc thang cụ thể hơn. "
-                        f"TUYỆT ĐỐI vẫn không giải hộ bài của em. "
+                        f"TUYỆT ĐỐI vẫn không giải hộ bài của em, và KHÔNG lạc sang chủ đề khác. "
                         f"Ngắn gọn, tiếng Việt bình dân, dễ hiểu."
                     )
                     sys_prompt_hint = _build_socratic_system_prompt(
@@ -236,7 +258,7 @@ def render_tab_socratic(grade, subject):
                 except Exception as e:
                     st.error(f"Lỗi phản hồi: {e}")
 
-    # ⚠️ CHAT INPUT LUÔN RENDER — KHÔNG nằm trong if nào
+    # ========== CHAT INPUT — LUÔN RENDER, KHÔNG NẰM TRONG ĐIỀU KIỆN NÀO ==========
     if q := st.chat_input(
         "Em chưa hiểu chỗ nào, hãy hỏi Thầy nhé...",
         key="socratic_chat_input"
@@ -246,19 +268,42 @@ def render_tab_socratic(grade, subject):
             st.markdown(q)
         with st.chat_message("assistant"):
             try:
-                history = st.session_state.messages[-8:]
+                # ===== LẤY CONTEXT GỐC =====
+                first_fb = st.session_state.get("first_feedback", "")
+                diag = st.session_state.get("current_diagnostic", {})
+                topic_value = diag.get("topic") or (first_fb.split('.')[0][:80] if first_fb else "bài làm gốc")
+                error_value = diag.get("error_type", "Chưa xác định")
+
+                # History 10 tin nhắn gần nhất
+                history = st.session_state.messages[-10:]
                 dialogue_context = "\n".join([
                     f"{msg['role']}: {msg['content']}"
                     for msg in history if msg.get("content")
                 ])
+
+                # ===== SYSTEM PROMPT MẠNH — NHỒI CHỦ ĐỀ GỐC =====
                 sys_prompt_chat = _build_socratic_system_prompt(
                     subject, grade_num, student_name, is_essay
                 )
+                sys_prompt_chat += f"""
+
+⚠️⚠️⚠️ QUY TẮC BẤT DI BẤT DỊCH KHI TRẢ LỜI CÂU HỎI TIẾP THEO:
+1. CHỦ ĐỀ GỐC CỦA BÀI LÀM: **{topic_value}**
+2. LOẠI LỖI ĐÃ CHẨN ĐOÁN: **{error_value}**
+3. NHẬN XÉT BAN ĐẦU (tóm tắt): {first_fb[:400] if first_fb else 'Chưa có'}
+
+TUYỆT ĐỐI TUÂN THỦ:
+- MỌI câu trả lời PHẢI bám sát chủ đề gốc "{topic_value}" — TUYỆT ĐỐI KHÔNG lạc sang chủ đề khác.
+- Nếu học sinh hỏi lạc đề, nhẹ nhàng hướng các em quay lại: "Câu hỏi của em hay, nhưng hiện tại thầy/cô đang cùng em gỡ rối phần {topic_value}. Mình quay lại phần này trước nhé!"
+- Vẫn giữ nguyên tắc Socratic: KHÔNG giải hộ, chỉ gợi mở.
+"""
+
                 prompt_chat = (
-                    f"Ngữ cảnh hội thoại trước:\n{dialogue_context}\n\n"
-                    f"Học sinh hỏi tiếp: {q}\n"
-                    f"Hãy tiếp tục phương pháp gợi mở Socratic, "
-                    f"giải thích bình dân học vụ, không giải hộ:"
+                    f"Ngữ cảnh hội thoại gần đây:\n{dialogue_context}\n\n"
+                    f"Học sinh hỏi tiếp: {q}\n\n"
+                    f"⚠️ NHẮC LẠI: Chủ đề đang học là **{topic_value}**. "
+                    f"Hãy trả lời bám sát chủ đề này, không lạc đề. "
+                    f"Vẫn dùng phương pháp Socratic — gợi mở, KHÔNG giải hộ."
                 )
                 rep = call_gemini_with_fallback(
                     prompt_chat, system_instruction=sys_prompt_chat
