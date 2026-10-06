@@ -319,9 +319,9 @@ QUY TẮC PHÂN LOẠI MÔ HÌNH:
 - *** CHECKLIST BẮT BUỘC KHI VẼ SƠ ĐỒ TƯ DUY "CÁC DẠNG HÀM SỐ" HOẶC TƯƠNG TỰ: PHẢI liệt kê ĐỦ 4 NHÓM CHÍNH, KHÔNG ĐƯỢC BỎ SÓT:
   + Nhóm 1: Hàm Đa Thức (Bậc nhất, Bậc hai, Bậc ba)
   + Nhóm 2: Hàm Phân Thức (Bậc 1/1, Bậc 2/1)
-  + Nhóm 3: Hàm Mũ và Logarit (y = a^x, y = log_a x)
-  + Nhóm 4: Hàm Lượng Giác (y = sin x, y = cos x, y = tan x, y = cot x)
-  Mỗi nút con BẮT BUỘC bọc công thức trong cặp $...$ (ví dụ $y = ax + b$, $y = \\\\frac{ax+b}{cx+d}$). ***"""
+  + Nhóm 3: Hàm Mũ và Logarit
+  + Nhóm 4: Hàm Lượng Giác (sin, cos, tan, cot)
+  Mỗi nút con BẮT BUỘC bọc công thức trong cặp $...$ (ví dụ $y = ax + b$, $y = ax^2 + bx + c$). ***"""
 
 # ==============================================================================
 # HÀM CHÍNH: RENDER TAB 1
