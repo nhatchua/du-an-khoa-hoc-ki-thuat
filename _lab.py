@@ -119,13 +119,23 @@ def render_mermaid(code: str):
             formula = formula.replace(/\\(([^()]+)\\)\\s*\\/\\s*\\(([^()]+)\\)/g, '\\\\frac{$1}{$2}');
             return label + ' $' + formula + '$';
         }
-        const escaped = text.replace(/\\{/g, '\\\\{').replace(/\\}/g, '\\\\}');
+        // Không có dấu ":" → thử tách label và formula bằng pattern "y = " hoặc "f(x) = "
+        const eqMatch = text.match(/^(.{2,40}?)\s*([yf]\(?x?\)?\s*=.+)$/i);
+        if (eqMatch) {
+            const label = eqMatch[1].trim();
+            let formula = eqMatch[2].trim();
+            formula = formula.replace(/\{/g, '\\{').replace(/\}/g, '\\}');
+            formula = formula.replace(/\(([^()]+)\)\s*\/\s*\(([^()]+)\)/g, '\\frac{$1}{$2}');
+            return label + ': $' + formula + '$';
+        }
+        const escaped = text.replace(/\{/g, '\\{').replace(/\}/g, '\\}');
         return '$' + escaped + '$';
     }
 
     function renderMathInLabel(text) {
         if (!text) return '';
         text = autoWrapMath(text);
+        text = text.replace(/([^\s:\$])(\$[^\$]+\$)/g, '$1: $2');
         const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
         return escaped.replace(/\\$([^\\$]+)\\$/g, function(m, formula) {
             try {
