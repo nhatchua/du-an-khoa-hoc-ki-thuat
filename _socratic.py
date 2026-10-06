@@ -204,6 +204,7 @@ def render_tab_socratic(grade, subject):
             st.markdown(m["content"])
 
     # ========== NÚT GỢI Ý + CHAT INPUT ==========
+    # Nút gợi ý chỉ hiện khi đã có chat
     if has_chat:
         if st.button("💡 Em cần gợi ý cụ thể hơn (thầy/cô sẽ không giải hộ)", key="soc_btn_hint"):
             with st.spinner("Gia Sư AI đang nghĩ cách gợi mở khác..."):
@@ -235,42 +236,44 @@ def render_tab_socratic(grade, subject):
                 except Exception as e:
                     st.error(f"Lỗi phản hồi: {e}")
 
-        if q := st.chat_input(
-            "Em chưa hiểu chỗ nào, hãy hỏi Thầy nhé...",
-            key="socratic_chat_input"
-        ):
-            st.session_state.messages.append({"role": "user", "content": q})
-            with st.chat_message("user"):
-                st.markdown(q)
-            with st.chat_message("assistant"):
-                try:
-                    history = st.session_state.messages[-8:]
-                    dialogue_context = "\n".join([
-                        f"{msg['role']}: {msg['content']}"
-                        for msg in history if msg.get("content")
-                    ])
-                    sys_prompt_chat = _build_socratic_system_prompt(
-                        subject, grade_num, student_name, is_essay
-                    )
-                    prompt_chat = (
-                        f"Ngữ cảnh hội thoại trước:\n{dialogue_context}\n\n"
-                        f"Học sinh hỏi tiếp: {q}\n"
-                        f"Hãy tiếp tục phương pháp gợi mở Socratic, "
-                        f"giải thích bình dân học vụ, không giải hộ:"
-                    )
-                    rep = call_gemini_with_fallback(
-                        prompt_chat, system_instruction=sys_prompt_chat
-                    )
-                    rep_clean = (
-                        rep.split("<DIAGNOSTIC>")[0].strip()
-                        if "<DIAGNOSTIC>" in rep else rep
-                    )
-                    if not rep_clean:
-                        st.error("Không nhận được phản hồi. Vui lòng thử lại.")
-                    else:
-                        st.markdown(rep_clean)
-                        st.session_state.messages.append({
-                            "role": "assistant", "content": rep_clean
-                        })
-                except Exception as e:
-                    st.error(f"Lỗi phản hồi: {e}")
+    # ⚠️ CHAT INPUT LUÔN RENDER — KHÔNG nằm trong if nào
+    if q := st.chat_input(
+        "Em chưa hiểu chỗ nào, hãy hỏi Thầy nhé...",
+        key="socratic_chat_input"
+    ):
+        st.session_state.messages.append({"role": "user", "content": q})
+        with st.chat_message("user"):
+            st.markdown(q)
+        with st.chat_message("assistant"):
+            try:
+                history = st.session_state.messages[-8:]
+                dialogue_context = "\n".join([
+                    f"{msg['role']}: {msg['content']}"
+                    for msg in history if msg.get("content")
+                ])
+                sys_prompt_chat = _build_socratic_system_prompt(
+                    subject, grade_num, student_name, is_essay
+                )
+                prompt_chat = (
+                    f"Ngữ cảnh hội thoại trước:\n{dialogue_context}\n\n"
+                    f"Học sinh hỏi tiếp: {q}\n"
+                    f"Hãy tiếp tục phương pháp gợi mở Socratic, "
+                    f"giải thích bình dân học vụ, không giải hộ:"
+                )
+                rep = call_gemini_with_fallback(
+                    prompt_chat, system_instruction=sys_prompt_chat
+                )
+                rep_clean = (
+                    rep.split("<DIAGNOSTIC>")[0].strip()
+                    if "<DIAGNOSTIC>" in rep else rep
+                )
+                if not rep_clean:
+                    st.error("Không nhận được phản hồi. Vui lòng thử lại.")
+                else:
+                    st.markdown(rep_clean)
+                    st.session_state.messages.append({
+                        "role": "assistant", "content": rep_clean
+                    })
+                    st.rerun()
+            except Exception as e:
+                st.error(f"Lỗi phản hồi: {e}")
