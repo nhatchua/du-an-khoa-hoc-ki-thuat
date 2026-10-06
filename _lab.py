@@ -137,6 +137,11 @@ def render_mermaid(code: str):
     // ===== ĐO KÍCH THƯỚC NODE CHÍNH XÁC (HỖ TRỢ MULTI-LINE + KATEX) =====
     function measureNodeSize(d) {
         const fontSize = d.depth === 0 ? 14 : 13;
+        const text = d.data.name;
+
+        // Nhận diện công thức cần nhiều chiều cao (phân số, căn, tổng, tích phân)
+        const hasComplexMath = /\\frac|\\sqrt|\\int|\\sum|\\lim|\\overline|\\binom/.test(text);
+
         const measurer = document.createElement('div');
         measurer.style.cssText = [
             'position: absolute',
@@ -150,17 +155,27 @@ def render_mermaid(code: str):
             'font-weight: 700',
             'font-size: ' + fontSize + 'px',
             'line-height: 1.4',
-            'max-width: 260px'
+            'max-width: 280px'
         ].join(';');
-        measurer.innerHTML = renderMathInLabel(d.data.name);
+        measurer.innerHTML = renderMathInLabel(text);
         document.body.appendChild(measurer);
+
+        // FORCE REFLOW 2 lần để KaTeX render xong hoàn toàn
+        void measurer.offsetHeight;
+        void measurer.offsetWidth;
+        void measurer.getBoundingClientRect();
+
         const rect = measurer.getBoundingClientRect();
+        const textW = Math.ceil(rect.width);
+        const textH = Math.ceil(rect.height);
         document.body.removeChild(measurer);
 
-        // Padding: trái 14 (sau circle) + phải 16 + circle ~20 = 44
-        d.boxWidth = Math.max(90, Math.ceil(rect.width) + 44);
-        // Padding: trên 12 + dưới 12 = 24
-        d.boxHeight = Math.max(44, Math.ceil(rect.height) + 24);
+        // Width: text + 44px padding (circle 20 + trái 14 + phải 10)
+        d.boxWidth = Math.max(95, textW + 50);
+
+        // Height: min 48px cho text thường, 68px cho công thức phức tạp
+        const minH = hasComplexMath ? 68 : 48;
+        d.boxHeight = Math.max(minH, textH + 28);
     }
 
     const treeData = parseMermaidToTree(rawCode);
@@ -332,6 +347,29 @@ def render_mermaid(code: str):
                 .remove();
 
             nodes.forEach(d => { d.x0 = d.x; d.y0 = d.y; });
+            
+            // ===== REMEASURE PASS: đo lại từ DOM thật sau khi KaTeX render =====
+            if (!window._remeasureTimer) {
+                window._remeasureTimer = setTimeout(function() {
+                    window._remeasureTimer = null;
+                    let changed = false;
+                    g.selectAll("g.node").each(function(d) {
+                        const divEl = d3.select(this).select("foreignObject").select("div").node();
+                        if (!divEl) return;
+                        const r = divEl.getBoundingClientRect();
+                        const realW = Math.ceil(r.width) + 50;
+                        const realH = Math.ceil(r.height) + 28;
+                        if (realW > d.boxWidth + 2 || realH > d.boxHeight + 2) {
+                            d.boxWidth = Math.max(d.boxWidth, realW);
+                            d.boxHeight = Math.max(d.boxHeight, realH);
+                            changed = true;
+                        }
+                    });
+                    if (changed) {
+                        update(root);  // vẽ lại 1 lần với kích thước đúng
+                    }
+                }, 180);
+            }
         }
 
         // Đợi font KaTeX load xong mới vẽ để đo chính xác
