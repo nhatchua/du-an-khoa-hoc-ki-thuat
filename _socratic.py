@@ -258,6 +258,7 @@ def render_tab_socratic(grade, subject):
                                     if "<DIAGNOSTIC>" in full_res else full_res
                                 )
                                 diag = _parse_diagnostic(full_res)
+                                st.write("🐛 DEBUG — diag =", diag)
 
                                 # ✅ LƯU DIAGNOSTIC + NHẬN XÉT GỐC ĐỂ DÙNG CHO CÁC CÂU HỎI TIẾP
                                 st.session_state.current_diagnostic = diag if diag else {}
