@@ -51,6 +51,74 @@ def _parse_diagnostic(full_res: str) -> dict:
     except Exception:
         return {}
 
+def _render_radar_chart(diag: dict, subject: str = ""):
+    """Render Radar Chart 5 trục năng lực — CHỈ cho môn có tính toán."""
+    import plotly.graph_objects as go
+
+    # ===== KIỂM TRA MÔN: CHỈ MÔN TỰ NHIÊN MỚI VẼ RADAR =====
+    MATH_SUBJECTS = {
+        "Toán học", "Vật lý", "Hóa học", "Sinh học",
+        "Khoa học tự nhiên", "Tin học"
+    }
+    if subject not in MATH_SUBJECTS:
+        return  # Môn xã hội → không vẽ radar
+
+    radar = diag.get("radar", {})
+    axes = radar.get("axes", [])
+    scores = radar.get("scores", [])
+
+    if not axes or not scores or len(axes) != len(scores):
+        return  # Không có dữ liệu radar → bỏ qua
+
+    # Đóng vòng radar
+    labels_closed = list(axes) + [axes[0]]
+    values_closed = list(scores) + [scores[0]]
+
+    with st.expander("🎯 Bản Đồ Năng Lực Sư Phạm (Radar Chart)", expanded=True):
+        fig = go.Figure()
+        fig.add_trace(go.Scatterpolar(
+            r=values_closed,
+            theta=labels_closed,
+            fill='toself',
+            fillcolor='rgba(56, 189, 248, 0.25)',
+            line=dict(color='#38bdf8', width=3),
+            name='Điểm ước lượng'
+        ))
+        fig.update_layout(
+            polar=dict(
+                radialaxis=dict(
+                    visible=True, range=[0, 100],
+                    gridcolor='#334155',
+                    tickfont=dict(color='#94a3b8', size=10)
+                ),
+                angularaxis=dict(
+                    gridcolor='#334155',
+                    tickfont=dict(color='#f8fafc', size=12)
+                ),
+                bgcolor='#0f172a'
+            ),
+            showlegend=False,
+            template='plotly_dark',
+            height=420,
+            margin=dict(l=70, r=70, t=30, b=30)
+        )
+        st.plotly_chart(fig, use_container_width=True)
+
+        st.caption("Ước lượng tham khảo của AI từ bài vừa nộp; không phải điểm năng lực đã được kiểm định.")
+
+        # Dòng chẩn đoán
+        topic = diag.get("topic", "—")
+        error_type = diag.get("error_type", "—")
+        evaluation = diag.get("evaluation", "—")
+        st.markdown(
+            f"<div style='padding:12px 16px; background:#1e293b; border-left:4px solid #38bdf8; "
+            f"border-radius:6px; margin-top:8px; font-size:14px; color:#cbd5e1;'>"
+            f"<b>🎯 Chẩn đoán:</b> Chủ đề <code style='color:#38bdf8;'>{topic}</code> "
+            f"| Phân loại lỗi: <code style='color:#fbbf24;'>{error_type}</code> "
+            f"| Đánh giá: <code style='color:#34d399;'>{evaluation}</code>"
+            f"</div>",
+            unsafe_allow_html=True
+        )
 
 def _build_socratic_system_prompt(subject, grade_num, student_name, is_essay):
     """System prompt rẽ nhánh theo đặc thù môn học."""
@@ -87,9 +155,19 @@ NGUYÊN TẮC BẤT DI BẤT DỊCH:
 - Xưng hô: gọi học sinh là "em", tự xưng "thầy/cô" (chọn 1 và giữ nhất quán suốt bài).
 - Ngôn ngữ: tiếng Việt bình dân, dễ hiểu, tuyệt đối không hàn lâm, không dùng từ tiếng Anh.
 
-Cuối bài LUÔN chèn khối (không thêm chữ nào sau khối này):
-<DIAGNOSTIC>{{"topic":"...","error_type":"...","evaluation":"..."}}</DIAGNOSTIC>"""
+QUY TẮC CHẤM ĐIỂM RADAR 5 TRỤC NĂNG LỰC (CHỈ ÁP DỤNG CHO MÔN CÓ TÍNH TOÁN):
+- NẾU môn là Toán / Vật lý / Hóa học / Sinh học / Khoa học tự nhiên / Tin học:
+  + Chọn 5 trục phù hợp với đặc thù môn {subject}, ví dụ môn Toán:
+    ["Đại số / Giải tích", "Kỹ năng tính toán", "Tư duy logic", "Xác suất / Thống kê", "Hình học / Oxyz"]
+  + Điểm PHẢI phản ánh đúng năng lực THỂ HIỆN QUA BÀI VỪA NỘP (0–100).
+  + Nếu bài làm tốt → điểm cao đều (80–95). Nếu có lỗi → trục liên quan lỗi đó thấp hơn (40–70).
+  + Trả về trường "radar" trong JSON chẩn đoán.
+- NẾU môn là Ngữ văn / Lịch sử / Địa lý / Tiếng Anh / GDCD / GDKTPL:
+  + KHÔNG trả về trường "radar" trong JSON chẩn đoán.
+  + Chỉ trả về topic, error_type, evaluation như bình thường.
 
+Cuối bài LUÔN chèn khối (không thêm chữ nào sau khối này):
+<DIAGNOSTIC>{"topic":"...","error_type":"...","evaluation":"...","radar":{"axes":["Trục 1","Trục 2","Trục 3","Trục 4","Trục 5"],"scores":[70,80,60,75,85]}}</DIAGNOSTIC>"""
 
 def render_tab_socratic(grade, subject):
     """Render toàn bộ Tab 2 (Gia sư Socratic + nộp bài)."""
@@ -213,6 +291,7 @@ def render_tab_socratic(grade, subject):
                                     "content": student_fb,
                                 })
                                 st.session_state.socratic_analyzed_keys.add(current_key)
+                                _render_radar_chart(diag, subject)
                                 st.rerun()
                         except Exception as e:
                             st.error(f"Lỗi: {e}")
