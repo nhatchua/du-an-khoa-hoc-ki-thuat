@@ -29,20 +29,24 @@ def render_mermaid(code: str):
 
     html_template = """
     <div style="background: radial-gradient(circle at center, #0f172a 0%, #020617 100%); border-radius: 14px; border: 1.5px solid #1e293b; padding: 12px; position: relative; font-family: system-ui, -apple-system, sans-serif;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 0 10px;">
-            <span style="color: #38bdf8; font-size: 13px; font-weight: 700; letter-spacing: 0.5px;">🎯 SƠ ĐỒ TƯ DUY TƯƠNG TÁC THUYẾT TRÌNH (CLICK VÀO NÚT ĐỂ SỔ / THU NHÁNH)</span>
-            <div>
-                <button onclick="expandAll()" style="background: #1e293b; color: #38bdf8; border: 1px solid #38bdf8; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; margin-right: 6px;">➕ Mở tất cả</button>
-                <button onclick="collapseAll()" style="background: #1e293b; color: #f43f5e; border: 1px solid #f43f5e; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; margin-right: 6px;">➖ Thu gọn</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 0 10px; flex-wrap: wrap; gap: 6px;">
+            <span style="color: #38bdf8; font-size: 13px; font-weight: 700; letter-spacing: 0.5px;">🎯 SƠ ĐỒ TƯ DUY TƯƠNG TÁC (CLICK ĐỂ SỔ / THU NHÁNH)</span>
+            <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                <button onclick="expandAll()" style="background: #1e293b; color: #38bdf8; border: 1px solid #38bdf8; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">➕ Mở tất cả</button>
+                <button onclick="collapseAll()" style="background: #1e293b; color: #f43f5e; border: 1px solid #f43f5e; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">➖ Thu gọn</button>
                 <button onclick="resetZoom()" style="background: #1e293b; color: #34d399; border: 1px solid #34d399; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">🎯 Căn giữa</button>
+                <button onclick="exportSVG()" style="background: #1e293b; color: #fbbf24; border: 1px solid #fbbf24; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">💾 Tải SVG</button>
+                <button onclick="exportPNG()" style="background: #1e293b; color: #a78bfa; border: 1px solid #a78bfa; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer;">🖼️ Tải PNG</button>
             </div>
         </div>
         <div id="mindmap-container" style="width: 100%; height: 520px; overflow: hidden; cursor: grab;"></div>
+        <div id="mindmap-loading" style="color: #38bdf8; text-align: center; padding-top: 200px; font-size: 14px;">⏳ Đang tải sơ đồ và font toán học...</div>
     </div>
 
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css">
     <script src="https://d3js.org/d3.v7.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/html-to-image@1.11.11/dist/html-to-image.js"></script>
     <script>
     const rawCode = ___JSON_CODE_PLACEHOLDER___;
 
@@ -50,9 +54,7 @@ def render_mermaid(code: str):
         if (!part) return null;
         part = part.trim().split(':::')[0].trim();
         const openIdx = part.search(/[\\(\\[\\{]/);
-        if (openIdx === -1) {
-            return { id: part, label: null };
-        }
+        if (openIdx === -1) return { id: part, label: null };
         const id = part.substring(0, openIdx).trim();
         let label = part.substring(openIdx).trim();
         label = label.replace(/^[\\(\\[\\{]+["']?/, '').replace(/["']?[\\)\\]\\}]+$/, '').trim();
@@ -67,9 +69,7 @@ def render_mermaid(code: str):
 
         lines.forEach(line => {
             line = line.trim();
-            if (!line || line.startsWith('graph') || line.startsWith('flowchart') || line.startsWith('classDef') || line.startsWith('style') || line.startsWith('subgraph') || line === 'end') {
-                return;
-            }
+            if (!line || line.startsWith('graph') || line.startsWith('flowchart') || line.startsWith('classDef') || line.startsWith('style') || line.startsWith('subgraph') || line === 'end') return;
             if (line.includes('-->')) {
                 const parts = line.split('-->');
                 if (parts.length >= 2) {
@@ -80,7 +80,6 @@ def render_mermaid(code: str):
                         else if (!nodeLabels[src.id]) nodeLabels[src.id] = src.id;
                         if (tgt.label) nodeLabels[tgt.id] = tgt.label;
                         else if (!nodeLabels[tgt.id]) nodeLabels[tgt.id] = tgt.id;
-
                         if (!childrenMap[src.id]) childrenMap[src.id] = [];
                         if (!childrenMap[src.id].includes(tgt.id)) childrenMap[src.id].push(tgt.id);
                         parentMap[tgt.id] = src.id;
@@ -88,9 +87,7 @@ def render_mermaid(code: str):
                 }
             } else {
                 const node = parseNodePart(line);
-                if (node && node.id && node.label) {
-                    nodeLabels[node.id] = node.label;
-                }
+                if (node && node.id && node.label) nodeLabels[node.id] = node.label;
             }
         });
 
@@ -101,62 +98,43 @@ def render_mermaid(code: str):
         function build(id, depth) {
             const item = { id: id, name: nodeLabels[id] || id, depth: depth };
             const childIds = childrenMap[id] || [];
-            if (childIds.length > 0) {
-                item.children = childIds.map(cId => build(cId, depth + 1));
-            }
+            if (childIds.length > 0) item.children = childIds.map(cId => build(cId, depth + 1));
             return item;
         }
         return build(rootId, 0);
     }
 
-        // ===== TỰ ĐỘNG WRAP CÔNG THỨC NẾU AI QUÊN $...$ =====
+    // ===== AUTO WRAP MATH NẾU AI QUÊN $...$ =====
     function autoWrapMath(text) {
         if (!text) return text;
-        // Nếu đã có $...$ → giữ nguyên
-        if (/\$[^\$]+\$/.test(text)) return text;
-
-        // Nhận diện dấu hiệu công thức toán
-        const mathHint = /(\^|\\frac|\\sqrt|\\int|\\sum|\\lim|\\sin|\\cos|\\tan|\\log|\\ln)/;
+        if (/\\$[^\\$]+\\$/.test(text)) return text;
+        const mathHint = /(\\^|\\\\frac|\\\\sqrt|\\\\int|\\\\sum|\\\\lim|\\\\sin|\\\\cos|\\\\tan|\\\\log|\\\\ln|\\\\times)/;
         if (!mathHint.test(text)) return text;
 
-        // Tách "label:" và phần công thức phía sau
         const colonIdx = text.indexOf(':');
         if (colonIdx > 0 && colonIdx < 40) {
             const label = text.substring(0, colonIdx + 1);
             let formula = text.substring(colonIdx + 1).trim();
-            formula = formula.replace(/\{/g, '\\{').replace(/\}/g, '\\}');
+            formula = formula.replace(/\\{/g, '\\\\{').replace(/\\}/g, '\\\\}');
+            formula = formula.replace(/\\(([^()]+)\\)\\s*\\/\\s*\\(([^()]+)\\)/g, '\\\\frac{$1}{$2}');
             return label + ' $' + formula + '$';
         }
-
-        // Không có dấu ":" → wrap toàn bộ
-        const escaped = text.replace(/\{/g, '\\{').replace(/\}/g, '\\}');
+        const escaped = text.replace(/\\{/g, '\\\\{').replace(/\\}/g, '\\\\}');
         return '$' + escaped + '$';
     }
 
-    // ===== RENDER LATEX TRONG LABEL (dùng KaTeX) =====
     function renderMathInLabel(text) {
         if (!text) return '';
-        // Bước 1: tự động wrap nếu AI quên
         text = autoWrapMath(text);
-        // Bước 2: escape HTML
-        const escaped = text
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-        // Bước 3: render $...$ bằng KaTeX
-        return escaped.replace(/\$([^\$]+)\$/g, function(m, formula) {
+        const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return escaped.replace(/\\$([^\\$]+)\\$/g, function(m, formula) {
             try {
-                return katex.renderToString(formula, {
-                    throwOnError: false,
-                    displayMode: false,
-                    output: 'html'
-                });
-            } catch(e) {
-                return m;
-            }
+                return katex.renderToString(formula, { throwOnError: false, displayMode: false, output: 'html' });
+            } catch(e) { return m; }
         });
     }
 
+    // ===== ĐO KÍCH THƯỚC NODE CHÍNH XÁC (HỖ TRỢ MULTI-LINE + KATEX) =====
     function measureNodeSize(d) {
         const fontSize = d.depth === 0 ? 14 : 13;
         const measurer = document.createElement('div');
@@ -166,33 +144,35 @@ def render_mermaid(code: str):
             'top: -9999px',
             'left: -9999px',
             'display: inline-block',
-            'white-space: nowrap',
+            'white-space: pre-wrap',
+            'word-break: break-word',
             'font-family: system-ui, -apple-system, sans-serif',
             'font-weight: 700',
             'font-size: ' + fontSize + 'px',
-            'color: #ffffff',
-            'padding: 0',
-            'line-height: 1.3'
+            'line-height: 1.4',
+            'max-width: 260px'
         ].join(';');
         measurer.innerHTML = renderMathInLabel(d.data.name);
         document.body.appendChild(measurer);
-
         const rect = measurer.getBoundingClientRect();
-        const textW = rect.width;
-        const textH = rect.height;
         document.body.removeChild(measurer);
 
-        d.boxWidth = Math.max(70, Math.ceil(textW) + 55);
-        d.boxHeight = Math.max(32, Math.ceil(textH) + 14);
+        // Padding: trái 14 (sau circle) + phải 16 + circle ~20 = 44
+        d.boxWidth = Math.max(90, Math.ceil(rect.width) + 44);
+        // Padding: trên 12 + dưới 12 = 24
+        d.boxHeight = Math.max(44, Math.ceil(rect.height) + 24);
     }
 
     const treeData = parseMermaidToTree(rawCode);
     const container = document.getElementById("mindmap-container");
+    const loadingEl = document.getElementById("mindmap-loading");
     const height = 520;
 
     if (!treeData) {
-        container.innerHTML = "<div style='color:#38bdf8; text-align:center; padding-top:200px;'>Đang hiển thị sơ đồ...</div>";
+        loadingEl.innerHTML = "⚠️ Không đọc được sơ đồ.";
     } else {
+        loadingEl.style.display = 'none';
+
         const svg = d3.select("#mindmap-container").append("svg")
             .attr("width", "100%")
             .attr("height", height)
@@ -205,7 +185,7 @@ def render_mermaid(code: str):
             .on("zoom", (e) => g.attr("transform", e.transform));
         svg.call(zoom);
 
-        const treeLayout = d3.tree().nodeSize([68, 200]);
+        const treeLayout = d3.tree();
         const root = d3.hierarchy(treeData);
         root.x0 = height / 2;
         root.y0 = 40;
@@ -214,21 +194,28 @@ def render_mermaid(code: str):
 
         if (root.children) {
             root.children.forEach(c => {
-                if (c.children) {
-                    c._children = c.children;
-                    c.children = null;
-                }
+                if (c.children) { c._children = c.children; c.children = null; }
             });
         }
 
         let i = 0;
         function update(source) {
+            // Bước 1: đo kích thước tất cả node
+            const allNodes = root.descendants();
+            allNodes.forEach(d => measureNodeSize(d));
+
+            // Bước 2: tính khoảng cách dọc động theo chiều cao box lớn nhất
+            let maxH = 0;
+            allNodes.forEach(d => { if (d.boxHeight > maxH) maxH = d.boxHeight; });
+            const verticalGap = maxH + 28;  // +28 để chắc chắn không dính
+            treeLayout.nodeSize([verticalGap, 220]);
+
+            // Bước 3: chạy layout
             const treeInfo = treeLayout(root);
             const nodes = treeInfo.descendants();
             const links = treeInfo.links();
 
-            nodes.forEach(d => measureNodeSize(d));
-
+            // Bước 4: tính khoảng cách ngang động theo box lớn nhất mỗi depth
             const maxWByDepth = {};
             nodes.forEach(d => {
                 if (!maxWByDepth[d.depth] || d.boxWidth > maxWByDepth[d.depth]) {
@@ -237,12 +224,13 @@ def render_mermaid(code: str):
             });
 
             const depthX = [40];
-            for (let dep = 1; dep <= 8; dep++) {
-                depthX[dep] = depthX[dep - 1] + (maxWByDepth[dep - 1] || 160) + 50;
+            for (let dep = 1; dep <= 10; dep++) {
+                depthX[dep] = depthX[dep - 1] + (maxWByDepth[dep - 1] || 160) + 60;
             }
 
             nodes.forEach(d => { d.y = depthX[d.depth]; });
 
+            // ===== VẼ NODE =====
             const node = g.selectAll("g.node").data(nodes, d => d.id || (d.id = ++i));
 
             const nodeEnter = node.enter().append("g")
@@ -250,13 +238,8 @@ def render_mermaid(code: str):
                 .attr("transform", d => `translate(${source.y0},${source.x0})`)
                 .style("cursor", "pointer")
                 .on("click", (event, d) => {
-                    if (d.children) {
-                        d._children = d.children;
-                        d.children = null;
-                    } else if (d._children) {
-                        d.children = d._children;
-                        d._children = null;
-                    }
+                    if (d.children) { d._children = d.children; d.children = null; }
+                    else if (d._children) { d.children = d._children; d._children = null; }
                     update(d);
                 });
 
@@ -279,9 +262,9 @@ def render_mermaid(code: str):
 
             const fo = nodeEnter.append("foreignObject")
                 .attr("x", 28)
-                .attr("y", d => -d.boxHeight / 2 + 4)
-                .attr("width", d => d.boxWidth - 34)
-                .attr("height", d => d.boxHeight - 8)
+                .attr("y", d => -d.boxHeight / 2 + 12)
+                .attr("width", d => d.boxWidth - 44)
+                .attr("height", d => d.boxHeight - 24)
                 .style("overflow", "visible");
 
             fo.append("xhtml:div")
@@ -293,7 +276,7 @@ def render_mermaid(code: str):
                 .style("color", "#ffffff")
                 .style("font-family", "system-ui, -apple-system, sans-serif")
                 .style("font-weight", "700")
-                .style("line-height", "1.3")
+                .style("line-height", "1.4")
                 .style("font-size", d => d.depth === 0 ? "14px" : "13px")
                 .html(d => renderMathInLabel(d.data.name));
 
@@ -306,17 +289,18 @@ def render_mermaid(code: str):
                 .attr("y", d => -d.boxHeight / 2);
 
             nodeUpdate.select("foreignObject")
-                .attr("width", d => d.boxWidth - 34)
-                .attr("height", d => d.boxHeight - 8)
-                .attr("y", d => -d.boxHeight / 2 + 4);
+                .attr("width", d => d.boxWidth - 44)
+                .attr("height", d => d.boxHeight - 24)
+                .attr("y", d => -d.boxHeight / 2 + 12);
 
             nodeUpdate.select("circle")
                 .style("fill", d => d._children ? palette[d.depth % palette.length] : (d.children ? "#0f172a" : "#475569"));
 
-            const nodeExit = node.exit().transition().duration(350)
+            node.exit().transition().duration(350)
                 .attr("transform", d => `translate(${source.y},${source.x})`)
                 .remove();
 
+            // ===== VẼ LINK =====
             const link = g.selectAll("path.link").data(links, d => d.target.id);
 
             const linkPath = d => {
@@ -338,8 +322,7 @@ def render_mermaid(code: str):
                 .style("stroke-opacity", 0.75)
                 .style("stroke-width", "2px");
 
-            link.merge(linkEnter).transition().duration(350)
-                .attr("d", linkPath);
+            link.merge(linkEnter).transition().duration(350).attr("d", linkPath);
 
             link.exit().transition().duration(350)
                 .attr("d", d => {
@@ -351,10 +334,20 @@ def render_mermaid(code: str):
             nodes.forEach(d => { d.x0 = d.x; d.y0 = d.y; });
         }
 
-        update(root);
+        // Đợi font KaTeX load xong mới vẽ để đo chính xác
+        if (document.fonts && document.fonts.ready) {
+            document.fonts.ready.then(function() {
+                update(root);
+                svg.call(zoom.transform, d3.zoomIdentity.translate(50, height / 2.3).scale(0.85));
+            });
+        } else {
+            setTimeout(function() {
+                update(root);
+                svg.call(zoom.transform, d3.zoomIdentity.translate(50, height / 2.3).scale(0.85));
+            }, 300);
+        }
 
-        svg.call(zoom.transform, d3.zoomIdentity.translate(50, height / 2.3).scale(0.85));
-
+        // ===== CÁC NÚT ĐIỀU KHIỂN =====
         window.expandAll = function() {
             function expand(d) {
                 if (d._children) { d.children = d._children; d._children = null; }
@@ -379,6 +372,85 @@ def render_mermaid(code: str):
 
         window.resetZoom = function() {
             svg.transition().duration(500).call(zoom.transform, d3.zoomIdentity.translate(50, height / 2.3).scale(0.85));
+        };
+
+        // ===== XUẤT SVG =====
+        window.exportSVG = function() {
+            const svgEl = document.querySelector('#mindmap-container svg');
+            if (!svgEl) { alert('Chưa có sơ đồ để tải!'); return; }
+
+            // Clone SVG và set kích thước thật
+            const clone = svgEl.cloneNode(true);
+            const bbox = g.node().getBBox();
+            const pad = 40;
+            const w = Math.ceil(bbox.width + pad * 2);
+            const h = Math.ceil(bbox.height + pad * 2);
+
+            clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+            clone.setAttribute('xmlns:xhtml', 'http://www.w3.org/1999/xhtml');
+            clone.setAttribute('width', w);
+            clone.setAttribute('height', h);
+            clone.setAttribute('viewBox', (bbox.x - pad) + ' ' + (bbox.y - pad) + ' ' + w + ' ' + h);
+
+            // Thêm background
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', bbox.x - pad);
+            rect.setAttribute('y', bbox.y - pad);
+            rect.setAttribute('width', w);
+            rect.setAttribute('height', h);
+            rect.setAttribute('fill', '#020617');
+            clone.insertBefore(rect, clone.firstChild);
+
+            // Nạp KaTeX CSS vào SVG
+            const style = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+            style.textContent = '@import url("https://cdn.jsdelivr.net/npm/katex@0.16.9/dist/katex.min.css");';
+            clone.insertBefore(style, clone.firstChild);
+
+            const serializer = new XMLSerializer();
+            const svgStr = serializer.serializeToString(clone);
+            const blob = new Blob([svgStr], { type: 'image/svg+xml;charset=utf-8' });
+            const url = URL.createObjectURL(blob);
+
+            const now = new Date();
+            const ts = now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
+
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'SoDoTuDuy_' + ts + '.svg';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        };
+
+        // ===== XUẤT PNG =====
+        window.exportPNG = function() {
+            const node = document.getElementById('mindmap-container');
+            if (!node) { alert('Chưa có sơ đồ để tải!'); return; }
+
+            if (typeof htmlToImage === 'undefined') {
+                alert('Thư viện tải PNG chưa load xong. Vui lòng đợi vài giây rồi thử lại.');
+                return;
+            }
+
+            const now = new Date();
+            const ts = now.getFullYear() + String(now.getMonth()+1).padStart(2,'0') + String(now.getDate()).padStart(2,'0') + '_' + String(now.getHours()).padStart(2,'0') + String(now.getMinutes()).padStart(2,'0') + String(now.getSeconds()).padStart(2,'0');
+
+            htmlToImage.toPng(node, {
+                backgroundColor: '#020617',
+                pixelRatio: 2,
+                cacheBust: true
+            }).then(function(dataUrl) {
+                const a = document.createElement('a');
+                a.href = dataUrl;
+                a.download = 'SoDoTuDuy_' + ts + '.png';
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            }).catch(function(err) {
+                console.error('Lỗi xuất PNG:', err);
+                alert('Không tạo được PNG. Thử tải SVG rồi chuyển đổi bằng công cụ online nhé!');
+            });
         };
     }
     </script>
