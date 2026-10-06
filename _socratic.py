@@ -258,7 +258,6 @@ def render_tab_socratic(grade, subject):
                                     if "<DIAGNOSTIC>" in full_res else full_res
                                 )
                                 diag = _parse_diagnostic(full_res)
-                                st.write("🐛 DEBUG — diag =", diag)
 
                                 # ✅ LƯU DIAGNOSTIC + NHẬN XÉT GỐC ĐỂ DÙNG CHO CÁC CÂU HỎI TIẾP
                                 st.session_state.current_diagnostic = diag if diag else {}
@@ -292,7 +291,6 @@ def render_tab_socratic(grade, subject):
                                     "content": student_fb,
                                 })
                                 st.session_state.socratic_analyzed_keys.add(current_key)
-                                _render_radar_chart(diag, subject)
                                 st.rerun()
                         except Exception as e:
                             st.error(f"Lỗi: {e}")
@@ -304,6 +302,19 @@ def render_tab_socratic(grade, subject):
                 st.image(m["image"], use_container_width=True)
             st.markdown(m["content"])
 
+    # ========== RENDER LỊCH SỬ CHAT ==========
+    for m in st.session_state.messages:
+        with st.chat_message(m["role"]):
+            if m.get("image"):
+                st.image(m["image"], use_container_width=True)
+            st.markdown(m["content"])
+
+    # ========== RENDER RADAR CHART — 1 LẦN DUY NHẤT ==========
+    if has_chat and st.session_state.get("current_diagnostic"):
+        _render_radar_chart(st.session_state.current_diagnostic, subject)
+        st.caption("📌 Bản đồ năng lực được đánh giá **1 lần** khi em nộp bài. Để đánh giá lại, bấm **🔄 Làm bài mới** và nộp bài khác.")
+
+    # ========== NÚT GỢI Ý (chỉ hiện khi có chat) ==========
     # ========== NÚT GỢI Ý (chỉ hiện khi có chat) ==========
     if has_chat:
         if st.button("💡 Em cần gợi ý cụ thể hơn (thầy/cô sẽ không giải hộ)", key="soc_btn_hint"):
