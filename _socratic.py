@@ -167,7 +167,7 @@ QUY TẮC CHẤM ĐIỂM RADAR 5 TRỤC NĂNG LỰC (CHỈ ÁP DỤNG CHO MÔN C
   + Chỉ trả về topic, error_type, evaluation như bình thường.
 
 Cuối bài LUÔN chèn khối (không thêm chữ nào sau khối này):
-<DIAGNOSTIC>{"topic":"...","error_type":"...","evaluation":"...","radar":{"axes":["Trục 1","Trục 2","Trục 3","Trục 4","Trục 5"],"scores":[70,80,60,75,85]}}</DIAGNOSTIC>"""
+<DIAGNOSTIC>{{"topic":"...","error_type":"...","evaluation":"...","radar":{{"axes":["Trục 1","Trục 2","Trục 3","Trục 4","Trục 5"],"scores":[70,80,60,75,85]}}}}</DIAGNOSTIC>"""
 
 def render_tab_socratic(grade, subject):
     """Render toàn bộ Tab 2 (Gia sư Socratic + nộp bài)."""
