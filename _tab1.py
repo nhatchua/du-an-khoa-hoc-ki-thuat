@@ -229,9 +229,38 @@ def _smart_fallback(lab_command):
     cmd_norm = re.sub(r'x\s*\*\*\s*2|x\s*\^\s*2|x2\b', 'x²', cmd_lower)
     cmd_norm = re.sub(r'x\s*\*\*\s*3|x\s*\^\s*3|x3\b', 'x³', cmd_norm)
 
-    # ===== THÊM MỚI: Nhận diện sơ đồ tư duy / mindmap / flowchart =====
-    mindmap_keywords = ["sơ đồ tư duy", "mindmap", "mind map", "flowchart",
-                        "lưu đồ", "sơ đồ khối", "sơ đồ cây", "sơ đồ"]
+    # ===== ƯU TIÊN 1: Sơ đồ tư duy "Các dạng hàm số" — HARDCODE ĐẦY ĐỦ 4 NHÓM =====
+    ham_so_keywords = [
+        "dạng hàm số", "loại hàm số", "các hàm số",
+        "sơ đồ hàm số", "phân loại hàm số",
+        "tổng hợp hàm số", "hàm số thường gặp",
+    ]
+    if any(kw in cmd_lower for kw in ham_so_keywords):
+        return {
+            "type": "mermaid",
+            "code": (
+                'graph LR\n'
+                '   Root["🎯 CÁC LOẠI HÀM SỐ"] --> A["📌 Hàm Đa Thức"]\n'
+                '   Root --> B["📌 Hàm Phân Thức"]\n'
+                '   Root --> C["📌 Hàm Mũ và Logarit"]\n'
+                '   Root --> D["📌 Hàm Lượng Giác"]\n'
+                '   A --> A1["Bậc nhất: $y = ax + b$"]\n'
+                '   A --> A2["Bậc hai: $y = ax^2 + bx + c$"]\n'
+                '   A --> A3["Bậc ba: $y = ax^3 + bx^2 + cx + d$"]\n'
+                '   B --> B1["Bậc 1/1: $y = \\\\frac{ax+b}{cx+d}$"]\n'
+                '   B --> B2["Bậc 2/1: $y = \\\\frac{ax^2+bx+c}{dx+e}$"]\n'
+                '   C --> C1["Hàm mũ: $y = a^x$"]\n'
+                '   C --> C2["Hàm logarit: $y = \\\\log_a x$"]\n'
+                '   D --> D1["$y = \\\\sin x$, $y = \\\\cos x$"]\n'
+                '   D --> D2["$y = \\\\tan x$, $y = \\\\cot x$"]'
+            )
+        }
+
+    # ===== ƯU TIÊN 2: Sơ đồ tư duy chung (khớp từ khóa rộng) =====
+    mindmap_keywords = [
+        "sơ đồ tư duy", "mindmap", "mind map", "flowchart",
+        "lưu đồ", "sơ đồ khối", "sơ đồ cây", "sơ đồ",
+    ]
     if any(kw in cmd_lower for kw in mindmap_keywords):
         return {
             "type": "mermaid",
@@ -249,6 +278,7 @@ def _smart_fallback(lab_command):
             )
         }
 
+    # ===== ƯU TIÊN 3: Các loại đồ thị hàm số =====
     if 'x³' in cmd_norm or 'bậc 3' in cmd_norm or 'bậc ba' in cmd_norm:
         return {"type": "func_3", "a": 1, "b": -3, "c": 0, "d": 2}
     elif 'x²' in cmd_norm or 'parabol' in cmd_norm or 'bậc 2' in cmd_norm or 'bậc hai' in cmd_norm:
@@ -285,10 +315,13 @@ QUY TẮC PHÂN LOẠI MÔ HÌNH:
 - BÁM SÁT 100% NGỮ LIỆU KNTT 2018.
 - MÔ PHỎNG NÂNG CAO: BẮT BUỘC gọi `setup_pedagogical_oxy(fig, [x_min, x_max], [y_min, y_max])` ở cuối.
 - BIẾN "func" TRONG JSON: KHÔNG DÙNG LATEX. Viết dạng Python (VD: (x**2 - 3*x + 2)/(x - 1)).
-- QUY TẮC TRÌNH DIỄN SƠ ĐỒ MERMAID: Dùng cấu trúc `graph LR`. Nút con chứa 3-6 từ xúc tích. 
-  Toàn bộ nhãn trong ngoặc vuông BẮT BUỘC bọc trong ngoặc kép [\"...\"]. 
-  *** BẮT BUỘC: Mọi công thức toán học trong nhãn phải bọc trong cặp $...$ (ví dụ: $\\frac{{a}}{{b}}$, $ax^2+bx+c$). ***
-  Không kèm giải thích thừa ngoài JSON."""
+- QUY TẮC TRÌNH DIỄN SƠ ĐỒ MERMAID: Dùng cấu trúc `graph LR`. Nút con chứa 3-6 từ xúc tích. Toàn bộ nhãn trong ngoặc vuông BẮT BUỘC bọc trong ngoặc kép [\"...\"]. Không kèm giải thích thừa ngoài JSON.
+- *** CHECKLIST BẮT BUỘC KHI VẼ SƠ ĐỒ TƯ DUY "CÁC DẠNG HÀM SỐ" HOẶC TƯƠNG TỰ: PHẢI liệt kê ĐỦ 4 NHÓM CHÍNH, KHÔNG ĐƯỢC BỎ SÓT:
+  + Nhóm 1: Hàm Đa Thức (Bậc nhất, Bậc hai, Bậc ba)
+  + Nhóm 2: Hàm Phân Thức (Bậc 1/1, Bậc 2/1)
+  + Nhóm 3: Hàm Mũ và Logarit (y = a^x, y = log_a x)
+  + Nhóm 4: Hàm Lượng Giác (y = sin x, y = cos x, y = tan x, y = cot x)
+  Mỗi nút con BẮT BUỘC bọc công thức trong cặp $...$ (ví dụ $y = ax + b$, $y = \\\\frac{ax+b}{cx+d}$). ***"""
 
 # ==============================================================================
 # HÀM CHÍNH: RENDER TAB 1
