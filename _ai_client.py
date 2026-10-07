@@ -11,7 +11,11 @@ from google.genai import types
 # QUÉT MODEL — Cache trong session
 # ==============================================================================
 def _scan_available_models(api_key: str):
-    """Quét TẤT CẢ model khả dụng từ Google API."""
+    """Quét TẤT CẢ model khả dụng từ Google API — CHỈ QUÉT 1 LẦN/SESSION."""
+    # ✅ FIX: Nếu đã quét rồi → trả cache, không quét lại
+    if st.session_state.get("_scan_done"):
+        return st.session_state.get("_available_models_cache", [])
+
     try:
         client = genai.Client(api_key=api_key)
         all_models = []
@@ -41,12 +45,15 @@ def _scan_available_models(api_key: str):
             return 99
 
         all_models.sort(key=priority)
+
+        # ✅ FIX: Đánh dấu đã quét + lưu cache
+        st.session_state["_scan_done"] = True
+        st.session_state["_available_models_cache"] = all_models
         return all_models
 
     except Exception as e:
         st.session_state["_scan_error"] = str(e)
         return []
-
 
 def _get_model_pool():
     """
