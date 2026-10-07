@@ -41,10 +41,11 @@ def _render_text_with_latex(text: str):
 
 
 # ==============================================================================
-# PARSE QUIZ TƯƠNG TÁC
+# PARSE QUIZ TƯƠNG TÁC — CACHE 10 PHÚT
 # ==============================================================================
+@st.cache_data(show_spinner=False)
 def _parse_quiz_questions(text):
-    """Parse text bài học AI sinh → list câu hỏi trắc nghiệm."""
+    """Parse text bài học AI sinh → list câu hỏi trắc nghiệm. CÓ CACHE."""
     questions = []
     part3_match = re.search(r'(?i)###\s*PHẦN\s*3', text)
     part2_text = text[:part3_match.start()] if part3_match else text
@@ -65,7 +66,7 @@ def _parse_quiz_questions(text):
             q_header = re.sub(r'(?i)\[Mức độ:\s*.*?\]', '', q_header).strip()
 
         q_text_lines = [q_header]
-        q_latex_blocks = []   # ✅ TÁCH LATEX RA RIÊNG
+        q_latex_blocks = []
         parsing_options = False
 
         for line in lines[1:]:
@@ -85,7 +86,7 @@ def _parse_quiz_questions(text):
                 explain = line.split(":", 1)[-1].strip()
             else:
                 if not parsing_options:
-                    # ✅ Tách $$...$$ ra khỏi câu hỏi
+                    # Tách $$...$$ ra khỏi câu hỏi
                     if '$$' in line:
                         latex_matches = re.findall(r'\$\$[\s\S]*?\$\$', line)
                         q_latex_blocks.extend(latex_matches)
@@ -104,7 +105,7 @@ def _parse_quiz_questions(text):
                 "options": options[:4],
                 "correct": correct,
                 "explain": explain,
-                "latex_blocks": q_latex_blocks,   # ✅
+                "latex_blocks": q_latex_blocks,
             })
     return questions
 
@@ -120,7 +121,7 @@ def _render_quiz_interactive(quiz_list):
     for idx, q in enumerate(quiz_list):
         st.markdown(f"**Câu {idx+1}:** `[{q['level']}]` {q['question']}")
 
-        # ✅ Render LaTeX block (BBT) trên dòng riêng
+        # Render LaTeX block (BBT) trên dòng riêng — dùng helper để tách $$...$$
         for latex_block in q.get("latex_blocks", []):
             _render_text_with_latex(latex_block)
             st.markdown("")
@@ -160,7 +161,7 @@ def _render_lesson(lesson_text, subject):
     # Phần 1
     if len(part2_split) > 0 and part2_split[0].strip():
         cleaned_p1 = re.sub(r'(?:\s*\-\-\-\s*)+$', '', part2_split[0].strip())
-        _render_text_with_latex(cleaned_p1)   # ✅ Dùng helper
+        _render_text_with_latex(cleaned_p1)
 
     # Phần 2
     quiz_list = st.session_state.get("parsed_quiz", [])
@@ -174,7 +175,8 @@ def _render_lesson(lesson_text, subject):
     # Phần 3
     if len(part3_split) > 1 and part3_split[-1].strip():
         st.markdown("### ✍️ Phần 3: Bài tập tự luận & Hướng dẫn tư duy")
-        _render_text_with_latex(part3_split[-1].strip())   # ✅ Dùng helper
+        _render_text_with_latex(part3_split[-1].strip())
+
 
 # ==============================================================================
 # PHÒNG LAB — XỬ LÝ RIÊNG
@@ -210,7 +212,6 @@ def _render_phong_lab(subject, grade_num, api_key_to_use):
                 else "Không có ngữ cảnh bài học trước đó."
             )
 
-            # Chuẩn hóa câu lệnh
             lab_command_norm = re.sub(r'x\s*\*\*\s*2|x\s*\^\s*2|x2\b', 'x²', lab_command)
             lab_command_norm = re.sub(r'x\s*\*\*\s*3|x\s*\^\s*3|x3\b', 'x³', lab_command_norm)
             lab_command_norm = lab_command_norm.rstrip('|').strip()
@@ -268,7 +269,7 @@ def _smart_fallback(lab_command):
     cmd_norm = re.sub(r'x\s*\*\*\s*2|x\s*\^\s*2|x2\b', 'x²', cmd_lower)
     cmd_norm = re.sub(r'x\s*\*\*\s*3|x\s*\^\s*3|x3\b', 'x³', cmd_norm)
 
-    # ===== ƯU TIÊN 1: Sơ đồ tư duy "Các dạng hàm số" — HARDCODE ĐẦY ĐỦ 4 NHÓM =====
+    # ===== ƯU TIÊN 1: Sơ đồ tư duy "Các dạng hàm số" =====
     ham_so_keywords = [
         "dạng hàm số", "loại hàm số", "các hàm số",
         "sơ đồ hàm số", "phân loại hàm số",
@@ -295,7 +296,7 @@ def _smart_fallback(lab_command):
             )
         }
 
-    # ===== ƯU TIÊN 2: Sơ đồ tư duy chung (khớp từ khóa rộng) =====
+    # ===== ƯU TIÊN 2: Sơ đồ tư duy chung =====
     mindmap_keywords = [
         "sơ đồ tư duy", "mindmap", "mind map", "flowchart",
         "lưu đồ", "sơ đồ khối", "sơ đồ cây", "sơ đồ",
@@ -327,6 +328,7 @@ def _smart_fallback(lab_command):
     elif 'sin' in cmd_lower or 'cos' in cmd_lower or 'lượng giác' in cmd_lower:
         return {"type": "func_3", "a": 1, "b": -3, "c": 0, "d": 2}
     return None
+
 
 def _build_lab_prompt(lab_request, subject, grade_num, context_text):
     """Sinh prompt Lab cho môn có đồ thị."""
@@ -361,6 +363,7 @@ QUY TẮC PHÂN LOẠI MÔ HÌNH:
   + Nhóm 3: Hàm Mũ và Logarit
   + Nhóm 4: Hàm Lượng Giác (sin, cos, tan, cot)
   Mỗi nút con BẮT BUỘC bọc công thức trong cặp $...$ (ví dụ $y = ax + b$, $y = ax^2 + bx + c$). ***"""
+
 
 # ==============================================================================
 # HÀM CHÍNH: RENDER TAB 1
