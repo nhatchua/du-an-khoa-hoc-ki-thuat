@@ -122,7 +122,7 @@ def _render_quiz_interactive(quiz_list):
 
         # ✅ Render LaTeX block (BBT) trên dòng riêng
         for latex_block in q.get("latex_blocks", []):
-            st.markdown(latex_block)
+            _render_text_with_latex(latex_block)
             st.markdown("")
 
         user_choice = st.radio(
