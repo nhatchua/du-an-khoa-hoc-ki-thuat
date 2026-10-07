@@ -13,11 +13,15 @@ def get_vn_time():
 
 APP_URL = "https://giasuaithiennhanedu-r5bwggdappdvrmtne2wv3dw.streamlit.app"
 
+# ==============================================================================
+# MODEL GEMINI THẬT (2024-2025) — xếp theo thứ tự ưu tiên
+# ==============================================================================
 ALL_GEMINI_MODELS = [
-    "gemini-3.8-flash",
-    "gemini-3.5-flash",
-    "gemini-3.1-flash-lite",
-    "gemini-3-flash-preview",
+    "gemini-2.0-flash-exp",      # Nhanh nhất, ổn định
+    "gemini-1.5-flash",          # Fallback 1
+    "gemini-1.5-flash-8b",       # Fallback 2 (nhẹ)
+    "gemini-2.0-flash",          # Fallback 3
+    "gemini-1.5-pro",            # Fallback 4 (mạnh nhưng chậm)
 ]
 
 TEXT_ONLY_SUBJECTS = {
@@ -61,6 +65,10 @@ def init_session_state():
         st.session_state.socratic_uploader_key = 0
     if "socratic_analyzed_keys" not in st.session_state:
         st.session_state.socratic_analyzed_keys = set()
+    if "current_diagnostic" not in st.session_state:
+        st.session_state.current_diagnostic = {}
+    if "first_feedback" not in st.session_state:
+        st.session_state.first_feedback = ""
 
     # ===== Trạm 3 — Khảo thí =====
     if "exam_state" not in st.session_state:
