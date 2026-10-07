@@ -98,6 +98,17 @@ def apply_styles():
     .stRadio > div { background-color: rgba(30, 41, 59, 0.6); padding: 15px; border-radius: 10px; border: 1px solid #334155; }
     .short-link-badge { background-color: #1e293b; border: 1px dashed #38bdf8; padding: 8px 12px; border-radius: 8px; font-family: 'Courier New', Courier, monospace; font-size: 0.8rem; color: #38bdf8; text-align: center; margin: 10px 0; word-break: break-all; }
 
+    /* Bảng biến thiên LaTeX (KaTeX display) — không tràn viền */
+    .katex-display {
+        overflow-x: auto !important;
+        overflow-y: hidden !important;
+        padding: 12px 0 !important;
+        margin: 16px 0 !important;
+    }
+    .katex-display > .katex {
+        font-size: 1.05em !important;
+    }
+    
     @media (max-width: 768px) {
         .stTabs [data-baseweb="tab-list"] {
             flex-wrap: wrap !important;
