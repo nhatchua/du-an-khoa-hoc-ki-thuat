@@ -2,7 +2,6 @@
 # _exam.py — Tab 3: Khảo thí độc lập
 # ==============================================================================
 import streamlit as st
-import plotly.graph_objects as go
 import numpy as np
 import re
 import json
@@ -12,14 +11,17 @@ from datetime import datetime
 from _config import VN_TZ, get_vn_time
 from _ai_client import call_gemini_with_fallback
 from _curriculum import BIGDATA_CURRICULUM
-from _lab import setup_pedagogical_oxy
 
 
 # ==============================================================================
-# HELPER: VẼ BẢNG BIẾN THIÊN + ĐỒ THỊ MINI (0-TOKEN)
+# HELPER: VẼ BẢNG BIẾN THIÊN + ĐỒ THỊ MINI (0-TOKEN) — LAZY IMPORT PLOTLY
 # ==============================================================================
 def _render_fast_visual(q):
-    """Vẽ bảng biến thiên + đồ thị mini từ dữ liệu AI đã sinh (không gọi lại AI)."""
+    """Vẽ bảng biến thiên + đồ thị mini từ dữ liệu AI đã sinh."""
+    # Lazy import plotly (chỉ khi cần vẽ)
+    import plotly.graph_objects as go
+    from _lab import setup_pedagogical_oxy
+
     if q.get("bbt"):
         raw_bbt = str(q["bbt"])
         raw_bbt = re.sub(r'\\+nearrow\b', '↗', raw_bbt)
@@ -207,10 +209,11 @@ def _render_fast_visual(q):
 
 
 # ==============================================================================
-# HELPER: PARSE JSON ĐỀ THI AN TOÀN
+# HELPER: PARSE JSON ĐỀ THI AN TOÀN — CACHE 10 PHÚT
 # ==============================================================================
+@st.cache_data(show_spinner=False)
 def _parse_exam_json_safely(raw_str):
-    """Parse JSON đề thi với cơ chế chống vỡ."""
+    """Parse JSON đề thi với cơ chế chống vỡ. CÓ CACHE."""
     start_idx = raw_str.find('{')
     if start_idx == -1:
         raise ValueError("AI không phản hồi cấu trúc JSON hợp lệ.")
@@ -663,7 +666,6 @@ YÊU CẦU DUY NHẤT: Trả về ĐÚNG 1 CON SỐ thập phân từ 1.0 đến
 
         total_score = 0.0
 
-        # Phần I
         p1_tot = len(exam.get("p1", []))
         if p1_tot > 0:
             p1_rate = max_p1 / p1_tot
@@ -678,7 +680,6 @@ YÊU CẦU DUY NHẤT: Trả về ĐÚNG 1 CON SỐ thập phân từ 1.0 đến
                     loi_sai_logs.append(f"TN Câu {idx+1}")
             total_score += p1_corr * p1_rate
 
-        # Phần II
         p2_tot = len(exam.get("p2", []))
         if p2_tot > 0:
             p2_rate = max_p2 / p2_tot
@@ -695,7 +696,6 @@ YÊU CẦU DUY NHẤT: Trả về ĐÚNG 1 CON SỐ thập phân từ 1.0 đến
                 p2_earned += sub_val * p2_rate
             total_score += p2_earned
 
-        # Phần III
         p3_tot = len(exam.get("p3", []))
         if p3_tot > 0:
             p3_rate = max_p3 / p3_tot
@@ -788,7 +788,7 @@ YÊU CẦU DUY NHẤT: Trả về ĐÚNG 1 CON SỐ thập phân từ 1.0 đến
         with st.chat_message(chat_msg["role"]):
             st.markdown(chat_msg["content"])
 
-    if prompt_socratic := st.chat_input("Hỏi Thầy về bất kỳ câu hỏi nào trong đề thi vừa làm..."):
+    if prompt_socratic := st.chat_input("Hỏi Thầy về bất kỳ câu hỏi nào trong đề thi vừa làm...", key="exam_chat_input"):
         st.session_state.tram3_chat_messages.append({"role": "user", "content": prompt_socratic})
         with st.chat_message("user"):
             st.markdown(prompt_socratic)
