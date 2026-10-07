@@ -382,7 +382,71 @@ YÊU CẦU PHÁP LÝ & HỌC THUẬT BẮT BUỘC:
    - NGỮ VĂN: Tiếp cận theo ĐẶC TRƯNG THỂ LOẠI. TUYỆT ĐỐI KHÔNG phân tích cơ học bổ dọc. Ngữ liệu ngoài SGK.
    - VẬT LÝ & SINH HỌC: Tuân thủ đúng bản chất hiện tượng, chuẩn SI.
 2. QUY ĐỊNH CẤU TRÚC KỸ THUẬT:
-   - BBT: DÙNG BẢNG MARKDOWN TIÊU CHUẨN.
+   - BẢNG BIẾN THIÊN (BBT): BẮT BUỘC sinh bằng LaTeX array, đặt trong cặp $$...$$. TUYỆT ĐỐI KHÔNG dùng Markdown table.
+     QUY TẮC CHUNG:
+     + Số cột dòng x PHẢI KHỚP số cột dòng y' và y.
+     + Dùng \\nearrow cho đồng biến (mũi tên lên), \\searrow cho nghịch biến (mũi tên xuống).
+     + Ghi rõ CĐ (cực đại), CT (cực tiểu), || cho tiệm cận đứng.
+     + Cột có cực trị thì phải có cột trung gian để chèn mũi tên.
+
+     MẪU 1 — Hàm BẬC 3 (y = ax³+bx²+cx+d, có 2 cực trị):
+     $$\\begin{{array}}{{|c|ccccccc|}}
+     \\hline
+     x & -\\infty & & x_1 & & x_2 & & +\\infty \\\\
+     \\hline
+     y' & & + & 0 & - & 0 & + & \\\\
+     \\hline
+     y & -\\infty & \\nearrow & y_{{CĐ}} & \\searrow & y_{{CT}} & \\nearrow & +\\infty \\\\
+     \\hline
+     \\end{{array}}$$
+
+     MẪU 2 — Hàm BẬC 3 vô cực trị (y' luôn dương hoặc luôn âm):
+     $$\\begin{{array}}{{|c|ccc|}}
+     \\hline
+     x & -\\infty & & +\\infty \\\\
+     \\hline
+     y' & & + & \\\\
+     \\hline
+     y & -\\infty & \\nearrow & +\\infty \\\\
+     \\hline
+     \\end{{array}}$$
+
+     MẪU 3 — Hàm PHÂN THỨC 1/1 (y=(ax+b)/(cx+d), có TCĐ):
+     $$\\begin{{array}}{{|c|cccc|}}
+     \\hline
+     x & -\\infty & & x_0 & & +\\infty \\\\
+     \\hline
+     y' & & - & || & - & \\\\
+     \\hline
+     y & y_{{TCN}} & \\searrow & || & \\searrow & y_{{TCN}} \\\\
+     \\hline
+     \\end{{array}}$$
+
+     MẪU 4 — Hàm PHÂN THỨC 2/1 (y=(ax²+bx+c)/(dx+e), có TCĐ + 2 cực trị):
+     $$\\begin{{array}}{{|c|ccccccc|}}
+     \\hline
+     x & -\\infty & & x_1 & & x_0 & & +\\infty \\\\
+     \\hline
+     y' & & + & 0 & - & || & - & \\\\
+     \\hline
+     y & +\\infty & \\nearrow & y_{{CĐ}} & \\searrow & -\\infty || +\\infty & \\searrow & y_{{TCN}} \\\\
+     \\hline
+     \\end{{array}}$$
+     (Tương tự mẫu đối xứng cho trường hợp còn lại)
+
+     MẪU 5 — Hàm PARABOL BẬC 2 (y = ax²+bx+c):
+     $$\\begin{{array}}{{|c|ccc|}}
+     \\hline
+     x & -\\infty & & x_0 & & +\\infty \\\\
+     \\hline
+     y' & & - & 0 & + & \\\\
+     \\hline
+     y & +\\infty & \\searrow & y_{{CT}} & \\nearrow & +\\infty \\\\
+     \\hline
+     \\end{{array}}$$
+     (Đảo dấu nếu a < 0)
+
+     LƯU Ý CUỐI: CHỌN ĐÚNG MẪU theo loại hàm đang khảo sát. Không bịa thêm mẫu khác.
    - ĐỒ THỊ: Mô tả bằng lời, ghi chú: "(Kéo xuống Phòng Lab ảo bên dưới để trực quan hóa nhé!)".
    - TRẮC NGHIỆM SOCRATIC: Sinh chính xác 3 câu hỏi trắc nghiệm đánh giá năng lực.
      + Bắt đầu mỗi câu bằng chữ "Câu 1:", "Câu 2:", "Câu 3:".
