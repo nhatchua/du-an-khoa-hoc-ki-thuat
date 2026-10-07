@@ -2,19 +2,21 @@
 # _analytics.py — Tab 4: KHKT & kiểm định thống kê
 # ==============================================================================
 import streamlit as st
-import plotly.graph_objects as go
-import plotly.express as px
 import numpy as np
-import pandas as pd
-import scipy.stats as stats
 import json
 from datetime import datetime
 from _config import VN_TZ
 from _ai_client import call_gemini_with_fallback
 
+# Lazy import: pandas, plotly, scipy — chỉ import khi thực sự cần
+
 
 def render_tab_analytics(grade, subject):
     """Render toàn bộ Tab 4 (Nhật ký KHKT + kiểm định thống kê)."""
+    # ===== LAZY IMPORT (chỉ khi Tab 4 mở) =====
+    import pandas as pd
+    import plotly.express as px
+
     grade_num = int(grade.split()[1])
     sheet_webhook_url = st.session_state.get("sheet_webhook_url", "")
     sheet_view_url = st.session_state.get("sheet_view_url", "")
@@ -190,6 +192,11 @@ def render_tab_analytics(grade, subject):
 # HELPER: PAIRED T-TEST + COHEN'S D + PHỔ GAUSS
 # ==============================================================================
 def _render_ttest(data_source, sample_size):
+    # ===== LAZY IMPORT =====
+    import pandas as pd
+    import scipy.stats as stats
+    import plotly.graph_objects as go
+
     np.random.seed(42)
 
     real_scores = []
