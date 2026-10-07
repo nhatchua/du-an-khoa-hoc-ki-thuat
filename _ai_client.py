@@ -49,20 +49,24 @@ def _scan_available_models(api_key: str):
 
 
 def _get_model_pool():
-    """Lấy danh sách model — cache trong session_state."""
+    """
+    Danh sách model ƯU TIÊN HARD-CODE — không quét API.
+    Nếu tất cả fail → mới quét lại từ API.
+    """
+    # ===== DANH SÁCH ƯU TIÊN (đã test OK) =====
+    PREFERRED_MODELS = [
+        "gemini-2.5-flash",
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+        "gemini-flash-latest",
+    ]
+
+    # Chỉ quét API nếu cache rỗng VÀ đã thử hết PREFERRED fail
     cached = st.session_state.get("_available_models_cache")
     if cached:
         return cached
 
-    active_keys_pool = st.session_state.get("active_keys_pool", [])
-    if not active_keys_pool:
-        return []
-
-    models = _scan_available_models(active_keys_pool[0])
-    if models:
-        st.session_state["_available_models_cache"] = models
-    return models
-
+    return PREFERRED_MODELS
 
 # ==============================================================================
 # HÀM CHÍNH
