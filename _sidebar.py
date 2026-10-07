@@ -15,15 +15,24 @@ def _get_local_img_as_base64(file_path):
         return ""
 
 
+@st.cache_data(ttl=300, show_spinner=False)
+def _fetch_global_logs_cached(webhook_url: str):
+    """Fetch global logs từ Google Sheets — cache 5 phút."""
+    try:
+        res = requests.get(webhook_url, timeout=3)
+        if res.status_code == 200:
+            data = res.json()
+            if isinstance(data, list):
+                return data
+    except Exception:
+        pass
+    return None
+
+
 def render_sidebar():
     """
     Render toàn bộ sidebar.
     Trả về (grade, subject).
-    Đồng thời set các biến quan trọng vào session_state:
-      - active_keys_pool
-      - sheet_webhook_url
-      - sheet_view_url
-      - student_name
     """
     with st.sidebar:
         # ========== LOGO + TIÊU ĐỀ ==========
@@ -92,20 +101,15 @@ def render_sidebar():
             if sheet_view_url_secret else sheet_webhook_url
         )
 
-        # Fetch global logs (chỉ 1 lần)
+        # ===== Fetch global logs (CACHED 5 PHÚT) =====
         if not st.session_state.global_stats_loaded and sheet_webhook_url:
-            try:
-                res = requests.get(sheet_webhook_url, timeout=3)
-                if res.status_code == 200:
-                    data_gs = res.json()
-                    if isinstance(data_gs, list):
-                        st.session_state.global_logs = data_gs
-                        st.session_state.global_exam_count = len(
-                            [x for x in data_gs if x.get("type") == "EXAM_RESULT"]
-                        )
-                st.session_state.global_stats_loaded = True
-            except Exception:
-                pass
+            data_gs = _fetch_global_logs_cached(sheet_webhook_url)
+            if data_gs:
+                st.session_state.global_logs = data_gs
+                st.session_state.global_exam_count = len(
+                    [x for x in data_gs if x.get("type") == "EXAM_RESULT"]
+                )
+            st.session_state.global_stats_loaded = True
 
         # ========== FIX CỨNG: CHỈ DÙNG API KEY CÁ NHÂN ==========
         active_keys_pool = (
