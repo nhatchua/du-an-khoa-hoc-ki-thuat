@@ -16,6 +16,31 @@ from _lab import (
 
 
 # ==============================================================================
+# HELPER: RENDER TEXT CÓ LATEX $$...$$ (tách block riêng, không bị vỡ)
+# ==============================================================================
+def _render_text_with_latex(text: str):
+    """Render text, tách $$...$$ ra và render riêng qua st.latex."""
+    if not text or not text.strip():
+        return
+
+    # Tách theo $$...$$ (hỗ trợ multi-line)
+    parts = re.split(r'(\$\$[\s\S]*?\$\$)', text)
+
+    for part in parts:
+        if not part or not part.strip():
+            continue
+        s = part.strip()
+        if s.startswith('$$') and s.endswith('$$') and len(s) > 4:
+            latex_content = s[2:-2].strip()
+            try:
+                st.latex(latex_content)
+            except Exception:
+                st.markdown(part)
+        else:
+            st.markdown(part)
+
+
+# ==============================================================================
 # PARSE QUIZ TƯƠNG TÁC
 # ==============================================================================
 def _parse_quiz_questions(text):
@@ -40,6 +65,7 @@ def _parse_quiz_questions(text):
             q_header = re.sub(r'(?i)\[Mức độ:\s*.*?\]', '', q_header).strip()
 
         q_text_lines = [q_header]
+        q_latex_blocks = []   # ✅ TÁCH LATEX RA RIÊNG
         parsing_options = False
 
         for line in lines[1:]:
@@ -59,7 +85,15 @@ def _parse_quiz_questions(text):
                 explain = line.split(":", 1)[-1].strip()
             else:
                 if not parsing_options:
-                    q_text_lines.append(line)
+                    # ✅ Tách $$...$$ ra khỏi câu hỏi
+                    if '$$' in line:
+                        latex_matches = re.findall(r'\$\$[\s\S]*?\$\$', line)
+                        q_latex_blocks.extend(latex_matches)
+                        line_clean = re.sub(r'\$\$[\s\S]*?\$\$', '', line).strip()
+                        if line_clean:
+                            q_text_lines.append(line_clean)
+                    else:
+                        q_text_lines.append(line)
                 elif options and not clean_line.upper().startswith(('A.', 'B.', 'C.', 'D.')):
                     explain += " " + line
 
@@ -70,6 +104,7 @@ def _parse_quiz_questions(text):
                 "options": options[:4],
                 "correct": correct,
                 "explain": explain,
+                "latex_blocks": q_latex_blocks,   # ✅
             })
     return questions
 
@@ -84,6 +119,12 @@ def _render_quiz_interactive(quiz_list):
 
     for idx, q in enumerate(quiz_list):
         st.markdown(f"**Câu {idx+1}:** `[{q['level']}]` {q['question']}")
+
+        # ✅ Render LaTeX block (BBT) trên dòng riêng
+        for latex_block in q.get("latex_blocks", []):
+            st.markdown(latex_block)
+            st.markdown("")
+
         user_choice = st.radio(
             f"Chọn đáp án câu {idx+1}:", q['options'],
             key=f"q_{idx}", label_visibility="collapsed"
@@ -118,9 +159,8 @@ def _render_lesson(lesson_text, subject):
 
     # Phần 1
     if len(part2_split) > 0 and part2_split[0].strip():
-        cleaned_p1 = re.sub(r'\n\s*\n', '\n\n', part2_split[0].strip())
-        cleaned_p1 = re.sub(r'(?:\s*\-\-\-\s*)+$', '', cleaned_p1)
-        st.markdown(cleaned_p1)
+        cleaned_p1 = re.sub(r'(?:\s*\-\-\-\s*)+$', '', part2_split[0].strip())
+        _render_text_with_latex(cleaned_p1)   # ✅ Dùng helper
 
     # Phần 2
     quiz_list = st.session_state.get("parsed_quiz", [])
@@ -129,13 +169,12 @@ def _render_lesson(lesson_text, subject):
     elif len(part2_split) > 1 and "PHẦN 3" in part2_split[1].upper():
         st.warning("💡 Hệ thống AI vừa sinh ra một định dạng trắc nghiệm mới. Đang hiển thị ở chế độ xem tĩnh:")
         fallback_p2 = re.split(r'(?i)###\s*PHẦN\s*3', part2_split[1])[0]
-        st.markdown(fallback_p2.strip())
+        _render_text_with_latex(fallback_p2.strip())
 
     # Phần 3
     if len(part3_split) > 1 and part3_split[-1].strip():
         st.markdown("### ✍️ Phần 3: Bài tập tự luận & Hướng dẫn tư duy")
-        st.markdown(part3_split[-1].strip())
-
+        _render_text_with_latex(part3_split[-1].strip())   # ✅ Dùng helper
 
 # ==============================================================================
 # PHÒNG LAB — XỬ LÝ RIÊNG
