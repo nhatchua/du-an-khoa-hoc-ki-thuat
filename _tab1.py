@@ -4,8 +4,13 @@
 import streamlit as st
 import json
 import re
-from _config import TEXT_ONLY_SUBJECTS
+import unicodedata
+from collections import defaultdict
+from datetime import datetime, timedelta
+
+from _config import TEXT_ONLY_SUBJECTS, VN_TZ, get_vn_time
 from _ai_client import call_gemini_with_fallback
+from _curriculum import BIGDATA_CURRICULUM
 from _lab import (
     render_smart_lab,
     render_lab_text_block,
@@ -22,7 +27,6 @@ def _render_text_with_latex(text: str):
     if not text or not text.strip():
         return
 
-    # Tách theo $$...$$ (hỗ trợ multi-line)
     parts = re.split(r'(\$\$[\s\S]*?\$\$)', text)
 
     for part in parts:
@@ -85,7 +89,6 @@ def _parse_quiz_questions(text):
                 explain = line.split(":", 1)[-1].strip()
             else:
                 if not parsing_options:
-                    # Tách $$...$$ ra khỏi câu hỏi
                     if '$$' in line:
                         latex_matches = re.findall(r'\$\$[\s\S]*?\$\$', line)
                         q_latex_blocks.extend(latex_matches)
@@ -120,7 +123,6 @@ def _render_quiz_interactive(quiz_list):
     for idx, q in enumerate(quiz_list):
         st.markdown(f"**Câu {idx+1}:** `[{q['level']}]` {q['question']}")
 
-        # Render LaTeX block (BBT) trên dòng riêng — dùng helper để tách $$...$$
         for latex_block in q.get("latex_blocks", []):
             _render_text_with_latex(latex_block)
             st.markdown("")
@@ -157,12 +159,10 @@ def _render_lesson(lesson_text, subject):
     part2_split = re.split(r'(?i)(?:###\s*)?PHẦN 2[\:\.]?', lesson_text)
     part3_split = re.split(r'(?i)(?:###\s*)?PHẦN 3[\:\.]?', lesson_text)
 
-    # Phần 1
     if len(part2_split) > 0 and part2_split[0].strip():
         cleaned_p1 = re.sub(r'(?:\s*\-\-\-\s*)+$', '', part2_split[0].strip())
         _render_text_with_latex(cleaned_p1)
 
-    # Phần 2
     quiz_list = st.session_state.get("parsed_quiz", [])
     if quiz_list:
         _render_quiz_interactive(quiz_list)
@@ -171,10 +171,394 @@ def _render_lesson(lesson_text, subject):
         fallback_p2 = re.split(r'(?i)###\s*PHẦN\s*3', part2_split[1])[0]
         _render_text_with_latex(fallback_p2.strip())
 
-    # Phần 3
     if len(part3_split) > 1 and part3_split[-1].strip():
         st.markdown("### ✍️ Phần 3: Bài tập tự luận & Hướng dẫn tư duy")
         _render_text_with_latex(part3_split[-1].strip())
+
+
+# ==============================================================================
+# ============ TÍNH NĂNG MỚI: KHO CHỦ ĐỀ =======================================
+# ==============================================================================
+
+# ----- 1. Chuẩn hóa tiếng Việt không dấu -----
+def _remove_diacritics(s: str) -> str:
+    """'Khảo sát hàm số' → 'khao sat ham so'"""
+    if not s:
+        return ""
+    s = s.replace("đ", "d").replace("Đ", "D")
+    s = unicodedata.normalize("NFD", s)
+    s = "".join(c for c in s if unicodedata.category(c) != "Mn")
+    return s.lower().strip()
+
+
+def _is_subsequence(query: str, target: str) -> bool:
+    """Kiểm tra query có phải subsequence của target không."""
+    it = iter(target)
+    return all(c in it for c in query)
+
+
+def _fuzzy_match(query: str, topic: str) -> bool:
+    """Tìm kiếm gần đúng: bỏ dấu, bỏ khoảng trắng, substring + subsequence."""
+    if not query or not query.strip():
+        return True
+    q = _remove_diacritics(query).replace(" ", "")
+    t = _remove_diacritics(topic).replace(" ", "")
+    if not q:
+        return True
+    if q in t:
+        return True
+    return _is_subsequence(q, t)
+
+
+# ----- 2. Khởi tạo state cho topic -----
+def _ensure_topic_state():
+    """Khởi tạo session_state cho tính năng kho chủ đề."""
+    if "topic_history" not in st.session_state:
+        st.session_state["topic_history"] = []  # list of dict
+    if "topic_favorites" not in st.session_state:
+        st.session_state["topic_favorites"] = set()  # set of "subject|topic"
+
+
+# ----- 3. Lịch sử gần đây -----
+def _add_to_history(topic: str, subject: str, grade_num: int):
+    """Thêm chủ đề vào lịch sử, giới hạn 5 entry/môn, TTL 7 ngày."""
+    _ensure_topic_state()
+    history = st.session_state["topic_history"]
+
+    # Xóa entry cũ cùng (subject, topic)
+    history = [e for e in history if not (e.get("subject") == subject and e.get("topic") == topic)]
+
+    # Thêm entry mới lên đầu
+    history.insert(0, {
+        "topic": topic,
+        "subject": subject,
+        "grade": grade_num,
+        "ts": get_vn_time(),
+    })
+
+    # Lọc bỏ entry cũ hơn 7 ngày
+    now = datetime.now(VN_TZ)
+    kept = []
+    for e in history:
+        try:
+            dt = datetime.strptime(e["ts"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=VN_TZ)
+            if (now - dt).days <= 7:
+                kept.append(e)
+        except Exception:
+            kept.append(e)
+    history = kept
+
+    # Giới hạn 5 entry/môn
+    by_subject = defaultdict(list)
+    for e in history:
+        by_subject[e.get("subject", "")].append(e)
+    result = []
+    for subj, entries in by_subject.items():
+        entries.sort(key=lambda x: x.get("ts", ""), reverse=True)
+        result.extend(entries[:5])
+    result.sort(key=lambda x: x.get("ts", ""), reverse=True)
+
+    st.session_state["topic_history"] = result
+
+
+def _get_history_for_subject(subject: str):
+    """Lấy lịch sử gần đây của 1 môn (đã TTL 7 ngày)."""
+    _ensure_topic_state()
+    history = st.session_state["topic_history"]
+    now = datetime.now(VN_TZ)
+    result = []
+    for e in history:
+        if e.get("subject") != subject:
+            continue
+        try:
+            dt = datetime.strptime(e["ts"], "%Y-%m-%d %H:%M:%S").replace(tzinfo=VN_TZ)
+            if (now - dt).days <= 7:
+                result.append(e)
+        except Exception:
+            result.append(e)
+    return result[:5]
+
+
+def _clear_history_for_subject(subject: str):
+    """Xóa lịch sử gần đây của 1 môn."""
+    _ensure_topic_state()
+    st.session_state["topic_history"] = [
+        e for e in st.session_state["topic_history"]
+        if e.get("subject") != subject
+    ]
+
+
+def _relative_time(ts_str: str) -> str:
+    """'2025-...' → '2 giờ trước'."""
+    try:
+        dt = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=VN_TZ)
+        now = datetime.now(VN_TZ)
+        delta = now - dt
+        if delta.days >= 1:
+            return f"{delta.days} ngày trước"
+        if delta.seconds >= 3600:
+            return f"{delta.seconds // 3600} giờ trước"
+        if delta.seconds >= 60:
+            return f"{delta.seconds // 60} phút trước"
+        return "Vừa xong"
+    except Exception:
+        return ""
+
+
+# ----- 4. Yêu thích -----
+def _is_favorite(subject: str, topic: str) -> bool:
+    _ensure_topic_state()
+    return f"{subject}|{topic}" in st.session_state["topic_favorites"]
+
+
+def _toggle_favorite(subject: str, topic: str):
+    _ensure_topic_state()
+    key = f"{subject}|{topic}"
+    favs = st.session_state["topic_favorites"]
+    if key in favs:
+        favs.discard(key)
+    else:
+        favs.add(key)
+    st.session_state["topic_favorites"] = favs
+    st.rerun()
+
+
+def _get_favorites_for_subject(subject: str):
+    _ensure_topic_state()
+    prefix = f"{subject}|"
+    return [k[len(prefix):] for k in st.session_state["topic_favorites"] if k.startswith(prefix)]
+
+
+# ----- 5. Lấy chủ đề theo môn + lớp -----
+def _get_topics_for_subject_grade(subject: str, grade_num: int, include_lower: bool = False):
+    """
+    Trả về list topic (str) cho môn + lớp.
+    - Môn "Lịch sử & Địa lý" → gộp 2 môn, prefix [Lịch sử]/[Địa lý].
+    - include_lower=True → thêm chủ đề lớp thấp hơn, prefix [Lớp X].
+    """
+    if subject == "Lịch sử & Địa lý":
+        curriculum_keys = [("Lịch sử", "[Lịch sử] "), ("Địa lý", "[Địa lý] ")]
+    elif subject in BIGDATA_CURRICULUM:
+        curriculum_keys = [(subject, "")]
+    else:
+        return []
+
+    topics = []
+    for ck, prefix in curriculum_keys:
+        grade_data = BIGDATA_CURRICULUM.get(ck, {})
+        # Lớp hiện tại
+        if grade_num in grade_data:
+            for t in grade_data[grade_num]:
+                topics.append(f"{prefix}{t}")
+        # Lớp dưới (nếu bật)
+        if include_lower:
+            for g in sorted(grade_data.keys(), reverse=True):
+                if g >= grade_num:
+                    continue
+                for t in grade_data[g]:
+                    topics.append(f"[Lớp {g}] {prefix}{t}")
+    return topics
+
+
+# ----- 6. UI: Link SGK -----
+def _render_sgk_link():
+    st.markdown(
+        '<div style="background: linear-gradient(135deg, #1e293b, #0f172a); '
+        'padding: 12px 18px; border-radius: 10px; border: 1.5px solid #38bdf8; '
+        'margin-bottom: 16px;">',
+        unsafe_allow_html=True,
+    )
+    col1, col2 = st.columns([3, 2])
+    with col1:
+        st.markdown(
+            '<div style="color: #f8fafc; font-weight: 700; font-size: 15px;">'
+            '📖 <b>Sách giáo khoa điện tử Kết Nối Tri Thức</b><br>'
+            '<span style="color: #94a3b8; font-size: 13px; font-weight: 400;">'
+            'Tra cứu lý thuyết, bài tập, ví dụ minh họa từ SGK gốc</span></div>',
+            unsafe_allow_html=True,
+        )
+    with col2:
+        st.link_button(
+            "🌐 Mở SGK điện tử",
+            "https://www.vniteach.com/sach-dien-tu-ket-noi-tri-thuc/",
+            use_container_width=True,
+        )
+    st.markdown('</div>', unsafe_allow_html=True)
+
+
+# ----- 7. UI: Tìm kiếm + Tabs + Danh sách chủ đề -----
+def _render_topic_button_row(topic: str, subject: str, grade_num: int, idx: int):
+    """Render 1 row: nút chọn chủ đề + nút ⭐ yêu thích."""
+    c1, c2 = st.columns([6, 1])
+    with c1:
+        display = topic if len(topic) <= 70 else topic[:67] + "..."
+        if st.button(
+            display,
+            key=f"topic_btn_{subject}_{grade_num}_{idx}",
+            use_container_width=True,
+            help=topic,
+        ):
+            st.session_state["topic_input_tab1"] = topic
+            _add_to_history(topic, subject, grade_num)
+            st.rerun()
+    with c2:
+        is_fav = _is_favorite(subject, topic)
+        if st.button(
+            "⭐" if is_fav else "☆",
+            key=f"fav_btn_{subject}_{grade_num}_{idx}",
+            use_container_width=True,
+            help="Bỏ yêu thích" if is_fav else "Thêm vào yêu thích",
+        ):
+            _toggle_favorite(subject, topic)
+
+
+def _render_topic_suggestions(subject: str, grade_num: int):
+    """Render toàn bộ khu vực gợi ý chủ đề (search + tabs + list)."""
+    _ensure_topic_state()
+
+    # Nếu môn không có dữ liệu → thông báo nhẹ
+    all_topics = _get_topics_for_subject_grade(subject, grade_num, include_lower=False)
+    if not all_topics:
+        st.caption(
+            f"ℹ️ Môn **{subject}** chưa có dữ liệu gợi ý chủ đề. "
+            "Bạn vẫn có thể tự nhập chủ đề ở ô bên dưới."
+        )
+        return
+
+    st.markdown("### 📚 Kho chủ đề gợi ý")
+
+    # ===== SEARCH BOX =====
+    query = st.text_input(
+        "🔍 Tìm kiếm chủ đề (gõ không dấu cũng được):",
+        placeholder="VD: khao sat ham so, tich phan, nhi thuc, dao ham...",
+        key=f"topic_search_{subject}_{grade_num}",
+        label_visibility="collapsed",
+    )
+
+    # ===== TABS =====
+    view_mode = st.radio(
+        "Chế độ xem:",
+        ["📚 Tất cả", "🕐 Gần đây (5)", "⭐ Yêu thích"],
+        horizontal=True,
+        key=f"topic_view_{subject}",
+        label_visibility="collapsed",
+    )
+
+    # ===== XÁC ĐỊNH DANH SÁCH HIỂN THỊ =====
+    if view_mode == "📚 Tất cả":
+        include_lower = st.checkbox(
+            "🔄 Bao gồm chủ đề lớp dưới (ôn nền tảng)",
+            value=False,
+            key=f"include_lower_{subject}_{grade_num}",
+        )
+        base_list = _get_topics_for_subject_grade(subject, grade_num, include_lower=include_lower)
+    elif view_mode == "🕐 Gần đây (5)":
+        history = _get_history_for_subject(subject)
+        base_list = [e["topic"] for e in history]
+        if not base_list:
+            st.info("Chưa có chủ đề nào trong lịch sử gần đây của môn này.")
+            return
+    else:  # ⭐ Yêu thích
+        base_list = _get_favorites_for_subject(subject)
+        if not base_list:
+            st.info("Chưa có chủ đề nào trong danh sách yêu thích. Bấm ⭐ để thêm.")
+            return
+
+    # ===== FILTER THEO QUERY =====
+    filtered = [t for t in base_list if _fuzzy_match(query, t)]
+
+    # ===== HIỂN THỊ =====
+    if query.strip():
+        st.caption(f"🔍 Tìm thấy **{len(filtered)}** chủ đề khớp với `{query}`")
+    else:
+        st.caption(f"📖 Hiển thị **{len(filtered)}** chủ đề")
+
+    if not filtered:
+        st.warning("😕 Không tìm thấy chủ đề nào khớp. Thử từ khóa khác nhé!")
+        return
+
+    # ===== LIST =====
+    for i, topic in enumerate(filtered):
+        # Hiển thị thời gian tương đối nếu ở tab "Gần đây"
+        if view_mode == "🕐 Gần đây (5)":
+            history = _get_history_for_subject(subject)
+            ts_str = ""
+            for e in history:
+                if e["topic"] == topic:
+                    ts_str = _relative_time(e["ts"])
+                    break
+            if ts_str:
+                st.caption(f"🕐 {ts_str}")
+        _render_topic_button_row(topic, subject, grade_num, i)
+
+    # ===== NÚT XÓA LỊCH SỬ =====
+    if view_mode == "🕐 Gần đây (5)":
+        if st.button("🗑️ Xóa lịch sử gần đây của môn này", key=f"clear_hist_{subject}"):
+            _clear_history_for_subject(subject)
+            st.rerun()
+
+
+# ----- 8. UI: Ôn tập nhiều chủ đề -----
+def _render_multi_topic_selector(subject: str, grade_num: int):
+    """Expander cho phép chọn nhiều chủ đề và soạn bài ôn tập tổng hợp."""
+    all_topics = _get_topics_for_subject_grade(subject, grade_num, include_lower=False)
+    if not all_topics:
+        return
+
+    with st.expander("📚 Ôn tập nhiều chủ đề (Soạn bài tổng hợp)", expanded=False):
+        st.caption(
+            "Chọn 2-5 chủ đề bên dưới → AI sẽ soạn **một bài ôn tập tổng hợp** "
+            "liên kết các chủ đề với nhau."
+        )
+        selected = st.multiselect(
+            "Chọn các chủ đề cần ôn tập:",
+            options=all_topics,
+            default=[],
+            key=f"multi_topic_{subject}_{grade_num}",
+        )
+        if st.button(
+            "🚀 Soạn bài ôn tập tổng hợp",
+            key=f"btn_review_{subject}_{grade_num}",
+            use_container_width=True,
+        ):
+            if len(selected) < 2:
+                st.warning("⚠️ Vui lòng chọn ít nhất 2 chủ đề!")
+            else:
+                _run_review_lesson(selected, subject, grade_num)
+
+
+def _run_review_lesson(topics: list, subject: str, grade_num: int):
+    """Gọi AI soạn bài ôn tập tổng hợp từ nhiều chủ đề."""
+    with st.spinner(f"AI đang tổng hợp {len(topics)} chủ đề thành bài ôn tập..."):
+        try:
+            prompt = _build_review_prompt(topics, subject, grade_num)
+            res_text = call_gemini_with_fallback(prompt)
+            st.session_state.current_lesson = res_text
+            st.session_state.parsed_quiz = _parse_quiz_questions(res_text)
+            st.session_state.quiz_states = {}
+            st.rerun()
+        except Exception as e:
+            st.error(f"Lỗi sinh bài ôn tập: {e}")
+
+
+def _build_review_prompt(topics: list, subject: str, grade_num: int) -> str:
+    """Prompt cho bài ôn tập tổng hợp nhiều chủ đề."""
+    topics_str = "\n".join(f"  - {t}" for t in topics)
+    return f"""[HỆ THỐNG BIÊN SOẠN BÀI ÔN TẬP TỔNG HỢP - CT GDPT 2018]
+Môn: {subject} | Lớp: {grade_num}
+Các chủ đề cần ôn tập tổng hợp:
+{topics_str}
+
+YÊU CẦU: Soạn 1 bài ÔN TẬP TỔNG HỢP liên kết {len(topics)} chủ đề trên.
+- Phần 1: SƠ ĐỒ LIÊN KẾT các chủ đề (nêu mối quan hệ giữa chúng).
+- Phần 2: 3 CÂU TRẮC NGHIỆM TÍCH HỢP (kiểm tra kiến thức liên chủ đề).
+- Phần 3: 2 BÀI TẬP TỰ LUẬN TỔNG HỢP (kèm hướng dẫn tư duy Polya, KHÔNG giải).
+
+TIÊU ĐỀ BẮT BUỘC:
+### PHẦN 1: SƠ ĐỒ LIÊN KẾT CHỦ ĐỀ
+### PHẦN 2: TRẮC NGHIỆM TÍCH HỢP
+### PHẦN 3: BÀI TẬP TỰ LUẬN TỔNG HỢP
+"""
 
 
 # ==============================================================================
@@ -210,10 +594,6 @@ def _render_phong_lab(subject, grade_num):
                 if st.session_state.get("current_lesson")
                 else "Không có ngữ cảnh bài học trước đó."
             )
-
-            lab_command_norm = re.sub(r'x\s*\*\*\s*2|x\s*\^\s*2|x2\b', 'x²', lab_command)
-            lab_command_norm = re.sub(r'x\s*\*\*\s*3|x\s*\^\s*3|x3\b', 'x³', lab_command_norm)
-            lab_command_norm = lab_command_norm.rstrip('|').strip()
 
             # NHÁNH 1: Môn text-only
             if subject in TEXT_ONLY_SUBJECTS:
@@ -268,7 +648,6 @@ def _smart_fallback(lab_command):
     cmd_norm = re.sub(r'x\s*\*\*\s*2|x\s*\^\s*2|x2\b', 'x²', cmd_lower)
     cmd_norm = re.sub(r'x\s*\*\*\s*3|x\s*\^\s*3|x3\b', 'x³', cmd_norm)
 
-    # ===== ƯU TIÊN 1: Sơ đồ tư duy "Các dạng hàm số" =====
     ham_so_keywords = [
         "dạng hàm số", "loại hàm số", "các hàm số",
         "sơ đồ hàm số", "phân loại hàm số",
@@ -295,7 +674,6 @@ def _smart_fallback(lab_command):
             )
         }
 
-    # ===== ƯU TIÊN 2: Sơ đồ tư duy chung =====
     mindmap_keywords = [
         "sơ đồ tư duy", "mindmap", "mind map", "flowchart",
         "lưu đồ", "sơ đồ khối", "sơ đồ cây", "sơ đồ",
@@ -317,7 +695,6 @@ def _smart_fallback(lab_command):
             )
         }
 
-    # ===== ƯU TIÊN 3: Các loại đồ thị hàm số =====
     if 'x³' in cmd_norm or 'bậc 3' in cmd_norm or 'bậc ba' in cmd_norm:
         return {"type": "func_3", "a": 1, "b": -3, "c": 0, "d": 2}
     elif 'x²' in cmd_norm or 'parabol' in cmd_norm or 'bậc 2' in cmd_norm or 'bậc hai' in cmd_norm:
@@ -370,6 +747,7 @@ QUY TẮC PHÂN LOẠI MÔ HÌNH:
 def render_tab_study(grade, subject):
     """Render toàn bộ Tab 1 (Học tập & Phòng Lab)."""
     grade_num = int(grade.split()[1])
+    _ensure_topic_state()
 
     # Reset khi đổi môn
     if "last_subject_seen" not in st.session_state:
@@ -379,19 +757,32 @@ def render_tab_study(grade, subject):
         st.session_state.lab_text_result = None
         st.session_state.current_lesson = ""
         st.session_state.last_subject_seen = subject
+        # Reset ô nhập bài học khi đổi môn
+        st.session_state["topic_input_tab1"] = ""
+        st.session_state.parsed_quiz = []
+        st.session_state.quiz_states = {}
 
     st.markdown("<br>", unsafe_allow_html=True)
     st.subheader(f"📖 Tự học & Chiếm lĩnh kiến thức môn {subject} - Lớp {grade_num}")
 
+    # ========== LINK SGK ==========
+    _render_sgk_link()
+
+    # ========== GỢI Ý CHỦ ĐỀ ==========
+    _render_topic_suggestions(subject, grade_num)
+
     # ========== INPUT BÀI HỌC ==========
+    st.markdown("### 📝 Hoặc tự nhập chủ đề khác:")
     topic_input = st.text_input(
-        "📝 Nhập bài học cần chiếm lĩnh kiến thức:",
+        "Nhập bài học cần chiếm lĩnh kiến thức:",
         placeholder="Ví dụ: Khảo sát hàm số, Hình chóp, Nhị thức Newton...",
-        key="topic_input_tab1"
+        key="topic_input_tab1",
+        label_visibility="collapsed",
     )
 
     if st.button("🚀 Soạn bài học chuẩn GDPT 2018") and topic_input.strip():
         st.session_state.tram1_count += 1
+        _add_to_history(topic_input.strip(), subject, grade_num)
         with st.spinner("Đang biên soạn chuẩn ngữ liệu SGK KNTT và cấu trúc Socratic..."):
             study_prompt = _build_study_prompt(topic_input, subject, grade_num)
             try:
@@ -405,6 +796,9 @@ def render_tab_study(grade, subject):
     # ========== RENDER BÀI HỌC ==========
     if st.session_state.get("current_lesson"):
         _render_lesson(st.session_state.current_lesson, subject)
+
+    # ========== ÔN TẬP NHIỀU CHỦ ĐỀ ==========
+    _render_multi_topic_selector(subject, grade_num)
 
     # ========== PHÒNG LAB ==========
     _render_phong_lab(subject, grade_num)
