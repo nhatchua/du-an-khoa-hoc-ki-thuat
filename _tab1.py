@@ -556,31 +556,214 @@ TIÊU ĐỀ BẮT BUỘC:
 
 
 # ==============================================================================
-# PHÒNG LAB — XỬ LÝ RIÊNG
+# PHÒNG LAB — PRESET + AI
 # ==============================================================================
 def _render_phong_lab(subject, grade_num):
-    """Render khu vực Phòng thí nghiệm ảo."""
+    """Render khu vực Phòng thí nghiệm ảo: Preset + AI."""
     st.markdown("---")
     st.markdown(
         '<h4 style="color: #38bdf8; margin-top: 0; margin-bottom: 5px; font-weight: 800;">'
-        '🔬 PHÒNG THÍ NGHIỆM ẢO THEO YÊU CẦU (VIRTUAL LAB)</h4>',
+        '🔬 PHÒNG THÍ NGHIỆM ẢO</h4>',
         unsafe_allow_html=True
     )
+
+    tab_preset, tab_ai = st.tabs([
+        "📚 Mô phỏng có sẵn",
+        "✨ Yêu cầu AI tự do",
+    ])
+
+    with tab_preset:
+        _render_preset_library(subject, grade_num)
+
+    with tab_ai:
+        _render_ai_lab_input(subject, grade_num)
+
+    # ===== RENDER KẾT QUẢ Ở DƯỚI (dùng chung cho cả 2 tab) =====
+    if st.session_state.get("lab_text_result"):
+        text_content = st.session_state.lab_text_result
+        text_content = strip_plot_section_from_text(text_content)
+        st.success("✨ Đã khởi tạo nội dung Phòng Lab thành công!")
+        render_lab_text_block(text_content)
+
+    if st.session_state.get("lab_data"):
+        data = st.session_state.lab_data
+        st.success("✨ Đã khởi tạo mô phỏng Phòng Lab thành công!")
+        render_smart_lab(data)
+
+
+def _render_preset_library(subject, grade_num):
+    """Khu vực preset library: search + smart suggestions + grid."""
+    from _lab_presets import (
+        get_all_presets_for_subject_grade_range,
+        has_presets_for_subject,
+    )
+
+    # Nếu môn không có preset → thông báo nhẹ
+    if not has_presets_for_subject(subject):
+        st.info(
+            f"ℹ️ Môn **{subject}** chưa có mô phỏng có sẵn. "
+            "Bạn vui lòng dùng tab **✨ Yêu cầu AI tự do** bên cạnh."
+        )
+        return
+
+    # ===== SEARCH BOX =====
+    query = st.text_input(
+        "🔍 Tìm mô phỏng (gõ không dấu cũng được):",
+        placeholder="VD: khao sat, parabol, tich phan, dao dong, quang hop...",
+        key=f"preset_search_{subject}_{grade_num}",
+        label_visibility="collapsed",
+    )
+
+    # ===== SMART SUGGESTIONS (chỉ khi chưa search) =====
+    if not query.strip():
+        current_lesson = st.session_state.get("current_lesson", "")
+        suggested = _suggest_presets_by_topic(current_lesson, subject, grade_num)
+        if suggested:
+            st.markdown("#### 💡 Gợi ý cho bài học hiện tại")
+            cols = st.columns(min(len(suggested), 3))
+            for i, p in enumerate(suggested[:6]):
+                with cols[i % 3]:
+                    _render_preset_card(p, subject, grade_num, prefix="sug")
+            st.markdown("---")
+
+    # ===== ALL PRESETS =====
+    include_lower = st.checkbox(
+        "🔄 Bao gồm mô phỏng lớp dưới",
+        value=False,
+        key=f"preset_include_lower_{subject}_{grade_num}",
+    )
+    all_presets = get_all_presets_for_subject_grade_range(
+        subject, grade_num, include_lower=include_lower
+    )
+
+    # Filter by query
+    if query.strip():
+        all_presets = [
+            p for p in all_presets
+            if _fuzzy_match(
+                query,
+                f"{p['name']} {p['desc']} {' '.join(p.get('tags', []))}",
+            )
+        ]
+
+    if query.strip():
+        st.caption(f"🔍 Tìm thấy **{len(all_presets)}** mô phỏng khớp với `{query}`")
+    else:
+        st.markdown(f"#### 📚 Kho mô phỏng {subject} — Lớp {grade_num}")
+
+    if not all_presets:
+        if query.strip():
+            st.warning(f"😕 Không tìm thấy mô phỏng nào khớp với `{query}`.")
+        return
+
+    # ===== GRID 3 CỘT =====
+    for i in range(0, len(all_presets), 3):
+        cols = st.columns(3)
+        for j in range(3):
+            idx = i + j
+            if idx >= len(all_presets):
+                break
+            with cols[j]:
+                _render_preset_card(
+                    all_presets[idx], subject, grade_num, prefix=f"grid_{idx}"
+                )
+
+
+def _render_preset_card(preset, subject, grade_num, prefix=""):
+    """Render 1 card preset: nút chọn + mô tả."""
+    btn_key = f"preset_btn_{prefix}_{preset['id']}_{subject}_{grade_num}"
+
+    label = preset["name"]
+    if preset.get("grade") and preset["grade"] != grade_num:
+        label += f" [Lớp {preset['grade']}]"
+
+    if st.button(
+        label,
+        key=btn_key,
+        use_container_width=True,
+        help=preset["desc"],
+    ):
+        st.session_state["lab_data"] = preset["data"]
+        st.session_state["lab_text_result"] = None
+        st.rerun()
+
+    st.caption(preset["desc"])
+
+
+def _suggest_presets_by_topic(topic, subject, grade_num):
+    """Gợi ý preset dựa trên từ khóa của bài học."""
+    if not topic:
+        return []
+    from _lab_presets import get_presets_for
+
+    topic_lower = _remove_diacritics(topic.lower())
+
+    # Map từ khóa → render type
+    keyword_map = {
+        "khao sat": ["func_3", "func_1_1", "func_2_1"],
+        "ham bac 3": ["func_3"],
+        "ham bac ba": ["func_3"],
+        "parabol": ["parabola"],
+        "bac hai": ["parabola"],
+        "phan thuc": ["func_1_1", "func_2_1"],
+        "tich phan": ["area", "revolve_ox"],
+        "dien tich": ["area"],
+        "khoi tron": ["revolve_ox"],
+        "oxyz": ["oxyz"],
+        "khong gian": ["oxyz"],
+        "toa do": ["oxyz"],
+        "so do": ["mermaid"],
+        "mindmap": ["mermaid"],
+        "tong hop": ["mermaid"],
+        "phan loai": ["mermaid"],
+        "dao dong": ["mermaid"],
+        "song dien tu": ["mermaid"],
+        "song co": ["mermaid"],
+        "hat nhan": ["mermaid"],
+        "newton": ["mermaid"],
+        "nang luong": ["mermaid"],
+        "nguyen tu": ["mermaid"],
+        "lien ket": ["mermaid"],
+        "hydrocarbon": ["mermaid"],
+        "carbohydrate": ["mermaid"],
+        "polymer": ["mermaid"],
+        "te bao": ["mermaid"],
+        "dai phan tu": ["mermaid"],
+        "quang hop": ["mermaid"],
+        "ho hap": ["mermaid"],
+        "mendel": ["mermaid"],
+        "di truyen": ["mermaid"],
+    }
+
+    matched_types = set()
+    for kw, types in keyword_map.items():
+        if kw in topic_lower:
+            matched_types.update(types)
+
+    if not matched_types:
+        return []
+
+    presets = get_presets_for(subject, grade_num)
+    return [p for p in presets if p["data"].get("type") in matched_types]
+
+
+def _render_ai_lab_input(subject, grade_num):
+    """Khu vực yêu cầu AI tự do (không render kết quả, để hàm cha render)."""
     st.markdown(
         f'<div style="color: #cbd5e1; font-size: 15px; margin-bottom: 12px;">'
-        f'Hệ thống AI đang liên kết trực tiếp với <b>Môn {subject} - Lớp {grade_num}</b>. '
-        f'Nhập yêu cầu mô phỏng đồ thị, tích phân, miền nghiệm, không gian 3D, hoặc sơ đồ tư duy:</div>',
+        f'Hệ thống AI liên kết với <b>Môn {subject} - Lớp {grade_num}</b>. '
+        f'Nhập yêu cầu mô phỏng đồ thị, tích phân, không gian 3D, hoặc sơ đồ tư duy:</div>',
         unsafe_allow_html=True
     )
 
     lab_command = st.text_input(
         "Lệnh mô phỏng:",
-        placeholder="Ví dụ Toán: Vẽ miền nghiệm... Diện tích hình phẳng... Lý/Hóa: Mô phỏng lực...",
+        placeholder="Ví dụ: Vẽ miền nghiệm... Diện tích hình phẳng... Mô phỏng lực...",
         label_visibility="collapsed",
         key="lab_command_input"
     )
 
-    if st.button("✨ Khởi chạy Phòng Lab") and lab_command.strip():
+    if st.button("✨ Khởi chạy Phòng Lab", key="btn_ai_lab") and lab_command.strip():
         st.session_state.tram1_count += 1
         with st.spinner("AI đang phân tích ngữ cảnh liên môn và dựng mô hình..."):
             context_text = (
@@ -622,19 +805,6 @@ def _render_phong_lab(subject, grade_num):
                             "ví dụ: *'Vẽ parabol y = x² - 2x + 1'* hoặc *'Vẽ hàm bậc 3'*"
                         )
                     st.session_state.lab_text_result = None
-
-    # Render kết quả
-    if st.session_state.get("lab_text_result"):
-        text_content = st.session_state.lab_text_result
-        text_content = strip_plot_section_from_text(text_content)
-        st.success("✨ Đã khởi tạo nội dung Phòng Lab thành công!")
-        render_lab_text_block(text_content)
-
-    if st.session_state.get("lab_data"):
-        data = st.session_state.lab_data
-        st.success("✨ Đã khởi tạo mô phỏng Phòng Lab liên môn thành công!")
-        render_smart_lab(data)
-
 
 def _smart_fallback(lab_command):
     """Đoán loại đồ thị từ câu lệnh khi AI lỗi."""
