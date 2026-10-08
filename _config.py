@@ -13,16 +13,59 @@ def get_vn_time():
 
 APP_URL = "https://giasuaithiennhanedu-r5bwggdappdvrmtne2wv3dw.streamlit.app"
 
+
 # ==============================================================================
-# MODEL GEMINI THẬT (2024-2025) — xếp theo thứ tự ưu tiên
+# DANH SÁCH MODEL GEMINI THẬT (2024-2025) — FALLBACK KHI KHÔNG QUÉT ĐƯỢC API
+#
+# ⚠️ LƯU Ý QUAN TRỌNG:
+# Đây CHỈ là danh sách FALLBACK khi app không quét được API.
+# App sẽ ưu tiên QUÉT API (client.models.list()) để biết CHÍNH XÁC
+# model nào khả dụng cho TỪNG API KEY cụ thể của mỗi học sinh.
+#
+# → Mỗi học sinh có thể có model khác nhau, tùy vào key của họ.
 # ==============================================================================
-ALL_GEMINI_MODELS = [
-    "gemini-2.0-flash-exp",      # Nhanh nhất, ổn định
-    "gemini-1.5-flash",          # Fallback 1
-    "gemini-1.5-flash-8b",       # Fallback 2 (nhẹ)
-    "gemini-2.0-flash",          # Fallback 3
-    "gemini-1.5-pro",            # Fallback 4 (mạnh nhưng chậm)
+FALLBACK_MODELS = [
+    "gemini-2.0-flash-exp",      # Experimental, nhanh, ổn định
+    "gemini-1.5-flash",          # Ổn định, phổ biến
+    "gemini-1.5-flash-8b",       # Nhẹ, nhanh
+    "gemini-1.5-pro",            # Mạnh hơn, chậm hơn
 ]
+
+# Alias cũ — giữ để tương thích ngược
+ALL_GEMINI_MODELS = FALLBACK_MODELS
+
+
+def get_model_priority(name: str) -> int:
+    """
+    Xếp hạng ưu tiên model — SỐ NHỎ = ƯU TIÊN CAO.
+    CHỈ xếp hạng các model THẬT đang tồn tại (2.0, 1.5, alias latest).
+    Tuyệt đối KHÔNG xếp hạng các model ảo (2.5, 3.x).
+    """
+    n = (name or "").lower()
+
+    # ===== Dòng 2.x — Mới nhất =====
+    if "2.0-flash-exp" in n:               return 1
+    if "2.0-flash-lite" in n:              return 2
+    if "2.0-flash" in n:                   return 3
+    if "2.0-pro" in n:                     return 4
+    if "2.0" in n:                         return 5
+
+    # ===== Alias "latest" — Luôn trỏ tới bản mới nhất =====
+    if "flash-latest" in n:                return 6
+    if "pro-latest" in n:                  return 7
+
+    # ===== Dòng 1.5 — Ổn định =====
+    if "1.5-flash" in n and "8b" not in n: return 10
+    if "1.5-flash-8b" in n:                return 11
+    if "1.5-pro" in n:                     return 12
+    if "1.5" in n:                         return 13
+
+    # ===== Experimental khác =====
+    if "exp" in n:                         return 20
+
+    # ===== Không xác định =====
+    return 99
+
 
 TEXT_ONLY_SUBJECTS = {
     "Hóa học", "Sinh học", "Lịch sử", "Địa lý",
