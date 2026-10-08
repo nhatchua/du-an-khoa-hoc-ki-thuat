@@ -180,7 +180,7 @@ def _render_lesson(lesson_text, subject):
 # ==============================================================================
 # PHÒNG LAB — XỬ LÝ RIÊNG
 # ==============================================================================
-def _render_phong_lab(subject, grade_num, api_key_to_use):
+def _render_phong_lab(subject, grade_num):
     """Render khu vực Phòng thí nghiệm ảo."""
     st.markdown("---")
     st.markdown(
@@ -370,7 +370,6 @@ QUY TẮC PHÂN LOẠI MÔ HÌNH:
 def render_tab_study(grade, subject):
     """Render toàn bộ Tab 1 (Học tập & Phòng Lab)."""
     grade_num = int(grade.split()[1])
-    api_key_to_use = st.session_state.get("active_keys_pool", [])
 
     # Reset khi đổi môn
     if "last_subject_seen" not in st.session_state:
@@ -408,7 +407,7 @@ def render_tab_study(grade, subject):
         _render_lesson(st.session_state.current_lesson, subject)
 
     # ========== PHÒNG LAB ==========
-    _render_phong_lab(subject, grade_num, api_key_to_use)
+    _render_phong_lab(subject, grade_num)
 
 
 def _build_study_prompt(topic_input, subject, grade_num):
