@@ -362,29 +362,23 @@ def _get_topics_for_subject_grade(subject: str, grade_num: int, include_lower: b
 
 # ----- 6. UI: Link SGK -----
 def _render_sgk_link():
-    st.markdown(
-        '<div style="background: linear-gradient(135deg, #1e293b, #0f172a); '
-        'padding: 12px 18px; border-radius: 10px; border: 1.5px solid #38bdf8; '
-        'margin-bottom: 16px;">',
-        unsafe_allow_html=True,
-    )
-    col1, col2 = st.columns([3, 2])
-    with col1:
-        st.markdown(
-            '<div style="color: #f8fafc; font-weight: 700; font-size: 15px;">'
-            '📖 <b>Sách giáo khoa điện tử Kết Nối Tri Thức</b><br>'
-            '<span style="color: #94a3b8; font-size: 13px; font-weight: 400;">'
-            'Tra cứu lý thuyết, bài tập, ví dụ minh họa từ SGK gốc</span></div>',
-            unsafe_allow_html=True,
-        )
-    with col2:
-        st.link_button(
-            "🌐 Mở SGK điện tử",
-            "https://www.vniteach.com/sach-dien-tu-ket-noi-tri-thuc/",
-            use_container_width=True,
-        )
-    st.markdown('</div>', unsafe_allow_html=True)
-
+    """Khung link SGK — dùng st.container(border=True) thay vì HTML thủ công."""
+    with st.container(border=True):
+        col1, col2 = st.columns([3, 2])
+        with col1:
+            st.markdown(
+                '<div style="color: #f8fafc; font-weight: 700; font-size: 15px; padding-top: 6px;">'
+                '📖 <b>Sách giáo khoa điện tử Kết Nối Tri Thức</b><br>'
+                '<span style="color: #94a3b8; font-size: 13px; font-weight: 400;">'
+                'Tra cứu lý thuyết, bài tập, ví dụ minh họa từ SGK gốc</span></div>',
+                unsafe_allow_html=True,
+            )
+        with col2:
+            st.link_button(
+                "🌐 Mở SGK điện tử",
+                "https://www.vniteach.com/sach-dien-tu-ket-noi-tri-thuc/",
+                use_container_width=True,
+            )
 
 # ----- 7. UI: Tìm kiếm + Tabs + Danh sách chủ đề -----
 def _render_topic_button_row(topic: str, subject: str, grade_num: int, idx: int):
