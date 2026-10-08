@@ -507,7 +507,14 @@ def render_mermaid(code: str):
     final_html = html_template.replace("___JSON_CODE_PLACEHOLDER___", json_code_str)
     components.html(final_html, height=560, scrolling=False)
 
-def setup_pedagogical_oxy(fig, x_range, y_range):
+def setup_pedagogical_oxy(fig, x_range, y_range, equal_aspect=False):
+    """
+    Vẽ trục Oxy chuẩn sư phạm với tick tự động theo range.
+
+    Tham số:
+        equal_aspect: True  → 1 đơn vị x = 1 đơn vị y (parabol, đường tròn).
+                      False → tự do (hàm bậc 3, phân thức).
+    """
     x_min, x_max = x_range
     y_min, y_max = y_range
 
@@ -524,11 +531,25 @@ def setup_pedagogical_oxy(fig, x_range, y_range):
 
     fig.update_layout(
         template="plotly_dark",
-        xaxis=dict(range=[x_min, x_max], zeroline=False, gridcolor="#1e293b", dtick=1),
-        yaxis=dict(range=[y_min, y_max], zeroline=False, gridcolor="#1e293b", dtick=1),
+        xaxis=dict(
+            range=[x_min, x_max],
+            zeroline=False,
+            gridcolor="#1e293b",
+            nticks=8,           # ✅ giới hạn tối đa 8 vạch
+        ),
+        yaxis=dict(
+            range=[y_min, y_max],
+            zeroline=False,
+            gridcolor="#1e293b",
+            nticks=8,           # ✅ giới hạn tối đa 8 vạch
+        ),
         margin=dict(l=15, r=15, t=30, b=15),
         showlegend=False
     )
+
+    # ✅ Cân tỉ lệ nếu cần
+    if equal_aspect:
+        fig.update_yaxes(scaleanchor="x", scaleratio=1)
 
 def _fmt_coef_smart(v):
     """Format hệ số: 1 → '', -1 → '-', 2.5 → '2.5'."""
