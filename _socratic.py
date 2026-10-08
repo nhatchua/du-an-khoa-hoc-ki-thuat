@@ -302,13 +302,6 @@ def render_tab_socratic(grade, subject):
                 st.image(m["image"], use_container_width=True)
             st.markdown(m["content"])
 
-    # ========== RENDER LỊCH SỬ CHAT ==========
-    for m in st.session_state.messages:
-        with st.chat_message(m["role"]):
-            if m.get("image"):
-                st.image(m["image"], use_container_width=True)
-            st.markdown(m["content"])
-
     # ========== RENDER RADAR CHART — 1 LẦN DUY NHẤT ==========
     if has_chat and st.session_state.get("current_diagnostic"):
         _render_radar_chart(st.session_state.current_diagnostic, subject)
