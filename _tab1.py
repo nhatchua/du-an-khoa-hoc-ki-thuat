@@ -10,7 +10,6 @@ from _lab import (
     render_smart_lab,
     render_lab_text_block,
     strip_plot_section_from_text,
-    clean_ai_response,
     _build_text_only_prompt,
 )
 
