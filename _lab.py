@@ -1103,33 +1103,54 @@ def render_smart_lab(data):
             mz = st.slider("z:", -4.0, 5.0, float(data.get("z", 4.0)), 0.5, key="lab_3d_z")
 
         with c2:
+            # ===== RANGE ĐỘNG: đủ chứa cả âm và dương =====
+            axis_min = -5
+            axis_max = 5
             axis_len = 5
+
             fig = go.Figure()
-            # === 3 TRỤC CHUẨN SGK ===
+
+            # === 3 TRỤC CHUẨN SGK (vẽ cả 2 chiều âm/dương) ===
             # Ox — đỏ
             fig.add_trace(go.Scatter3d(
-                x=[0, axis_len], y=[0, 0], z=[0, 0], mode='lines+text',
+                x=[-axis_len, axis_len], y=[0, 0], z=[0, 0], mode='lines',
                 line=dict(color='#ef4444', width=6),
-                text=["", "x"], textposition="top center",
-                textfont=dict(color='#ef4444', size=14),
                 showlegend=False, hoverinfo='skip'
             ))
+            # Nhãn trục Ox
+            fig.add_trace(go.Scatter3d(
+                x=[axis_len], y=[0], z=[0], mode='text',
+                text=["x"], textposition="middle right",
+                textfont=dict(color='#ef4444', size=16),
+                showlegend=False, hoverinfo='skip'
+            ))
+
             # Oy — xanh lá
             fig.add_trace(go.Scatter3d(
-                x=[0, 0], y=[0, axis_len], z=[0, 0], mode='lines+text',
+                x=[0, 0], y=[-axis_len, axis_len], z=[0, 0], mode='lines',
                 line=dict(color='#22c55e', width=6),
-                text=["", "y"], textposition="top center",
-                textfont=dict(color='#22c55e', size=14),
                 showlegend=False, hoverinfo='skip'
             ))
+            fig.add_trace(go.Scatter3d(
+                x=[0], y=[axis_len], z=[0], mode='text',
+                text=["y"], textposition="middle right",
+                textfont=dict(color='#22c55e', size=16),
+                showlegend=False, hoverinfo='skip'
+            ))
+
             # Oz — xanh dương
             fig.add_trace(go.Scatter3d(
-                x=[0, 0], y=[0, 0], z=[0, axis_len], mode='lines+text',
+                x=[0, 0], y=[0, 0], z=[-axis_len, axis_len], mode='lines',
                 line=dict(color='#3b82f6', width=6),
-                text=["", "z"], textposition="top center",
-                textfont=dict(color='#3b82f6', size=14),
                 showlegend=False, hoverinfo='skip'
             ))
+            fig.add_trace(go.Scatter3d(
+                x=[0], y=[0], z=[axis_len], mode='text',
+                text=["z"], textposition="top center",
+                textfont=dict(color='#3b82f6', size=16),
+                showlegend=False, hoverinfo='skip'
+            ))
+
             # Điểm O
             fig.add_trace(go.Scatter3d(
                 x=[0], y=[0], z=[0], mode='markers+text',
@@ -1138,26 +1159,28 @@ def render_smart_lab(data):
                 textfont=dict(color='#f8fafc', size=12),
                 showlegend=False, hoverinfo='skip'
             ))
-            # === HÌNH CHIẾU VUÔNG GÓC ===
-            # M1 = chiếu xuống Oxy
+
+            # === HÌNH CHIẾU VUÔNG GÓC (3 đường) ===
+            # Chiếu xuống Oxy: M → M_xy(mx; my; 0)
             fig.add_trace(go.Scatter3d(
                 x=[mx, mx], y=[my, my], z=[0, mz], mode='lines',
                 line=dict(color='#94a3b8', width=2, dash='dash'),
                 showlegend=False, hoverinfo='skip'
             ))
-            # M2 = chiếu xuống Oyz
+            # Chiếu xuống Oyz: M → M_yz(0; my; mz)
             fig.add_trace(go.Scatter3d(
                 x=[0, mx], y=[my, my], z=[mz, mz], mode='lines',
                 line=dict(color='#94a3b8', width=2, dash='dash'),
                 showlegend=False, hoverinfo='skip'
             ))
-            # M3 = chiếu xuống Oxz
+            # Chiếu xuống Oxz: M → M_xz(mx; 0; mz)
             fig.add_trace(go.Scatter3d(
                 x=[mx, mx], y=[0, my], z=[mz, mz], mode='lines',
                 line=dict(color='#94a3b8', width=2, dash='dash'),
                 showlegend=False, hoverinfo='skip'
             ))
-            # Điểm M
+
+            # === ĐIỂM M ===
             fig.add_trace(go.Scatter3d(
                 x=[mx], y=[my], z=[mz], mode='markers+text',
                 marker=dict(size=9, color='#38bdf8'),
@@ -1166,13 +1189,17 @@ def render_smart_lab(data):
                 showlegend=False,
                 hovertemplate=f"M<br>x = %{{x:.2f}}<br>y = %{{y:.2f}}<br>z = %{{z:.2f}}<extra></extra>"
             ))
+
             fig.update_layout(
                 title="Không gian Oxyz chuẩn SGK",
                 template="plotly_dark",
                 scene=dict(
-                    xaxis=dict(range=[-1, 5], backgroundcolor="#0f172a", showgrid=False, zeroline=False, showticklabels=False),
-                    yaxis=dict(range=[-1, 5], backgroundcolor="#0f172a", showgrid=False, zeroline=False, showticklabels=False),
-                    zaxis=dict(range=[-1, 5], backgroundcolor="#0f172a", showgrid=False, zeroline=False, showticklabels=False),
+                    xaxis=dict(range=[axis_min, axis_max], backgroundcolor="#0f172a",
+                               showgrid=True, gridcolor="#1e293b", zeroline=False, showticklabels=True),
+                    yaxis=dict(range=[axis_min, axis_max], backgroundcolor="#0f172a",
+                               showgrid=True, gridcolor="#1e293b", zeroline=False, showticklabels=True),
+                    zaxis=dict(range=[axis_min, axis_max], backgroundcolor="#0f172a",
+                               showgrid=True, gridcolor="#1e293b", zeroline=False, showticklabels=True),
                     aspectmode='cube',
                     camera=dict(eye=dict(x=1.5, y=1.5, z=1.2))
                 ),
@@ -1196,10 +1223,6 @@ def render_smart_lab(data):
                 f"<div style='background: rgba(56,189,248,0.10); border-left: 3px solid #38bdf8; "
                 f"padding: 6px 10px; border-radius: 4px; margin: 4px 0; font-size: 0.85rem;'>"
                 f"⬇️ Oxz: ({mx}; 0; {mz})</div>", unsafe_allow_html=True)
-
-    else:
-        st.info("💡 Đã tiếp nhận yêu cầu. Kéo thanh trượt hoặc nhập tham số để mô phỏng tương tác!")
-
 
 # ==============================================================================
 # TEXT-ONLY PROMPT (giữ nguyên)
