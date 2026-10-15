@@ -20,15 +20,12 @@ from _lab import (
 
 
 # ==============================================================================
-# HELPER: RENDER TEXT CÓ LATEX $$...$$ (tách block riêng, không bị vỡ)
+# HELPER: RENDER TEXT CÓ LATEX
 # ==============================================================================
 def _render_text_with_latex(text: str):
-    """Render text, tách $$...$$ ra và render riêng qua st.latex."""
     if not text or not text.strip():
         return
-
     parts = re.split(r'(\$\$[\s\S]*?\$\$)', text)
-
     for part in parts:
         if not part or not part.strip():
             continue
@@ -44,40 +41,32 @@ def _render_text_with_latex(text: str):
 
 
 # ==============================================================================
-# PARSE QUIZ TƯƠNG TÁC — CACHE 10 PHÚT
+# PARSE QUIZ
 # ==============================================================================
 @st.cache_data(show_spinner=False)
 def _parse_quiz_questions(text):
-    """Parse text bài học AI sinh → list câu hỏi trắc nghiệm. CÓ CACHE."""
     questions = []
     part3_match = re.search(r'(?i)###\s*PHẦN\s*3', text)
     part2_text = text[:part3_match.start()] if part3_match else text
-
     pattern = r'(?i)(?:\[Q\d+\]|C[âa]u\s*\d+[\.\:]?)'
     parts = re.split(pattern, part2_text)
-
     for part in parts[1:]:
         lines = [l.strip() for l in part.strip().split('\n') if l.strip()]
         if not lines:
             continue
         q_header = lines[0]
         level, options, correct, explain = "Vận dụng", [], "A", "Gợi ý tự suy luận!"
-
         match = re.search(r'(?i)\[Mức độ:\s*(.*?)\]', q_header)
         if match:
             level = match.group(1)
             q_header = re.sub(r'(?i)\[Mức độ:\s*.*?\]', '', q_header).strip()
-
         q_text_lines = [q_header]
         q_latex_blocks = []
         parsing_options = False
-
         for line in lines[1:]:
             clean_line = re.sub(r'(?i)^\*{0,2}([A-D])\b[\.\:]?\*{0,2}\s*', r'\1. ', line)
-
             if re.match(r'(?i)###\s*PHẦN\s*3', line):
                 break
-
             if clean_line.upper().startswith(('A.', 'B.', 'C.', 'D.')):
                 parsing_options = True
                 options.append(clean_line)
@@ -99,38 +88,29 @@ def _parse_quiz_questions(text):
                         q_text_lines.append(line)
                 elif options and not clean_line.upper().startswith(('A.', 'B.', 'C.', 'D.')):
                     explain += " " + line
-
         if len(options) >= 4:
             questions.append({
                 "question": " ".join(q_text_lines).strip(),
-                "level": level,
-                "options": options[:4],
-                "correct": correct,
-                "explain": explain,
+                "level": level, "options": options[:4],
+                "correct": correct, "explain": explain,
                 "latex_blocks": q_latex_blocks,
             })
     return questions
 
 
 # ==============================================================================
-# RENDER QUIZ TƯƠNG TÁC
+# RENDER QUIZ
 # ==============================================================================
 def _render_quiz_interactive(quiz_list):
-    """Render danh sách quiz tương tác."""
     st.markdown("<br>", unsafe_allow_html=True)
     st.markdown("### 🎯 Phần 2: Trắc nghiệm khách quan Socratic")
-
     for idx, q in enumerate(quiz_list):
         st.markdown(f"**Câu {idx+1}:** `[{q['level']}]` {q['question']}")
-
         for latex_block in q.get("latex_blocks", []):
             _render_text_with_latex(latex_block)
             st.markdown("")
-
-        user_choice = st.radio(
-            f"Chọn đáp án câu {idx+1}:", q['options'],
-            key=f"q_{idx}", label_visibility="collapsed"
-        )
+        user_choice = st.radio(f"Chọn đáp án câu {idx+1}:", q['options'],
+                                key=f"q_{idx}", label_visibility="collapsed")
         if st.button(f"🔍 Kiểm tra câu {idx+1}", key=f"btn_{idx}"):
             if user_choice:
                 choice_letter = re.sub(r'[^A-D]', '', user_choice.strip()[:3]).upper()[:1]
@@ -140,7 +120,6 @@ def _render_quiz_interactive(quiz_list):
                     st.session_state.quiz_states[idx] = ("incorrect", f"💡 **Gợi ý Socratic:** {q['explain']}")
             else:
                 st.warning("Vui lòng chọn một đáp án!")
-
         if idx in st.session_state.quiz_states:
             status, msg = st.session_state.quiz_states[idx]
             if status == "correct":
@@ -152,17 +131,14 @@ def _render_quiz_interactive(quiz_list):
 
 
 # ==============================================================================
-# RENDER BÀI HỌC
+# RENDER LESSON
 # ==============================================================================
 def _render_lesson(lesson_text, subject):
-    """Hiển thị Phần 1 + Phần 2 (quiz) + Phần 3 (tự luận)."""
     part2_split = re.split(r'(?i)(?:###\s*)?PHẦN 2[\:\.]?', lesson_text)
     part3_split = re.split(r'(?i)(?:###\s*)?PHẦN 3[\:\.]?', lesson_text)
-
     if len(part2_split) > 0 and part2_split[0].strip():
         cleaned_p1 = re.sub(r'(?:\s*\-\-\-\s*)+$', '', part2_split[0].strip())
         _render_text_with_latex(cleaned_p1)
-
     quiz_list = st.session_state.get("parsed_quiz", [])
     if quiz_list:
         _render_quiz_interactive(quiz_list)
@@ -170,19 +146,15 @@ def _render_lesson(lesson_text, subject):
         st.warning("💡 Hệ thống AI vừa sinh ra một định dạng trắc nghiệm mới. Đang hiển thị ở chế độ xem tĩnh:")
         fallback_p2 = re.split(r'(?i)###\s*PHẦN\s*3', part2_split[1])[0]
         _render_text_with_latex(fallback_p2.strip())
-
     if len(part3_split) > 1 and part3_split[-1].strip():
         st.markdown("### ✍️ Phần 3: Bài tập tự luận & Hướng dẫn tư duy")
         _render_text_with_latex(part3_split[-1].strip())
 
 
 # ==============================================================================
-# ============ TÍNH NĂNG MỚI: KHO CHỦ ĐỀ =======================================
+# KHO CHỦ ĐỀ — Helpers
 # ==============================================================================
-
-# ----- 1. Chuẩn hóa tiếng Việt không dấu -----
 def _remove_diacritics(s: str) -> str:
-    """'Khảo sát hàm số' → 'khao sat ham so'"""
     if not s:
         return ""
     s = s.replace("đ", "d").replace("Đ", "D")
@@ -192,13 +164,11 @@ def _remove_diacritics(s: str) -> str:
 
 
 def _is_subsequence(query: str, target: str) -> bool:
-    """Kiểm tra query có phải subsequence của target không."""
     it = iter(target)
     return all(c in it for c in query)
 
 
 def _fuzzy_match(query: str, topic: str) -> bool:
-    """Tìm kiếm gần đúng: bỏ dấu, bỏ khoảng trắng, substring + subsequence."""
     if not query or not query.strip():
         return True
     q = _remove_diacritics(query).replace(" ", "")
@@ -210,33 +180,18 @@ def _fuzzy_match(query: str, topic: str) -> bool:
     return _is_subsequence(q, t)
 
 
-# ----- 2. Khởi tạo state cho topic -----
 def _ensure_topic_state():
-    """Khởi tạo session_state cho tính năng kho chủ đề."""
     if "topic_history" not in st.session_state:
-        st.session_state["topic_history"] = []  # list of dict
+        st.session_state["topic_history"] = []
     if "topic_favorites" not in st.session_state:
-        st.session_state["topic_favorites"] = set()  # set of "subject|topic"
+        st.session_state["topic_favorites"] = set()
 
 
-# ----- 3. Lịch sử gần đây -----
 def _add_to_history(topic: str, subject: str, grade_num: int):
-    """Thêm chủ đề vào lịch sử, giới hạn 5 entry/môn, TTL 7 ngày."""
     _ensure_topic_state()
     history = st.session_state["topic_history"]
-
-    # Xóa entry cũ cùng (subject, topic)
     history = [e for e in history if not (e.get("subject") == subject and e.get("topic") == topic)]
-
-    # Thêm entry mới lên đầu
-    history.insert(0, {
-        "topic": topic,
-        "subject": subject,
-        "grade": grade_num,
-        "ts": get_vn_time(),
-    })
-
-    # Lọc bỏ entry cũ hơn 7 ngày
+    history.insert(0, {"topic": topic, "subject": subject, "grade": grade_num, "ts": get_vn_time()})
     now = datetime.now(VN_TZ)
     kept = []
     for e in history:
@@ -247,8 +202,6 @@ def _add_to_history(topic: str, subject: str, grade_num: int):
         except Exception:
             kept.append(e)
     history = kept
-
-    # Giới hạn 5 entry/môn
     by_subject = defaultdict(list)
     for e in history:
         by_subject[e.get("subject", "")].append(e)
@@ -257,12 +210,10 @@ def _add_to_history(topic: str, subject: str, grade_num: int):
         entries.sort(key=lambda x: x.get("ts", ""), reverse=True)
         result.extend(entries[:5])
     result.sort(key=lambda x: x.get("ts", ""), reverse=True)
-
     st.session_state["topic_history"] = result
 
 
 def _get_history_for_subject(subject: str):
-    """Lấy lịch sử gần đây của 1 môn (đã TTL 7 ngày)."""
     _ensure_topic_state()
     history = st.session_state["topic_history"]
     now = datetime.now(VN_TZ)
@@ -280,16 +231,13 @@ def _get_history_for_subject(subject: str):
 
 
 def _clear_history_for_subject(subject: str):
-    """Xóa lịch sử gần đây của 1 môn."""
     _ensure_topic_state()
     st.session_state["topic_history"] = [
-        e for e in st.session_state["topic_history"]
-        if e.get("subject") != subject
+        e for e in st.session_state["topic_history"] if e.get("subject") != subject
     ]
 
 
 def _relative_time(ts_str: str) -> str:
-    """'2025-...' → '2 giờ trước'."""
     try:
         dt = datetime.strptime(ts_str, "%Y-%m-%d %H:%M:%S").replace(tzinfo=VN_TZ)
         now = datetime.now(VN_TZ)
@@ -305,7 +253,6 @@ def _relative_time(ts_str: str) -> str:
         return ""
 
 
-# ----- 4. Yêu thích -----
 def _is_favorite(subject: str, topic: str) -> bool:
     _ensure_topic_state()
     return f"{subject}|{topic}" in st.session_state["topic_favorites"]
@@ -329,28 +276,19 @@ def _get_favorites_for_subject(subject: str):
     return [k[len(prefix):] for k in st.session_state["topic_favorites"] if k.startswith(prefix)]
 
 
-# ----- 5. Lấy chủ đề theo môn + lớp -----
 def _get_topics_for_subject_grade(subject: str, grade_num: int, include_lower: bool = False):
-    """
-    Trả về list topic (str) cho môn + lớp.
-    - Môn "Lịch sử & Địa lý" → gộp 2 môn, prefix [Lịch sử]/[Địa lý].
-    - include_lower=True → thêm chủ đề lớp thấp hơn, prefix [Lớp X].
-    """
     if subject == "Lịch sử & Địa lý":
         curriculum_keys = [("Lịch sử", "[Lịch sử] "), ("Địa lý", "[Địa lý] ")]
     elif subject in BIGDATA_CURRICULUM:
         curriculum_keys = [(subject, "")]
     else:
         return []
-
     topics = []
     for ck, prefix in curriculum_keys:
         grade_data = BIGDATA_CURRICULUM.get(ck, {})
-        # Lớp hiện tại
         if grade_num in grade_data:
             for t in grade_data[grade_num]:
                 topics.append(f"{prefix}{t}")
-        # Lớp dưới (nếu bật)
         if include_lower:
             for g in sorted(grade_data.keys(), reverse=True):
                 if g >= grade_num:
@@ -360,91 +298,116 @@ def _get_topics_for_subject_grade(subject: str, grade_num: int, include_lower: b
     return topics
 
 
-# ----- 6. UI: Link SGK -----
+# ==============================================================================
+# SGK EXPANDER — Mở rộng nhiều link
+# ==============================================================================
 def _render_sgk_link():
-    """Khung link SGK — dùng st.container(border=True) thay vì HTML thủ công."""
     with st.container(border=True):
         col1, col2 = st.columns([3, 2])
         with col1:
             st.markdown(
                 '<div style="color: #f8fafc; font-weight: 700; font-size: 15px; padding-top: 6px;">'
-                '📖 <b>Sách giáo khoa điện tử Kết Nối Tri Thức</b><br>'
+                '📖 <b>Sách giáo khoa điện tử & Tài liệu tham khảo</b><br>'
                 '<span style="color: #94a3b8; font-size: 13px; font-weight: 400;">'
-                'Tra cứu lý thuyết, bài tập, ví dụ minh họa từ SGK gốc</span></div>',
+                'Tra cứu SGK, sách bài tập, chuyên đề, đề thi các cấp</span></div>',
                 unsafe_allow_html=True,
             )
         with col2:
             st.link_button(
-                "🌐 Mở SGK điện tử",
+                "🌐 Mở SGK Kết Nối Tri Thức",
                 "https://www.vniteach.com/sach-dien-tu-ket-noi-tri-thuc/",
                 use_container_width=True,
             )
 
-# ----- 7. UI: Tìm kiếm + Tabs + Danh sách chủ đề -----
+        with st.expander("📚 Mở rộng — Danh sách đầy đủ các nguồn tài liệu", expanded=False):
+            st.markdown("##### 🇻🇳 Sách giáo khoa Việt Nam (Kết Nối Tri Thức)")
+            cols_sgk = st.columns(7)
+            sgk_links = [
+                ("📕 Lớp 6", "https://www.vniteach.com/sach-dien-tu-ket-noi-tri-thuc/"),
+                ("📗 Lớp 7", "https://www.vniteach.com/sach-dien-tu-ket-noi-tri-thuc/"),
+                ("📘 Lớp 8", "https://www.vniteach.com/sach-dien-tu-ket-noi-tri-thuc/"),
+                ("📙 Lớp 9", "https://www.vniteach.com/sach-dien-tu-ket-noi-tri-thuc/"),
+                ("📕 Lớp 10", "https://www.vniteach.com/sach-dien-tu-ket-noi-tri-thuc/"),
+                ("📗 Lớp 11", "https://www.vniteach.com/sach-dien-tu-ket-noi-tri-thuc/"),
+                ("📘 Lớp 12", "https://www.vniteach.com/sach-dien-tu-ket-noi-tri-thuc/"),
+            ]
+            for c, (label, url) in zip(cols_sgk, sgk_links):
+                with c:
+                    st.link_button(label, url, use_container_width=True)
+
+            st.markdown("##### 📝 Sách bài tập & Chuyên đề (Bộ GD&ĐT)")
+            col_bt, col_cd = st.columns(2)
+            with col_bt:
+                st.link_button("📝 Sách bài tập Kết Nối Tri Thức",
+                               "https://www.vniteach.com/sach-dien-tu-ket-noi-tri-thuc/",
+                               use_container_width=True)
+            with col_cd:
+                st.link_button("📝 Sách chuyên đề học tập",
+                               "https://www.vniteach.com/sach-dien-tu-ket-noi-tri-thuc/",
+                               use_container_width=True)
+
+            st.markdown("##### 🎯 Đề thi & Luyện tập")
+            col_d1, col_d2 = st.columns(2)
+            with col_d1:
+                st.link_button("🎯 Đề thi TN THPT các năm", "https://moet.gov.vn/", use_container_width=True)
+            with col_d2:
+                st.link_button("🏆 Đề thi HSG Quốc gia", "https://moet.gov.vn/", use_container_width=True)
+
+            st.markdown("##### 🌍 Sách tham khảo nâng cao / Quốc tế")
+            col_i1, col_i2, col_i3 = st.columns(3)
+            with col_i1:
+                st.link_button("🌍 Cambridge / A-Level", "https://www.cambridge.org/education", use_container_width=True)
+            with col_i2:
+                st.link_button("🌍 SAT / AP", "https://www.collegeboard.org/", use_container_width=True)
+            with col_i3:
+                st.link_button("🌍 Olympiad Toán/Lý/Hóa", "https://www.imo-official.org/", use_container_width=True)
+
+
+# ==============================================================================
+# TOPIC SUGGESTIONS
+# ==============================================================================
 def _render_topic_button_row(topic: str, subject: str, grade_num: int, idx: int):
-    """Render 1 row: nút chọn chủ đề + nút ⭐ yêu thích."""
     c1, c2 = st.columns([6, 1])
     with c1:
         display = topic if len(topic) <= 70 else topic[:67] + "..."
-        if st.button(
-            display,
-            key=f"topic_btn_{subject}_{grade_num}_{idx}",
-            use_container_width=True,
-            help=topic,
-        ):
+        if st.button(display, key=f"topic_btn_{subject}_{grade_num}_{idx}",
+                     use_container_width=True, help=topic):
             st.session_state["topic_input_tab1"] = topic
             _add_to_history(topic, subject, grade_num)
             st.rerun()
     with c2:
         is_fav = _is_favorite(subject, topic)
-        if st.button(
-            "⭐" if is_fav else "☆",
-            key=f"fav_btn_{subject}_{grade_num}_{idx}",
-            use_container_width=True,
-            help="Bỏ yêu thích" if is_fav else "Thêm vào yêu thích",
-        ):
+        if st.button("⭐" if is_fav else "☆",
+                     key=f"fav_btn_{subject}_{grade_num}_{idx}",
+                     use_container_width=True,
+                     help="Bỏ yêu thích" if is_fav else "Thêm vào yêu thích"):
             _toggle_favorite(subject, topic)
 
 
 def _render_topic_suggestions(subject: str, grade_num: int):
-    """Render toàn bộ khu vực gợi ý chủ đề (search + tabs + list)."""
     _ensure_topic_state()
-
-    # Nếu môn không có dữ liệu → thông báo nhẹ
     all_topics = _get_topics_for_subject_grade(subject, grade_num, include_lower=False)
     if not all_topics:
-        st.caption(
-            f"ℹ️ Môn **{subject}** chưa có dữ liệu gợi ý chủ đề. "
-            "Bạn vẫn có thể tự nhập chủ đề ở ô bên dưới."
-        )
+        st.caption(f"ℹ️ Môn **{subject}** chưa có dữ liệu gợi ý chủ đề. "
+                   "Bạn vẫn có thể tự nhập chủ đề ở ô bên dưới.")
         return
-
     st.markdown("### 📚 Kho chủ đề gợi ý")
-
-    # ===== SEARCH BOX =====
     query = st.text_input(
         "🔍 Tìm kiếm chủ đề (gõ không dấu cũng được):",
         placeholder="VD: khao sat ham so, tich phan, nhi thuc, dao ham...",
         key=f"topic_search_{subject}_{grade_num}",
         label_visibility="collapsed",
     )
-
-    # ===== TABS =====
     view_mode = st.radio(
         "Chế độ xem:",
         ["📚 Tất cả", "🕐 Gần đây (5)", "⭐ Yêu thích"],
-        horizontal=True,
-        key=f"topic_view_{subject}",
+        horizontal=True, key=f"topic_view_{subject}",
         label_visibility="collapsed",
     )
-
-    # ===== XÁC ĐỊNH DANH SÁCH HIỂN THỊ =====
     if view_mode == "📚 Tất cả":
-        include_lower = st.checkbox(
-            "🔄 Bao gồm chủ đề lớp dưới (ôn nền tảng)",
-            value=False,
-            key=f"include_lower_{subject}_{grade_num}",
-        )
+        include_lower = st.checkbox("🔄 Bao gồm chủ đề lớp dưới (ôn nền tảng)",
+                                     value=False,
+                                     key=f"include_lower_{subject}_{grade_num}")
         base_list = _get_topics_for_subject_grade(subject, grade_num, include_lower=include_lower)
     elif view_mode == "🕐 Gần đây (5)":
         history = _get_history_for_subject(subject)
@@ -452,28 +415,20 @@ def _render_topic_suggestions(subject: str, grade_num: int):
         if not base_list:
             st.info("Chưa có chủ đề nào trong lịch sử gần đây của môn này.")
             return
-    else:  # ⭐ Yêu thích
+    else:
         base_list = _get_favorites_for_subject(subject)
         if not base_list:
             st.info("Chưa có chủ đề nào trong danh sách yêu thích. Bấm ⭐ để thêm.")
             return
-
-    # ===== FILTER THEO QUERY =====
     filtered = [t for t in base_list if _fuzzy_match(query, t)]
-
-    # ===== HIỂN THỊ =====
     if query.strip():
         st.caption(f"🔍 Tìm thấy **{len(filtered)}** chủ đề khớp với `{query}`")
     else:
         st.caption(f"📖 Hiển thị **{len(filtered)}** chủ đề")
-
     if not filtered:
         st.warning("😕 Không tìm thấy chủ đề nào khớp. Thử từ khóa khác nhé!")
         return
-
-    # ===== LIST =====
     for i, topic in enumerate(filtered):
-        # Hiển thị thời gian tương đối nếu ở tab "Gần đây"
         if view_mode == "🕐 Gần đây (5)":
             history = _get_history_for_subject(subject)
             ts_str = ""
@@ -484,45 +439,57 @@ def _render_topic_suggestions(subject: str, grade_num: int):
             if ts_str:
                 st.caption(f"🕐 {ts_str}")
         _render_topic_button_row(topic, subject, grade_num, i)
-
-    # ===== NÚT XÓA LỊCH SỬ =====
     if view_mode == "🕐 Gần đây (5)":
         if st.button("🗑️ Xóa lịch sử gần đây của môn này", key=f"clear_hist_{subject}"):
             _clear_history_for_subject(subject)
             st.rerun()
 
 
-# ----- 8. UI: Ôn tập nhiều chủ đề -----
+# ==============================================================================
+# ÔN TẬP NHIỀU CHỦ ĐỀ — CHECKBOX GRID (đã bỏ multiselect)
+# ==============================================================================
 def _render_multi_topic_selector(subject: str, grade_num: int):
-    """Expander cho phép chọn nhiều chủ đề và soạn bài ôn tập tổng hợp."""
     all_topics = _get_topics_for_subject_grade(subject, grade_num, include_lower=False)
     if not all_topics:
         return
-
     with st.expander("📚 Ôn tập nhiều chủ đề (Soạn bài tổng hợp)", expanded=False):
         st.caption(
-            "Chọn 2-5 chủ đề bên dưới → AI sẽ soạn **một bài ôn tập tổng hợp** "
+            "Tích chọn **2-5 chủ đề** bên dưới → AI sẽ soạn **một bài ôn tập tổng hợp** "
             "liên kết các chủ đề với nhau."
         )
-        selected = st.multiselect(
-            "Chọn các chủ đề cần ôn tập:",
-            options=all_topics,
-            default=[],
-            key=f"multi_topic_{subject}_{grade_num}",
-        )
+        # Grid checkbox 2 cột
+        selected = []
+        n_cols = 2
+        cols = st.columns(n_cols)
+        for i, topic in enumerate(all_topics):
+            with cols[i % n_cols]:
+                chk_key = f"multi_topic_chk_{subject}_{grade_num}_{i}"
+                if st.checkbox(topic, key=chk_key):
+                    selected.append(topic)
+
+        # Đếm + cảnh báo
+        n_selected = len(selected)
+        if n_selected == 0:
+            st.caption("👉 Chưa chọn chủ đề nào.")
+        elif n_selected < 2:
+            st.warning(f"⚠️ Đã chọn **{n_selected}** chủ đề. Cần chọn ít nhất 2.")
+        elif n_selected > 5:
+            st.warning(f"⚠️ Đã chọn **{n_selected}** chủ đề. Tối đa 5 chủ đề để đảm bảo chất lượng.")
+        else:
+            st.success(f"✅ Đã chọn **{n_selected}** chủ đề.")
+
+        # Nút soạn bài — chỉ enable khi 2-5 chủ đề
+        can_run = 2 <= n_selected <= 5
         if st.button(
             "🚀 Soạn bài ôn tập tổng hợp",
             key=f"btn_review_{subject}_{grade_num}",
             use_container_width=True,
+            disabled=not can_run,
         ):
-            if len(selected) < 2:
-                st.warning("⚠️ Vui lòng chọn ít nhất 2 chủ đề!")
-            else:
-                _run_review_lesson(selected, subject, grade_num)
+            _run_review_lesson(selected, subject, grade_num)
 
 
 def _run_review_lesson(topics: list, subject: str, grade_num: int):
-    """Gọi AI soạn bài ôn tập tổng hợp từ nhiều chủ đề."""
     with st.spinner(f"AI đang tổng hợp {len(topics)} chủ đề thành bài ôn tập..."):
         try:
             prompt = _build_review_prompt(topics, subject, grade_num)
@@ -536,7 +503,6 @@ def _run_review_lesson(topics: list, subject: str, grade_num: int):
 
 
 def _build_review_prompt(topics: list, subject: str, grade_num: int) -> str:
-    """Prompt cho bài ôn tập tổng hợp nhiều chủ đề."""
     topics_str = "\n".join(f"  - {t}" for t in topics)
     return f"""[HỆ THỐNG BIÊN SOẠN BÀI ÔN TẬP TỔNG HỢP - CT GDPT 2018]
 Môn: {subject} | Lớp: {grade_num}
@@ -556,35 +522,26 @@ TIÊU ĐỀ BẮT BUỘC:
 
 
 # ==============================================================================
-# PHÒNG LAB — PRESET + AI
+# PHÒNG LAB
 # ==============================================================================
 def _render_phong_lab(subject, grade_num):
-    """Render khu vực Phòng thí nghiệm ảo: Preset + AI."""
     st.markdown("---")
     st.markdown(
         '<h4 style="color: #38bdf8; margin-top: 0; margin-bottom: 5px; font-weight: 800;">'
         '🔬 PHÒNG THÍ NGHIỆM ẢO</h4>',
         unsafe_allow_html=True
     )
-
-    tab_preset, tab_ai = st.tabs([
-        "📚 Mô phỏng có sẵn",
-        "✨ Yêu cầu AI tự do",
-    ])
-
+    tab_preset, tab_ai = st.tabs(["📚 Mô phỏng có sẵn", "✨ Yêu cầu AI tự do"])
     with tab_preset:
         _render_preset_library(subject, grade_num)
-
     with tab_ai:
         _render_ai_lab_input(subject, grade_num)
 
-    # ===== RENDER KẾT QUẢ Ở DƯỚI (dùng chung cho cả 2 tab) =====
     if st.session_state.get("lab_text_result"):
         text_content = st.session_state.lab_text_result
         text_content = strip_plot_section_from_text(text_content)
         st.success("✨ Đã khởi tạo nội dung Phòng Lab thành công!")
         render_lab_text_block(text_content)
-
     if st.session_state.get("lab_data"):
         data = st.session_state.lab_data
         st.success("✨ Đã khởi tạo mô phỏng Phòng Lab thành công!")
@@ -592,29 +549,20 @@ def _render_phong_lab(subject, grade_num):
 
 
 def _render_preset_library(subject, grade_num):
-    """Khu vực preset library: search + smart suggestions + grid."""
     from _lab_presets import (
         get_all_presets_for_subject_grade_range,
         has_presets_for_subject,
     )
-
-    # Nếu môn không có preset → thông báo nhẹ
     if not has_presets_for_subject(subject):
-        st.info(
-            f"ℹ️ Môn **{subject}** chưa có mô phỏng có sẵn. "
-            "Bạn vui lòng dùng tab **✨ Yêu cầu AI tự do** bên cạnh."
-        )
+        st.info(f"ℹ️ Môn **{subject}** chưa có mô phỏng có sẵn. "
+                "Bạn vui lòng dùng tab **✨ Yêu cầu AI tự do** bên cạnh.")
         return
-
-    # ===== SEARCH BOX =====
     query = st.text_input(
         "🔍 Tìm mô phỏng (gõ không dấu cũng được):",
         placeholder="VD: khao sat, parabol, tich phan, dao dong, quang hop...",
         key=f"preset_search_{subject}_{grade_num}",
         label_visibility="collapsed",
     )
-
-    # ===== SMART SUGGESTIONS (chỉ khi chưa search) =====
     if not query.strip():
         current_lesson = st.session_state.get("current_lesson", "")
         suggested = _suggest_presets_by_topic(current_lesson, subject, grade_num)
@@ -625,38 +573,20 @@ def _render_preset_library(subject, grade_num):
                 with cols[i % 3]:
                     _render_preset_card(p, subject, grade_num, prefix="sug")
             st.markdown("---")
-
-    # ===== ALL PRESETS =====
-    include_lower = st.checkbox(
-        "🔄 Bao gồm mô phỏng lớp dưới",
-        value=False,
-        key=f"preset_include_lower_{subject}_{grade_num}",
-    )
-    all_presets = get_all_presets_for_subject_grade_range(
-        subject, grade_num, include_lower=include_lower
-    )
-
-    # Filter by query
+    include_lower = st.checkbox("🔄 Bao gồm mô phỏng lớp dưới", value=False,
+                                 key=f"preset_include_lower_{subject}_{grade_num}")
+    all_presets = get_all_presets_for_subject_grade_range(subject, grade_num, include_lower=include_lower)
     if query.strip():
-        all_presets = [
-            p for p in all_presets
-            if _fuzzy_match(
-                query,
-                f"{p['name']} {p['desc']} {' '.join(p.get('tags', []))}",
-            )
-        ]
-
+        all_presets = [p for p in all_presets
+                       if _fuzzy_match(query, f"{p['name']} {p['desc']} {' '.join(p.get('tags', []))}")]
     if query.strip():
         st.caption(f"🔍 Tìm thấy **{len(all_presets)}** mô phỏng khớp với `{query}`")
     else:
         st.markdown(f"#### 📚 Kho mô phỏng {subject} — Lớp {grade_num}")
-
     if not all_presets:
         if query.strip():
             st.warning(f"😕 Không tìm thấy mô phỏng nào khớp với `{query}`.")
         return
-
-    # ===== GRID 3 CỘT =====
     for i in range(0, len(all_presets), 3):
         cols = st.columns(3)
         for j in range(3):
@@ -664,41 +594,26 @@ def _render_preset_library(subject, grade_num):
             if idx >= len(all_presets):
                 break
             with cols[j]:
-                _render_preset_card(
-                    all_presets[idx], subject, grade_num, prefix=f"grid_{idx}"
-                )
+                _render_preset_card(all_presets[idx], subject, grade_num, prefix=f"grid_{idx}")
 
 
 def _render_preset_card(preset, subject, grade_num, prefix=""):
-    """Render 1 card preset: nút chọn + mô tả."""
     btn_key = f"preset_btn_{prefix}_{preset['id']}_{subject}_{grade_num}"
-
     label = preset["name"]
     if preset.get("grade") and preset["grade"] != grade_num:
         label += f" [Lớp {preset['grade']}]"
-
-    if st.button(
-        label,
-        key=btn_key,
-        use_container_width=True,
-        help=preset["desc"],
-    ):
+    if st.button(label, key=btn_key, use_container_width=True, help=preset["desc"]):
         st.session_state["lab_data"] = preset["data"]
         st.session_state["lab_text_result"] = None
         st.rerun()
-
     st.caption(preset["desc"])
 
 
 def _suggest_presets_by_topic(topic, subject, grade_num):
-    """Gợi ý preset dựa trên từ khóa của bài học."""
     if not topic:
         return []
     from _lab_presets import get_presets_for
-
     topic_lower = _remove_diacritics(topic.lower())
-
-    # Map từ khóa → render type
     keyword_map = {
         "khao sat": ["func_3", "func_1_1", "func_2_1"],
         "ham bac 3": ["func_3"],
@@ -709,9 +624,12 @@ def _suggest_presets_by_topic(topic, subject, grade_num):
         "tich phan": ["area", "revolve_ox"],
         "dien tich": ["area"],
         "khoi tron": ["revolve_ox"],
-        "oxyz": ["oxyz"],
-        "khong gian": ["oxyz"],
-        "toa do": ["oxyz"],
+        "oxyz": ["oxyz", "oxyz_plane", "oxyz_line", "oxyz_sphere"],
+        "khong gian": ["oxyz", "oxyz_plane", "oxyz_line", "oxyz_sphere"],
+        "toa do": ["oxyz", "oxyz_plane", "oxyz_line", "oxyz_sphere"],
+        "mat phang": ["oxyz_plane"],
+        "duong thang": ["oxyz_line"],
+        "mat cau": ["oxyz_sphere"],
         "so do": ["mermaid"],
         "mindmap": ["mermaid"],
         "tong hop": ["mermaid"],
@@ -734,45 +652,35 @@ def _suggest_presets_by_topic(topic, subject, grade_num):
         "mendel": ["mermaid"],
         "di truyen": ["mermaid"],
     }
-
     matched_types = set()
     for kw, types in keyword_map.items():
         if kw in topic_lower:
             matched_types.update(types)
-
     if not matched_types:
         return []
-
     presets = get_presets_for(subject, grade_num)
     return [p for p in presets if p["data"].get("type") in matched_types]
 
 
 def _render_ai_lab_input(subject, grade_num):
-    """Khu vực yêu cầu AI tự do (không render kết quả, để hàm cha render)."""
     st.markdown(
         f'<div style="color: #cbd5e1; font-size: 15px; margin-bottom: 12px;">'
         f'Hệ thống AI liên kết với <b>Môn {subject} - Lớp {grade_num}</b>. '
         f'Nhập yêu cầu mô phỏng đồ thị, tích phân, không gian 3D, hoặc sơ đồ tư duy:</div>',
         unsafe_allow_html=True
     )
-
     lab_command = st.text_input(
         "Lệnh mô phỏng:",
         placeholder="Ví dụ: Vẽ miền nghiệm... Diện tích hình phẳng... Mô phỏng lực...",
         label_visibility="collapsed",
         key="lab_command_input"
     )
-
     if st.button("✨ Khởi chạy Phòng Lab", key="btn_ai_lab") and lab_command.strip():
         st.session_state.tram1_count += 1
         with st.spinner("AI đang phân tích ngữ cảnh liên môn và dựng mô hình..."):
-            context_text = (
-                st.session_state.current_lesson
-                if st.session_state.get("current_lesson")
-                else "Không có ngữ cảnh bài học trước đó."
-            )
-
-            # NHÁNH 1: Môn text-only
+            context_text = (st.session_state.current_lesson
+                            if st.session_state.get("current_lesson")
+                            else "Không có ngữ cảnh bài học trước đó.")
             if subject in TEXT_ONLY_SUBJECTS:
                 try:
                     text_prompt = _build_text_only_prompt(lab_command, subject, grade_num)
@@ -781,8 +689,6 @@ def _render_ai_lab_input(subject, grade_num):
                 except Exception as e:
                     st.error(f"Lỗi sinh nội dung: {e}")
                     st.session_state.lab_text_result = None
-
-            # NHÁNH 2: Môn có đồ thị
             else:
                 lab_prompt = _build_lab_prompt(lab_command, subject, grade_num, context_text)
                 try:
@@ -800,78 +706,25 @@ def _render_ai_lab_input(subject, grade_num):
                         st.session_state.lab_data = fallback_data
                     else:
                         st.session_state.lab_data = None
-                        st.warning(
-                            "⚠️ Không nhận diện được yêu cầu. Vui lòng nhập rõ hơn, "
-                            "ví dụ: *'Vẽ parabol y = x² - 2x + 1'* hoặc *'Vẽ hàm bậc 3'*"
-                        )
+                        st.warning("⚠️ Không nhận diện được yêu cầu. Vui lòng nhập rõ hơn, "
+                                   "ví dụ: *'Vẽ parabol y = x² - 2x + 1'* hoặc *'Vẽ hàm bậc 3'*")
                     st.session_state.lab_text_result = None
 
+
 def _smart_fallback(lab_command):
-    """Đoán loại đồ thị từ câu lệnh khi AI lỗi."""
     cmd_lower = lab_command.lower()
     cmd_norm = re.sub(r'x\s*\*\*\s*2|x\s*\^\s*2|x2\b', 'x²', cmd_lower)
     cmd_norm = re.sub(r'x\s*\*\*\s*3|x\s*\^\s*3|x3\b', 'x³', cmd_norm)
-
-    ham_so_keywords = [
-        "dạng hàm số", "loại hàm số", "các hàm số",
-        "sơ đồ hàm số", "phân loại hàm số",
-        "tổng hợp hàm số", "hàm số thường gặp",
-    ]
-    if any(kw in cmd_lower for kw in ham_so_keywords):
-        return {
-            "type": "mermaid",
-            "code": (
-                'graph LR\n'
-                '   Root["🎯 CÁC LOẠI HÀM SỐ"] --> A["📌 Hàm Đa Thức"]\n'
-                '   Root --> B["📌 Hàm Phân Thức"]\n'
-                '   Root --> C["📌 Hàm Mũ và Logarit"]\n'
-                '   Root --> D["📌 Hàm Lượng Giác"]\n'
-                '   A --> A1["Bậc nhất: $y = ax + b$"]\n'
-                '   A --> A2["Bậc hai: $y = ax^2 + bx + c$"]\n'
-                '   A --> A3["Bậc ba: $y = ax^3 + bx^2 + cx + d$"]\n'
-                '   B --> B1["Bậc 1/1: $y = \\\\frac{ax+b}{cx+d}$"]\n'
-                '   B --> B2["Bậc 2/1: $y = \\\\frac{ax^2+bx+c}{dx+e}$"]\n'
-                '   C --> C1["Hàm mũ: $y = a^x$"]\n'
-                '   C --> C2["Hàm logarit: $y = \\\\log_a x$"]\n'
-                '   D --> D1["$y = \\\\sin x$, $y = \\\\cos x$"]\n'
-                '   D --> D2["$y = \\\\tan x$, $y = \\\\cot x$"]'
-            )
-        }
-
-    mindmap_keywords = [
-        "sơ đồ tư duy", "mindmap", "mind map", "flowchart",
-        "lưu đồ", "sơ đồ khối", "sơ đồ cây", "sơ đồ",
-    ]
-    if any(kw in cmd_lower for kw in mindmap_keywords):
-        return {
-            "type": "mermaid",
-            "code": (
-                'graph LR\n'
-                '   Root["🎯 SƠ ĐỒ TƯ DUY"] --> A["📌 Nhánh 1: Khái niệm"]\n'
-                '   Root --> B["📌 Nhánh 2: Công thức"]\n'
-                '   Root --> C["📌 Nhánh 3: Ứng dụng"]\n'
-                '   A --> A1["Từ khóa 1.1"]\n'
-                '   A --> A2["Từ khóa 1.2"]\n'
-                '   B --> B1["Từ khóa 2.1"]\n'
-                '   B --> B2["Từ khóa 2.2"]\n'
-                '   C --> C1["Từ khóa 3.1"]\n'
-                '   C --> C2["Từ khóa 3.2"]'
-            )
-        }
-
     if 'x³' in cmd_norm or 'bậc 3' in cmd_norm or 'bậc ba' in cmd_norm:
         return {"type": "func_3", "a": 1, "b": -3, "c": 0, "d": 2}
     elif 'x²' in cmd_norm or 'parabol' in cmd_norm or 'bậc 2' in cmd_norm or 'bậc hai' in cmd_norm:
         return {"type": "parabola", "a": 1, "b": -2, "c": 1}
     elif '/' in lab_command and 'x' in cmd_lower:
         return {"type": "func_1_1", "a": 1, "b": 1, "c": 1, "d": -1}
-    elif 'sin' in cmd_lower or 'cos' in cmd_lower or 'lượng giác' in cmd_lower:
-        return {"type": "func_3", "a": 1, "b": -3, "c": 0, "d": 2}
     return None
 
 
 def _build_lab_prompt(lab_request, subject, grade_num, context_text):
-    """Sinh prompt Lab cho môn có đồ thị."""
     return f"""[HỆ TRI THỨC SƯ PHẠM QUỐC GIA - CHUẨN CT GDPT 2018 & QUY CHẾ THI 2026]
 Môn học: {subject} | Khối lớp: {grade_num}. 
 NGỮ CẢNH BÀI HỌC HIỆN TẠI:
@@ -888,32 +741,25 @@ QUY TẮC PHÂN LOẠI MÔ HÌNH:
 4. HÀM PHÂN THỨC 1/1: {{"type": "func_1_1", "a": 1, "b": 1, "c": 1, "d": -1}}
 5. HÀM PHÂN THỨC 2/1: {{"type": "func_2_1", "a": 1, "b": -2, "c": 2, "d": 1, "e": -1}}
 6. PARABOL BẬC 2: {{"type": "parabola", "a": 1, "b": -2, "c": 1}}
-7. KHÔNG GIAN OXYZ: {{"type": "oxyz", "x": 2, "y": 3, "z": 4}}
-8. MÔ PHỎNG NÂNG CAO PYTHON PLOTLY: {{"type": "dynamic_code", "python_code": "fig = go.Figure()\\n# Code vẽ đồ thị\\nsetup_pedagogical_oxy(fig, [-5, 5], [-5, 5])"}}
-9. SƠ ĐỒ TƯ DUY MERMAID: {{"type": "mermaid", "code": "graph LR\\n   Root[\\"🎯 TIÊU ĐỀ\\"] --> A[\\"Nhánh 1\\"]"}}
+7. ĐIỂM TRONG KHÔNG GIAN OXYZ: {{"type": "oxyz", "x": 2, "y": 3, "z": 4}}
+8. MẶT PHẲNG OXYZ: {{"type": "oxyz_plane", "A": 1.0, "B": 2.0, "C": -1.0, "D": -6.0}}
+9. ĐƯỜNG THẲNG OXYZ: {{"type": "oxyz_line", "x0": 1.0, "y0": 2.0, "z0": 3.0, "ux": 2.0, "uy": -1.0, "uz": 2.0}}
+10. MẶT CẦU OXYZ: {{"type": "oxyz_sphere", "Ix": 1.0, "Iy": 2.0, "Iz": 3.0, "R": 2.5}}
+11. MÔ PHỎNG NÂNG CAO PYTHON PLOTLY: {{"type": "dynamic_code", "python_code": "fig = go.Figure()\\n# Code vẽ đồ thị\\nsetup_pedagogical_oxy(fig, [-5, 5], [-5, 5])"}}
+12. SƠ ĐỒ TƯ DUY MERMAID: {{"type": "mermaid", "code": "graph LR\\n   Root[\\"🎯 TIÊU ĐỀ\\"] --> A[\\"Nhánh 1\\"]"}}
 
 *RÀO CHẮN THÉP:*
 - BÁM SÁT 100% NGỮ LIỆU KNTT 2018.
-- MÔ PHỎNG NÂNG CAO: BẮT BUỘC gọi `setup_pedagogical_oxy(fig, [x_min, x_max], [y_min, y_max])` ở cuối.
 - BIẾN "func" TRONG JSON: KHÔNG DÙNG LATEX. Viết dạng Python (VD: (x**2 - 3*x + 2)/(x - 1)).
-- QUY TẮC TRÌNH DIỄN SƠ ĐỒ MERMAID: Dùng cấu trúc `graph LR`. Nút con chứa 3-6 từ xúc tích. Toàn bộ nhãn trong ngoặc vuông BẮT BUỘC bọc trong ngoặc kép [\"...\"]. Không kèm giải thích thừa ngoài JSON.
-- *** CHECKLIST BẮT BUỘC KHI VẼ SƠ ĐỒ TƯ DUY "CÁC DẠNG HÀM SỐ" HOẶC TƯƠNG TỰ: PHẢI liệt kê ĐỦ 4 NHÓM CHÍNH, KHÔNG ĐƯỢC BỎ SÓT:
-  + Nhóm 1: Hàm Đa Thức (Bậc nhất, Bậc hai, Bậc ba)
-  + Nhóm 2: Hàm Phân Thức (Bậc 1/1, Bậc 2/1)
-  + Nhóm 3: Hàm Mũ và Logarit
-  + Nhóm 4: Hàm Lượng Giác (sin, cos, tan, cot)
-  Mỗi nút con BẮT BUỘC bọc công thức trong cặp $...$ (ví dụ $y = ax + b$, $y = ax^2 + bx + c$). ***"""
+- QUY TẮC TRÌNH DIỄN SƠ ĐỒ MERMAID: Dùng cấu trúc `graph LR`. Nút con chứa 3-6 từ xúc tích. Toàn bộ nhãn trong ngoặc vuông BẮT BUỘC bọc trong ngoặc kép [\"...\"]. Không kèm giải thích thừa ngoài JSON."""
 
 
 # ==============================================================================
 # HÀM CHÍNH: RENDER TAB 1
 # ==============================================================================
 def render_tab_study(grade, subject):
-    """Render toàn bộ Tab 1 (Học tập & Phòng Lab)."""
     grade_num = int(grade.split()[1])
     _ensure_topic_state()
-
-    # Reset khi đổi môn
     if "last_subject_seen" not in st.session_state:
         st.session_state.last_subject_seen = subject
     elif st.session_state.last_subject_seen != subject:
@@ -921,7 +767,6 @@ def render_tab_study(grade, subject):
         st.session_state.lab_text_result = None
         st.session_state.current_lesson = ""
         st.session_state.last_subject_seen = subject
-        # Reset ô nhập bài học khi đổi môn
         st.session_state["topic_input_tab1"] = ""
         st.session_state.parsed_quiz = []
         st.session_state.quiz_states = {}
@@ -929,13 +774,9 @@ def render_tab_study(grade, subject):
     st.markdown("<br>", unsafe_allow_html=True)
     st.subheader(f"📖 Tự học & Chiếm lĩnh kiến thức môn {subject} - Lớp {grade_num}")
 
-    # ========== LINK SGK ==========
     _render_sgk_link()
-
-    # ========== GỢI Ý CHỦ ĐỀ ==========
     _render_topic_suggestions(subject, grade_num)
 
-    # ========== INPUT BÀI HỌC ==========
     st.markdown("### 📝 Hoặc tự nhập chủ đề khác:")
     topic_input = st.text_input(
         "Nhập bài học cần chiếm lĩnh kiến thức:",
@@ -943,7 +784,6 @@ def render_tab_study(grade, subject):
         key="topic_input_tab1",
         label_visibility="collapsed",
     )
-
     if st.button("🚀 Soạn bài học chuẩn GDPT 2018") and topic_input.strip():
         st.session_state.tram1_count += 1
         _add_to_history(topic_input.strip(), subject, grade_num)
@@ -957,19 +797,14 @@ def render_tab_study(grade, subject):
             except Exception as e:
                 st.error(f"Lỗi: {e}")
 
-    # ========== RENDER BÀI HỌC ==========
     if st.session_state.get("current_lesson"):
         _render_lesson(st.session_state.current_lesson, subject)
 
-    # ========== ÔN TẬP NHIỀU CHỦ ĐỀ ==========
     _render_multi_topic_selector(subject, grade_num)
-
-    # ========== PHÒNG LAB ==========
     _render_phong_lab(subject, grade_num)
 
 
 def _build_study_prompt(topic_input, subject, grade_num):
-    """Sinh prompt bài học."""
     return f"""[HỆ THỐNG BIÊN SOẠN BÀI HỌC CHUẨN QUỐC GIA - CT GDPT 2018 & QUY CHẾ THI 2026]
 Môn học: {subject} | Khối lớp: {grade_num}. Chủ đề bài học: '{topic_input}'.
 
@@ -983,11 +818,11 @@ YÊU CẦU PHÁP LÝ & HỌC THUẬT BẮT BUỘC:
    - BẢNG BIẾN THIÊN (BBT): BẮT BUỘC sinh bằng LaTeX array, đặt trong cặp $$...$$. TUYỆT ĐỐI KHÔNG dùng Markdown table.
      QUY TẮC CHUNG:
      + Số cột dòng x PHẢI KHỚP số cột dòng y' và y.
-     + Dùng \\nearrow cho đồng biến (mũi tên lên), \\searrow cho nghịch biến (mũi tên xuống).
+     + Dùng \\nearrow cho đồng biến, \\searrow cho nghịch biến.
      + Ghi rõ CĐ (cực đại), CT (cực tiểu), || cho tiệm cận đứng.
      + Cột có cực trị thì phải có cột trung gian để chèn mũi tên.
 
-     MẪU 1 — Hàm BẬC 3 (y = ax³+bx²+cx+d, có 2 cực trị):
+     MẪU 1 — Hàm BẬC 3 (có 2 cực trị):
      $$\\begin{{array}}{{|c|ccccccc|}}
      \\hline
      x & -\\infty & & x_1 & & x_2 & & +\\infty \\\\
@@ -998,7 +833,7 @@ YÊU CẦU PHÁP LÝ & HỌC THUẬT BẮT BUỘC:
      \\hline
      \\end{{array}}$$
 
-     MẪU 2 — Hàm BẬC 3 vô cực trị (y' luôn dương hoặc luôn âm):
+     MẪU 2 — Hàm BẬC 3 vô cực trị:
      $$\\begin{{array}}{{|c|ccc|}}
      \\hline
      x & -\\infty & & +\\infty \\\\
@@ -1009,7 +844,7 @@ YÊU CẦU PHÁP LÝ & HỌC THUẬT BẮT BUỘC:
      \\hline
      \\end{{array}}$$
 
-     MẪU 3 — Hàm PHÂN THỨC 1/1 (y=(ax+b)/(cx+d), có TCĐ):
+     MẪU 3 — Hàm PHÂN THỨC 1/1:
      $$\\begin{{array}}{{|c|cccc|}}
      \\hline
      x & -\\infty & & x_0 & & +\\infty \\\\
@@ -1020,7 +855,7 @@ YÊU CẦU PHÁP LÝ & HỌC THUẬT BẮT BUỘC:
      \\hline
      \\end{{array}}$$
 
-     MẪU 4 — Hàm PHÂN THỨC 2/1 (y=(ax²+bx+c)/(dx+e), có TCĐ + 2 cực trị):
+     MẪU 4 — Hàm PHÂN THỨC 2/1:
      $$\\begin{{array}}{{|c|ccccccc|}}
      \\hline
      x & -\\infty & & x_1 & & x_0 & & +\\infty \\\\
@@ -1030,9 +865,8 @@ YÊU CẦU PHÁP LÝ & HỌC THUẬT BẮT BUỘC:
      y & +\\infty & \\nearrow & y_{{CĐ}} & \\searrow & -\\infty || +\\infty & \\searrow & y_{{TCN}} \\\\
      \\hline
      \\end{{array}}$$
-     (Tương tự mẫu đối xứng cho trường hợp còn lại)
 
-     MẪU 5 — Hàm PARABOL BẬC 2 (y = ax²+bx+c):
+     MẪU 5 — Hàm PARABOL BẬC 2:
      $$\\begin{{array}}{{|c|ccc|}}
      \\hline
      x & -\\infty & & x_0 & & +\\infty \\\\
@@ -1043,11 +877,9 @@ YÊU CẦU PHÁP LÝ & HỌC THUẬT BẮT BUỘC:
      \\hline
      \\end{{array}}$$
      (Đảo dấu nếu a < 0)
-
-     LƯU Ý CUỐI: CHỌN ĐÚNG MẪU theo loại hàm đang khảo sát. Không bịa thêm mẫu khác.
    - ĐỒ THỊ: Mô tả bằng lời, ghi chú: "(Kéo xuống Phòng Lab ảo bên dưới để trực quan hóa nhé!)".
-   - TRẮC NGHIỆM SOCRATIC: Sinh chính xác 3 câu hỏi trắc nghiệm đánh giá năng lực.
-     + Bắt đầu mỗi câu bằng chữ "Câu 1:", "Câu 2:", "Câu 3:".
+   - TRẮC NGHIỆM SOCRATIC: Sinh chính xác 3 câu hỏi trắc nghiệm.
+     + Bắt đầu mỗi câu bằng "Câu 1:", "Câu 2:", "Câu 3:".
      + 4 phương án A, B, C, D trên 4 dòng riêng biệt.
      + Kèm dòng "ĐÁP ÁN: [A/B/C/D]" và dòng "GIẢI THÍCH: [Gợi ý tư duy Socratic]".
    - TỰ LUẬN: Sinh 2 bài tập vận dụng kèm HƯỚNG DẪN TƯ DUY 4 BƯỚC (POLYA).
