@@ -1,5 +1,346 @@
-    # ========== HÀM BẬC 3 ==========
+"""
+_lab.py — Phòng Lab: 31 render types cho mô phỏng trực quan.
+Bao gồm: Toán (12), Vật lý (12), Hóa học (8), Sinh học (8).
+"""
+import streamlit as st
+import plotly.graph_objects as go
+import numpy as np
+import re
+import math
+
+
+# ==============================================================================
+# HELPER FUNCTIONS
+# ==============================================================================
+
+def _plotly_config(name="chart"):
+    """Config chung cho mọi Plotly chart."""
+    return {
+        "displayModeBar": True,
+        "displaylogo": False,
+        "toImageButtonOptions": {
+            "format": "png",
+            "filename": name,
+            "scale": 2,
+        },
+        "modeBarButtonsToRemove": ["lasso2d", "select2d"],
+    }
+
+
+def _hovertemplate_rounded(decimals=2):
+    """Hovertemplate cho Scatter 2D, làm tròn theo decimals."""
+    return f"x = %{{x:.{decimals}f}}<br>y = %{{y:.{decimals}f}}<extra></extra>"
+
+
+def setup_pedagogical_oxy(fig, x_range, y_range, equal_aspect=False):
+    """Setup trục sư phạm cho đồ thị 2D: grid, zeroline, màu tối."""
+    fig.update_layout(
+        template="plotly_dark",
+        plot_bgcolor="#0f172a",
+        paper_bgcolor="#0f172a",
+        font=dict(color="#e2e8f0"),
+    )
+    fig.update_xaxes(
+        range=x_range,
+        showgrid=True, gridcolor="#1e293b", gridwidth=1,
+        zeroline=True, zerolinecolor="#475569", zerolinewidth=1.5,
+        showline=True, linecolor="#475569",
+    )
+    fig.update_yaxes(
+        range=y_range,
+        showgrid=True, gridcolor="#1e293b", gridwidth=1,
+        zeroline=True, zerolinecolor="#475569", zerolinewidth=1.5,
+        showline=True, linecolor="#475569",
+    )
+    if equal_aspect:
+        fig.update_yaxes(scaleanchor='x', scaleratio=1)
+
+
+def _draw_oxyz_axes(fig, axis_len, axis_min, axis_max):
+    """Vẽ 3 trục Ox, Oy, Oz với mũi tên và nhãn."""
+    for vec, color, label in [
+        ((axis_len, 0, 0), "#ef4444", "x"),
+        ((0, axis_len, 0), "#22c55e", "y"),
+        ((0, 0, axis_len), "#3b82f6", "z"),
+    ]:
+        fig.add_trace(go.Scatter3d(
+            x=[0, vec[0]], y=[0, vec[1]], z=[0, vec[2]],
+            mode='lines+text',
+            line=dict(color=color, width=5),
+            text=["", label],
+            textposition="top center",
+            textfont=dict(color=color, size=14),
+            showlegend=False, hoverinfo='skip',
+        ))
+    fig.add_trace(go.Scatter3d(
+        x=[0], y=[0], z=[0], mode='markers+text',
+        marker=dict(size=6, color='#f8fafc'),
+        text=['O'], textposition='bottom left',
+        textfont=dict(color='#f8fafc', size=12),
+        showlegend=False, hoverinfo='skip',
+    ))
+
+
+def _auto_fit_view(dtype, params):
+    """Tự động tính range view cho từng loại đồ thị 2D."""
     if dtype == "func_3":
+        return -4.0, 4.0, -10.0, 10.0
+    if dtype in ("func_1_1", "func_2_1"):
+        return -8.0, 8.0, -10.0, 10.0
+    if dtype in ("parabola", "func_2"):
+        return -5.0, 5.0, -8.0, 8.0
+    if dtype == "area":
+        a = params.get("a", 0.0)
+        b = params.get("b", 1.0)
+        pad = max(1.0, (b - a) * 0.2)
+        return a - pad, b + pad, -5.0, 10.0
+    return -5.0, 5.0, -5.0, 5.0
+
+
+def _render_info_panel(dtype, params):
+    """Info panel bên phải cho từng loại đồ thị."""
+    if dtype == "func_3":
+        a, b, c, d = params.get("a", 1), params.get("b", 0), params.get("c", 0), params.get("d", 0)
+        st.markdown("##### 📝 Hàm số")
+        st.latex(rf"y = {a}x^3 + {b}x^2 + {c}x + {d}")
+        st.markdown("##### 📐 Đạo hàm")
+        st.latex(rf"y' = {3*a}x^2 + {2*b}x + {c}")
+        delta = (2*b)**2 - 4*(3*a)*c
+        st.markdown("##### 🔍 Biện luận cực trị")
+        if abs(a) < 1e-9:
+            st.caption("a ≈ 0 → không phải hàm bậc 3")
+        elif delta > 0:
+            st.markdown("✅ Có **2 cực trị** (CĐ và CT)")
+        elif abs(delta) < 1e-9:
+            st.markdown("⚠️ Có **1 điểm uốn** (không cực trị)")
+        else:
+            st.markdown("❌ **Không có cực trị** (đơn điệu)")
+    elif dtype == "func_1_1":
+        a, b, c, d = params.get("a", 1), params.get("b", 1), params.get("c", 1), params.get("d", -1)
+        st.markdown("##### 📝 Hàm số")
+        st.latex(rf"y = \dfrac{{{a}x + {b}}}{{{c}x + {d}}}")
+        if abs(c) > 1e-9:
+            st.markdown("##### 📐 Tiệm cận")
+            st.latex(rf"TCĐ: x = {-d/c:.2f}")
+            st.latex(rf"TCN: y = {a/c:.2f}")
+    elif dtype == "func_2_1":
+        a, b, c, d, e = (params.get("a", 1), params.get("b", -2), params.get("c", 2),
+                         params.get("d", 1), params.get("e", -1))
+        st.markdown("##### 📝 Hàm số")
+        st.latex(rf"y = \dfrac{{{a}x^2 + {b}x + {c}}}{{{d}x + {e}}}")
+        if abs(d) > 1e-9:
+            st.markdown("##### 📐 Tiệm cận")
+            st.latex(rf"TCĐ: x = {-e/d:.2f}")
+    elif dtype in ("parabola", "func_2"):
+        a, b, c = params.get("a", 1), params.get("b", -2), params.get("c", 1)
+        st.markdown("##### 📝 Hàm số")
+        st.latex(rf"y = {a}x^2 + {b}x + {c}")
+        x_dinh = -b / (2 * a)
+        y_dinh = a * x_dinh**2 + b * x_dinh + c
+        st.markdown("##### 📐 Đỉnh")
+        st.latex(rf"I({x_dinh:.2f}; {y_dinh:.2f})")
+        delta = b*b - 4*a*c
+        st.markdown("##### 🔍 Nghiệm")
+        if delta > 0:
+            st.markdown("✅ 2 nghiệm phân biệt")
+        elif abs(delta) < 1e-9:
+            st.markdown("⚠️ Nghiệm kép")
+        else:
+            st.markdown("❌ Vô nghiệm")
+    else:
+        st.info("ℹ️ Không có thông tin bổ sung.")
+
+
+# ==============================================================================
+# MAIN DISPATCHER
+# ==============================================================================
+
+def render_smart_lab(data: dict):
+    """Dispatcher: nhận dict data với key 'type', gọi render tương ứng."""
+    if not data or not isinstance(data, dict):
+        st.warning("⚠️ Dữ liệu mô phỏng không hợp lệ.")
+        return
+    dtype = data.get("type", "")
+    if not dtype:
+        st.warning("⚠️ Thiếu trường 'type' trong dữ liệu mô phỏng.")
+        return
+
+    # ========== DIỆN TÍCH HÌNH PHẲNG ==========
+    if dtype == "area":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            func_options = [
+                "x**2 - 3*x + 2", "x**2 - 4", "np.sin(x)",
+                "np.exp(-x**2)", "x**3 - 3*x", "(x**2 - 1)/(x**2 + 1)",
+            ]
+            default_func = data.get("func", "x**2 - 3*x + 2")
+            if default_func not in func_options:
+                func_options.insert(0, default_func)
+            func_str = st.selectbox("Hàm f(x):", func_options, key="lab_area_func")
+            custom_func = st.text_input("Hoặc nhập hàm khác (Python):", value="", key="lab_area_custom")
+            if custom_func.strip():
+                func_str = custom_func.strip()
+            a_val = st.slider("Cận dưới a:", -5.0, 5.0, float(data.get("a", 0.0)), 0.5, key="lab_area_a")
+            b_val = st.slider("Cận trên b:", -5.0, 5.0, float(data.get("b", 3.0)), 0.5, key="lab_area_b")
+            if b_val <= a_val:
+                b_val = a_val + 0.5
+
+        with c2:
+            try:
+                x_min_v, x_max_v, y_min_v, y_max_v = _auto_fit_view("area", {"a": a_val, "b": b_val})
+                x_vals = np.linspace(x_min_v, x_max_v, 800)
+                safe_env = {"np": np, "x": x_vals, "sin": np.sin, "cos": np.cos,
+                            "exp": np.exp, "log": np.log, "sqrt": np.sqrt, "abs": np.abs}
+                y_vals = eval(func_str, {"__builtins__": {}}, safe_env)
+                if not isinstance(y_vals, np.ndarray):
+                    y_vals = np.full_like(x_vals, y_vals)
+                x_fill = np.linspace(a_val, b_val, 400)
+                safe_env["x"] = x_fill
+                y_fill = eval(func_str, {"__builtins__": {}}, safe_env)
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines',
+                                          line=dict(color='#38bdf8', width=3), name='f(x)',
+                                          hovertemplate=_hovertemplate_rounded(2)))
+                fig.add_trace(go.Scatter(
+                    x=np.concatenate([x_fill, x_fill[::-1]]),
+                    y=np.concatenate([y_fill, np.zeros_like(y_fill)]),
+                    fill='toself', fillcolor='rgba(56,189,248,0.3)',
+                    line=dict(color='rgba(0,0,0,0)'), name='Miền S', hoverinfo='skip'))
+                setup_pedagogical_oxy(fig, [x_min_v, x_max_v], [y_min_v, y_max_v])
+                fig.update_layout(title=f"S = ∫|{func_str}|dx từ {a_val} đến {b_val}", height=420)
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("Area"))
+            except Exception as e:
+                st.error(f"Lỗi vẽ diện tích: {e}")
+
+        with c3:
+            st.markdown("##### 📐 Công thức")
+            st.latex(r"S = \int_a^b |f(x)|dx")
+            try:
+                x_check = np.linspace(a_val, b_val, 1000)
+                safe_env = {"np": np, "x": x_check, "sin": np.sin, "cos": np.cos,
+                            "exp": np.exp, "log": np.log, "sqrt": np.sqrt, "abs": np.abs}
+                y_check = eval(func_str, {"__builtins__": {}}, safe_env)
+                if not isinstance(y_check, np.ndarray):
+                    y_check = np.full_like(x_check, y_check)
+                S_val = np.trapz(np.abs(y_check), x_check)
+                st.markdown("##### 📏 Kết quả (xấp xỉ)")
+                st.latex(rf"S \approx {S_val:.4f}")
+            except Exception:
+                pass
+
+    # ========== KHỐI TRÒN XOAY ==========
+    elif dtype == "revolve_ox":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            func_options = ["2*x + 1", "np.sqrt(x)", "np.sin(x) + 2", "x**2", "np.exp(-x) + 1"]
+            default_func = data.get("func", "2*x + 1")
+            if default_func not in func_options:
+                func_options.insert(0, default_func)
+            func_str = st.selectbox("Hàm f(x):", func_options, key="lab_rev_func")
+            custom_func = st.text_input("Hoặc nhập hàm khác:", value="", key="lab_rev_custom")
+            if custom_func.strip():
+                func_str = custom_func.strip()
+            a_val = st.slider("Cận dưới a:", 0.0, 5.0, float(data.get("a", 2.0)), 0.5, key="lab_rev_a")
+            b_val = st.slider("Cận trên b:", 0.5, 6.0, float(data.get("b", 5.0)), 0.5, key="lab_rev_b")
+            if b_val <= a_val:
+                b_val = a_val + 0.5
+            angle_deg = st.slider("Góc quay (°):", 90, 360, 360, 30, key="lab_rev_angle")
+            show_slice = st.checkbox("Hiển thị 1/8 + 2 mặt cắt", value=True, key="lab_rev_slice")
+
+        with c2:
+            try:
+                n_theta = 60
+                theta = np.linspace(0, 2 * np.pi * angle_deg / 360, n_theta)
+                x_lin = np.linspace(a_val, b_val, 80)
+                safe_env = {"np": np, "x": x_lin, "sin": np.sin, "cos": np.cos,
+                            "exp": np.exp, "log": np.log, "sqrt": np.sqrt, "abs": np.abs}
+                y_lin = eval(func_str, {"__builtins__": {}}, safe_env)
+                if not isinstance(y_lin, np.ndarray):
+                    y_lin = np.full_like(x_lin, y_lin)
+                X, T = np.meshgrid(x_lin, theta)
+                Y = np.outer(np.sin(theta), np.abs(y_lin))
+                Z = np.outer(np.cos(theta), np.abs(y_lin))
+                fig = go.Figure()
+                fig.add_trace(go.Surface(x=X, y=Y, z=Z,
+                                          colorscale='Blues', opacity=0.75, showscale=False,
+                                          name='Khối tròn xoay'))
+                fig.add_trace(go.Scatter3d(x=x_lin, y=np.zeros_like(x_lin), z=y_lin,
+                                            mode='lines', line=dict(color='#fbbf24', width=6),
+                                            name='Đường sinh'))
+                fig.update_layout(
+                    title=f"Khối tròn xoay quanh Ox: y = {func_str}, x ∈ [{a_val}; {b_val}]",
+                    template="plotly_dark",
+                    scene=dict(
+                        xaxis=dict(backgroundcolor="#0f172a", gridcolor="#1e293b"),
+                        yaxis=dict(backgroundcolor="#0f172a", gridcolor="#1e293b"),
+                        zaxis=dict(backgroundcolor="#0f172a", gridcolor="#1e293b"),
+                        aspectmode='cube',
+                        camera=dict(eye=dict(x=1.8, y=1.8, z=1.5)),
+                    ),
+                    height=460, margin=dict(l=10, r=10, t=30, b=10),
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("RevolveOx"))
+            except Exception as e:
+                st.error(f"Lỗi vẽ khối tròn xoay: {e}")
+
+        with c3:
+            st.markdown("##### 📐 Công thức")
+            st.latex(r"V = \pi \int_a^b [f(x)]^2 dx")
+            try:
+                x_check = np.linspace(a_val, b_val, 1000)
+                safe_env = {"np": np, "x": x_check, "sin": np.sin, "cos": np.cos,
+                            "exp": np.exp, "log": np.log, "sqrt": np.sqrt, "abs": np.abs}
+                y_check = eval(func_str, {"__builtins__": {}}, safe_env)
+                if not isinstance(y_check, np.ndarray):
+                    y_check = np.full_like(x_check, y_check)
+                V_val = np.pi * np.trapz(y_check**2, x_check)
+                st.markdown("##### 📏 Thể tích (xấp xỉ)")
+                st.latex(rf"V \approx {V_val:.4f}")
+            except Exception:
+                pass
+
+    # ========== MERMAID MINDMAP ==========
+    elif dtype == "mermaid":
+        code = data.get("code", "")
+        if not code.strip():
+            st.warning("⚠️ Không có mã Mermaid để hiển thị.")
+            return
+        safe_code = re.sub(r'\\\\([a-zA-Z])', r'\\\1', code)
+        try:
+            st.markdown(f"```mermaid\n{safe_code}\n```")
+        except Exception as e:
+            st.error(f"Lỗi render Mermaid: {e}")
+
+    # ========== DYNAMIC CODE ==========
+    elif dtype == "dynamic_code":
+        code = data.get("python_code", "")
+        if not code.strip():
+            st.warning("⚠️ Không có code Python để chạy.")
+            return
+        try:
+            safe_globals = {
+                "go": go, "np": np, "st": st, "math": math,
+                "setup_pedagogical_oxy": setup_pedagogical_oxy,
+                "fig": None,
+                "__builtins__": {
+                    "range": range, "len": len, "min": min, "max": max,
+                    "abs": abs, "float": float, "int": int, "str": str,
+                    "list": list, "dict": dict, "tuple": tuple, "print": print,
+                },
+            }
+            exec(code, safe_globals)
+            fig = safe_globals.get("fig")
+            if fig is not None:
+                st.plotly_chart(fig, use_container_width=True,
+                                config=_plotly_config("DynamicCode"))
+            else:
+                st.info("ℹ️ Code đã chạy nhưng không tạo biến `fig`.")
+        except Exception as e:
+            st.error(f"Lỗi chạy code động: {e}")
+    # ========== HÀM BẬC 3 ==========
+    elif dtype == "func_3":
         c1, c2, c3 = st.columns([0.8, 3.2, 1])
         with c1:
             st.markdown("**⚙️ Hệ số**")
