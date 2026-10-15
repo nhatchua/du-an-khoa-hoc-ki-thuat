@@ -2230,6 +2230,577 @@
             elif "glucose" in compound.lower():
                 st.markdown("**Carbohydrate** (monosaccharide)")
 
+    # ========== SINH HỌC: DNA XOẮN KÉP 3D ==========
+    elif dtype == "dna_helix":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            n_turns = st.slider("Số vòng xoắn:", 1, 6,
+                                int(data.get("n_turns", 3)), 1, key="sinh_dna_turns")
+            radius = st.slider("Bán kính xoắn:", 0.5, 1.5,
+                               float(data.get("radius", 1.0)), 0.1, key="sinh_dna_r")
+            pitch = st.slider("Bước xoắn (chiều cao/vòng):", 1.0, 3.0,
+                              float(data.get("pitch", 2.0)), 0.2, key="sinh_dna_pitch")
+            show_bases = st.checkbox("Hiển thị base pair (A-T, G-C)", value=True, key="sinh_dna_bases")
+
+        with c2:
+            try:
+                t_vals = np.linspace(0, 2 * np.pi * n_turns, 400)
+                # 2 mạch xoắn ngược chiều nhau (lệch pha π)
+                x1 = radius * np.cos(t_vals)
+                y1 = radius * np.sin(t_vals)
+                z1 = pitch * t_vals / (2 * np.pi)
+
+                x2 = radius * np.cos(t_vals + np.pi)
+                y2 = radius * np.sin(t_vals + np.pi)
+                z2 = z1
+
+                fig = go.Figure()
+
+                # Mạch 1 (xanh dương)
+                fig.add_trace(go.Scatter3d(
+                    x=x1, y=y1, z=z1, mode='lines',
+                    line=dict(color='#38bdf8', width=8),
+                    name='Mạch 1 (5\'→3\')', hoverinfo='skip'
+                ))
+                # Mạch 2 (hồng)
+                fig.add_trace(go.Scatter3d(
+                    x=x2, y=y2, z=z2, mode='lines',
+                    line=dict(color='#f472b6', width=8),
+                    name='Mạch 2 (3\'→5\')', hoverinfo='skip'
+                ))
+
+                # Base pair (rungs) - vẽ khoảng 20 base
+                if show_bases:
+                    n_bases = 20
+                    base_indices = np.linspace(0, len(t_vals) - 1, n_bases).astype(int)
+                    bx, by, bz = [], [], []
+                    base_colors = []
+                    base_pairs = ['A-T', 'T-A', 'G-C', 'C-G']
+                    for i, idx in enumerate(base_indices):
+                        bx.extend([x1[idx], x2[idx], None])
+                        by.extend([y1[idx], y2[idx], None])
+                        bz.extend([z1[idx], z2[idx], None])
+                    fig.add_trace(go.Scatter3d(
+                        x=bx, y=by, z=bz, mode='lines',
+                        line=dict(color='#fbbf24', width=3),
+                        name='Base pair (A-T, G-C)', hoverinfo='skip'
+                    ))
+
+                fig.update_layout(
+                    title=f"DNA xoắn kép — {n_turns} vòng xoắn",
+                    template="plotly_dark",
+                    scene=dict(
+                        xaxis=dict(showbackground=True, backgroundcolor="#0f172a",
+                                   showgrid=True, gridcolor="#1e293b",
+                                   showticklabels=False, zeroline=False),
+                        yaxis=dict(showbackground=True, backgroundcolor="#0f172a",
+                                   showgrid=True, gridcolor="#1e293b",
+                                   showticklabels=False, zeroline=False),
+                        zaxis=dict(showbackground=True, backgroundcolor="#0f172a",
+                                   showgrid=True, gridcolor="#1e293b",
+                                   showticklabels=False, zeroline=False,
+                                   title="Chiều dài DNA"),
+                        aspectmode='manual',
+                        aspectratio=dict(x=1, y=1, z=2),
+                        camera=dict(eye=dict(x=1.5, y=1.5, z=0.8))
+                    ),
+                    height=560, margin=dict(l=10, r=10, t=40, b=10),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("DNA"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ DNA: {err}")
+
+        with c3:
+            st.markdown("##### 🧬 Cấu trúc")
+            st.markdown("**Mô hình Watson-Crick** (1953)")
+            st.markdown("##### 📐 Thông số thật")
+            st.latex(r"\text{Bước xoắn} = 3.4\,\text{nm}")
+            st.latex(r"10\,\text{base pair/vòng}")
+            st.latex(r"\text{Đường kính} = 2\,\text{nm}")
+            st.markdown("##### 🔗 Nguyên tắc bổ sung")
+            st.markdown("- **A** (Adenine) ↔ **T** (Thymine): 2 liên kết H")
+            st.markdown("- **G** (Guanine) ↔ **C** (Cytosine): 3 liên kết H")
+            st.markdown("##### 🎯 Chiều mạch")
+            st.markdown("- Mạch 1: **5' → 3'**")
+            st.markdown("- Mạch 2: **3' → 5'** (ngược chiều)")
+
+    # ========== SINH HỌC: TỔNG HỢP PROTEIN ==========
+    elif dtype == "protein_synthesis":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Chọn giai đoạn**")
+            stage = st.radio(
+                "Giai đoạn:",
+                ["1. Phiên mã (DNA→mRNA)", "2. Dịch mã (mRNA→Protein)"],
+                key="sinh_ps_stage"
+            )
+            show_animation = st.checkbox("Hiển thị mũi tên di chuyển", value=True, key="sinh_ps_anim")
+
+        with c2:
+            try:
+                fig = go.Figure()
+                if "Phiên mã" in stage:
+                    # DNA → mRNA
+                    # DNA (đoạn thẳng đôi)
+                    fig.add_trace(go.Scatter(x=[0, 10], y=[2, 2], mode='lines',
+                        line=dict(color='#38bdf8', width=6), name='Mạch DNA gốc 3\'→5\''))
+                    fig.add_trace(go.Scatter(x=[0, 10], y=[1.5, 1.5], mode='lines',
+                        line=dict(color='#f472b6', width=6), name='Mạch DNA bổ sung 5\'→3\''))
+
+                    # Base pairs
+                    for i in range(0, 11):
+                        fig.add_trace(go.Scatter(x=[i, i], y=[1.5, 2], mode='lines',
+                            line=dict(color='#fbbf24', width=2), showlegend=False, hoverinfo='skip'))
+
+                    # Enzyme RNA polymerase (vòng tròn)
+                    fig.add_shape(type="circle", x0=4, x1=5.5, y0=0.8, y1=2.6,
+                                  fillcolor='rgba(34,197,94,0.4)',
+                                  line=dict(color='#22c55e', width=2))
+                    fig.add_annotation(x=4.75, y=2.8, text="RNA polymerase",
+                                       showarrow=False,
+                                       font=dict(color='#22c55e', size=12))
+
+                    # mRNA đang tách ra
+                    fig.add_trace(go.Scatter(x=[0, 10], y=[-1, -1], mode='lines',
+                        line=dict(color='#a78bfa', width=6), name='mRNA (5\'→3\')'))
+                    # Mũi tên nối mRNA với mạch gốc
+                    if show_animation:
+                        for i in range(3, 8):
+                            fig.add_annotation(x=i, y=-0.5, ax=i, ay=0.5,
+                                xref='x', yref='y', axref='x', ayref='y',
+                                text='', showarrow=True, arrowhead=0,
+                                arrowwidth=1, arrowcolor='#a78bfa')
+
+                else:  # Dịch mã
+                    # mRNA
+                    fig.add_trace(go.Scatter(x=[0, 12], y=[1, 1], mode='lines',
+                        line=dict(color='#a78bfa', width=6), name='mRNA'))
+
+                    # Codons
+                    codons = ["AUG", "GCA", "UAA", "CCG"]
+                    for i, codon in enumerate(codons):
+                        fig.add_annotation(x=i*3 + 1.5, y=1.4, text=f"<b>{codon}</b>",
+                                           showarrow=False,
+                                           font=dict(color='#f8fafc', size=13))
+
+                    # Ribosome (2 tiểu phần)
+                    fig.add_shape(type="circle", x0=2, x1=8, y0=0.3, y1=2.2,
+                                  fillcolor='rgba(34,197,94,0.2)',
+                                  line=dict(color='#22c55e', width=2))
+                    fig.add_annotation(x=5, y=2.4, text="Ribosome",
+                                       showarrow=False,
+                                       font=dict(color='#22c55e', size=13))
+
+                    # tRNA (chữ Y) mang axit amin
+                    trna_x = [1.5, 4.5, 7.5]
+                    trna_labels = ["Met", "Ala", "STOP"]
+                    trna_colors = ['#fbbf24', '#f472b6', '#94a3b8']
+                    for x, label, col in zip(trna_x, trna_labels, trna_colors):
+                        # tRNA
+                        fig.add_trace(go.Scatter(x=[x, x, x], y=[3.5, 2.5, 1.8],
+                            mode='lines+markers+text',
+                            line=dict(color=col, width=3),
+                            marker=dict(size=8, color=col),
+                            text=['', '', label],
+                            textposition='top center',
+                            textfont=dict(color=col, size=12),
+                            showlegend=False, hoverinfo='skip'))
+
+                    # Axit amin (chuỗi)
+                    fig.add_trace(go.Scatter(x=[1.5, 4.5], y=[3.5, 3.5], mode='lines+markers',
+                        line=dict(color='#f43f5e', width=3),
+                        marker=dict(size=10, color='#f43f5e', symbol='circle'),
+                        name='Chuỗi polypeptide',
+                        hoverinfo='skip'))
+
+                fig.update_layout(
+                    title=f"Tổng hợp protein — {stage}",
+                    template="plotly_dark",
+                    xaxis=dict(range=[-1, 13], showticklabels=False,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, showgrid=False),
+                    yaxis=dict(range=[-2, 4.5], showticklabels=False,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, showgrid=False,
+                               scaleanchor='x', scaleratio=1),
+                    height=460, margin=dict(l=10, r=10, t=40, b=10),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("TongHopProtein"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ tổng hợp protein: {err}")
+
+        with c3:
+            if "Phiên mã" in stage:
+                st.markdown("##### 📝 Quá trình")
+                st.markdown("DNA → **mRNA** (diễn ra trong nhân)")
+                st.markdown("##### 🔗 Nguyên tắc")
+                st.latex(r"A_{DNA} \rightarrow U_{mRNA}")
+                st.latex(r"T_{DNA} \rightarrow A_{mRNA}")
+                st.latex(r"G_{DNA} \rightarrow X_{mRNA}")
+                st.latex(r"X_{DNA} \rightarrow G_{mRNA}")
+                st.markdown("##### 🎯 Enzyme")
+                st.markdown("**RNA polymerase**")
+            else:
+                st.markdown("##### 📝 Quá trình")
+                st.markdown("mRNA → **Protein** (tại ribosome)")
+                st.markdown("##### 🎯 Mã di truyền")
+                st.markdown("- **AUG**: mã mở đầu (Met)")
+                st.markdown("- **UAA, UAG, UGA**: mã kết thúc")
+                st.markdown("##### 🔗 Liên kết")
+                st.markdown("Codon (mRNA) ↔ Anticodon (tRNA)")
+
+    # ========== SINH HỌC: NGUYÊN PHÂN / GIẢM PHÂN ==========
+    elif dtype == "cell_division":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Chọn kiểu**")
+            division_type = st.radio(
+                "Kiểu phân bào:",
+                ["Nguyên phân (Mitosis)", "Giảm phân (Meiosis)"],
+                key="sinh_cd_type"
+            )
+            if "Nguyên phân" in division_type:
+                stage = st.select_slider(
+                    "Giai đoạn:",
+                    options=["Kỳ trung gian", "Kỳ đầu", "Kỳ giữa", "Kỳ sau", "Kỳ cuối"],
+                    value="Kỳ giữa", key="sinh_cd_stage_mit"
+                )
+            else:
+                stage = st.select_slider(
+                    "Giai đoạn:",
+                    options=["Kỳ trung gian", "Giảm phân I", "Giảm phân II", "4 tế bào con"],
+                    value="Giảm phân I", key="sinh_cd_stage_mei"
+                )
+
+        with c2:
+            try:
+                fig = go.Figure()
+
+                if "Nguyên phân" in division_type:
+                    # 2n = 4 (2 cặp NST)
+                    if stage == "Kỳ trung gian":
+                        # NST tháo xoắn
+                        for i, (x, y) in enumerate([(-1.5, 0.8), (-0.5, 0.8), (0.5, -0.8), (1.5, -0.8)]):
+                            fig.add_trace(go.Scatter(x=[x], y=[y], mode='markers+text',
+                                marker=dict(size=25, color='#38bdf8' if i < 2 else '#f472b6',
+                                            line=dict(color='#f8fafc', width=2)),
+                                text=[f'({i+1})'], textposition='middle center',
+                                textfont=dict(color='#0f172a', size=10),
+                                showlegend=False, hoverinfo='skip'))
+                        fig.add_annotation(x=0, y=-2, text="NST tháo xoắn, nhân đôi",
+                                           showarrow=False, font=dict(color='#f8fafc', size=13))
+
+                    elif stage == "Kỳ đầu":
+                        # NST bắt đầu xoắn
+                        for i, (x, y) in enumerate([(-1.5, 0.8), (-0.5, 0.8), (0.5, -0.8), (1.5, -0.8)]):
+                            fig.add_trace(go.Scatter(x=[x, x+0.15], y=[y, y], mode='lines+markers',
+                                line=dict(color='#38bdf8' if i < 2 else '#f472b6', width=6),
+                                marker=dict(size=8),
+                                showlegend=False, hoverinfo='skip'))
+                        fig.add_shape(type="circle", x0=-2.2, x1=2.2, y0=-1.5, y1=1.5,
+                                      line=dict(color='#fbbf24', width=2, dash='dot'),
+                                      fillcolor='rgba(0,0,0,0)')
+                        fig.add_annotation(x=0, y=-2, text="NST co xoắn, màng nhân tiêu biến",
+                                           showarrow=False, font=dict(color='#f8fafc', size=13))
+
+                    elif stage == "Kỳ giữa":
+                        # NST xếp hàng ở mặt phẳng xích đạo
+                        ys = [0.6, 0, -0.6, -1.2]
+                        for i, y in enumerate(ys):
+                            fig.add_trace(go.Scatter(x=[0, 0], y=[y, y+0.4], mode='lines+markers',
+                                line=dict(color='#38bdf8' if i < 2 else '#f472b6', width=8),
+                                marker=dict(size=6),
+                                showlegend=False, hoverinfo='skip'))
+                        # Thoi phân bào
+                        fig.add_trace(go.Scatter(x=[-2, 0], y=[1.5, 1], mode='lines',
+                            line=dict(color='#a78bfa', width=1.5, dash='dash'),
+                            showlegend=False, hoverinfo='skip'))
+                        fig.add_trace(go.Scatter(x=[-2, 0], y=[-1.5, -1], mode='lines',
+                            line=dict(color='#a78bfa', width=1.5, dash='dash'),
+                            showlegend=False, hoverinfo='skip'))
+                        fig.add_trace(go.Scatter(x=[2, 0], y=[1.5, 1], mode='lines',
+                            line=dict(color='#a78bfa', width=1.5, dash='dash'),
+                            showlegend=False, hoverinfo='skip'))
+                        fig.add_trace(go.Scatter(x=[2, 0], y=[-1.5, -1], mode='lines',
+                            line=dict(color='#a78bfa', width=1.5, dash='dash'),
+                            showlegend=False, hoverinfo='skip'))
+                        fig.add_annotation(x=0, y=-2, text="NST xếp 1 hàng trên mặt phẳng xích đạo",
+                                           showarrow=False, font=dict(color='#f8fafc', size=13))
+
+                    elif stage == "Kỳ sau":
+                        # NST phân ly về 2 cực
+                        for i in range(4):
+                            color = '#38bdf8' if i < 2 else '#f472b6'
+                            y = 0.5 - i * 0.4
+                            fig.add_trace(go.Scatter(x=[-1.8, -1.5], y=[y, y], mode='lines',
+                                line=dict(color=color, width=8), showlegend=False, hoverinfo='skip'))
+                            fig.add_trace(go.Scatter(x=[1.5, 1.8], y=[y, y], mode='lines',
+                                line=dict(color=color, width=8), showlegend=False, hoverinfo='skip'))
+                        fig.add_annotation(x=0, y=-2, text="NST tách ra, di chuyển về 2 cực",
+                                           showarrow=False, font=dict(color='#f8fafc', size=13))
+
+                    else:  # Kỳ cuối
+                        # 2 tế bào con
+                        fig.add_shape(type="circle", x0=-2.8, x1=-0.2, y0=-1, y1=1,
+                                      line=dict(color='#38bdf8', width=2),
+                                      fillcolor='rgba(56,189,248,0.1)')
+                        fig.add_shape(type="circle", x0=0.2, x1=2.8, y0=-1, y1=1,
+                                      line=dict(color='#f472b6', width=2),
+                                      fillcolor='rgba(244,114,182,0.1)')
+                        for i in range(4):
+                            color = '#38bdf8' if i < 2 else '#f472b6'
+                            cx = -1.5 if i < 2 else 1.5
+                            cy = 0.3 if i % 2 == 0 else -0.3
+                            fig.add_trace(go.Scatter(x=[cx], y=[cy], mode='markers',
+                                marker=dict(size=15, color=color,
+                                            line=dict(color='#f8fafc', width=1.5)),
+                                showlegend=False, hoverinfo='skip'))
+                        fig.add_annotation(x=0, y=-2, text="2 tế bào con (2n)",
+                                           showarrow=False, font=dict(color='#f8fafc', size=13))
+
+                else:  # Giảm phân
+                    if stage == "Kỳ trung gian":
+                        for i, (x, y) in enumerate([(-1.5, 0.8), (-0.5, 0.8), (0.5, -0.8), (1.5, -0.8)]):
+                            fig.add_trace(go.Scatter(x=[x], y=[y], mode='markers+text',
+                                marker=dict(size=25, color='#38bdf8' if i < 2 else '#f472b6',
+                                            line=dict(color='#f8fafc', width=2)),
+                                text=[f'({i+1})'], textposition='middle center',
+                                textfont=dict(color='#0f172a', size=10),
+                                showlegend=False, hoverinfo='skip'))
+                        fig.add_annotation(x=0, y=-2, text="Tế bào 2n chuẩn bị giảm phân",
+                                           showarrow=False, font=dict(color='#f8fafc', size=13))
+
+                    elif stage == "Giảm phân I":
+                        # Tiếp hợp tạo cặp tương đồng
+                        for i in range(2):
+                            y = 0.6 - i * 1.2
+                            fig.add_trace(go.Scatter(x=[-2, -1, -0.5], y=[y, y, y], mode='lines+markers',
+                                line=dict(color='#38bdf8', width=6),
+                                marker=dict(size=6), showlegend=False, hoverinfo='skip'))
+                            fig.add_trace(go.Scatter(x=[-2, -1, -0.5], y=[y+0.15, y+0.15, y+0.15],
+                                mode='lines+markers',
+                                line=dict(color='#f472b6', width=6),
+                                marker=dict(size=6), showlegend=False, hoverinfo='skip'))
+                        fig.add_annotation(x=-1.5, y=1.6, text="Cặp NST tương đồng",
+                                           showarrow=False, font=dict(color='#f8fafc', size=12))
+                        # Trao đổi chéo
+                        fig.add_annotation(x=-1, y=0.6, ax=-1, ay=1.5,
+                            xref='x', yref='y', axref='x', ayref='y',
+                            text='', showarrow=True, arrowhead=2,
+                            arrowwidth=2, arrowcolor='#fbbf24')
+                        fig.add_annotation(x=-1, y=0.9, text="Trao đổi chéo",
+                                           showarrow=False, font=dict(color='#fbbf24', size=11))
+                        fig.add_annotation(x=1.5, y=-2, text="Giảm phân I → 2 tế bào (n, kép)",
+                                           showarrow=False, font=dict(color='#f8fafc', size=13))
+
+                    elif stage == "Giảm phân II":
+                        # 2 tế bào, mỗi tế bào có 2 NST kép
+                        for cx in [-1.8, 1.8]:
+                            fig.add_shape(type="circle", x0=cx-1, x1=cx+1, y0=-1, y1=1,
+                                          line=dict(color='#38bdf8', width=2),
+                                          fillcolor='rgba(56,189,248,0.1)')
+                            fig.add_trace(go.Scatter(x=[cx-0.3, cx+0.3], y=[0.3, 0.3],
+                                mode='lines', line=dict(color='#f472b6', width=6),
+                                showlegend=False, hoverinfo='skip'))
+                            fig.add_trace(go.Scatter(x=[cx-0.3, cx+0.3], y=[-0.3, -0.3],
+                                mode='lines', line=dict(color='#38bdf8', width=6),
+                                showlegend=False, hoverinfo='skip'))
+                        fig.add_annotation(x=0, y=-2, text="Giảm phân II → 4 tế bào (n, đơn)",
+                                           showarrow=False, font=dict(color='#f8fafc', size=13))
+
+                    else:  # 4 tế bào con
+                        for i, (cx, cy) in enumerate([(-2.5, 0.5), (-1.5, -0.5), (1.5, 0.5), (2.5, -0.5)]):
+                            fig.add_shape(type="circle", x0=cx-0.4, x1=cx+0.4, y0=cy-0.4, y1=cy+0.4,
+                                          line=dict(color='#34d399', width=2),
+                                          fillcolor='rgba(52,211,153,0.2)')
+                            fig.add_trace(go.Scatter(x=[cx], y=[cy], mode='markers',
+                                marker=dict(size=12, color='#38bdf8' if i % 2 == 0 else '#f472b6',
+                                            line=dict(color='#f8fafc', width=1)),
+                                showlegend=False, hoverinfo='skip'))
+                        fig.add_annotation(x=0, y=-2, text="4 tế bào con (n) — giao tử",
+                                           showarrow=False, font=dict(color='#f8fafc', size=13))
+
+                fig.update_layout(
+                    title=f"{division_type} — {stage}",
+                    template="plotly_dark",
+                    xaxis=dict(range=[-3.5, 3.5], showticklabels=False,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, showgrid=False),
+                    yaxis=dict(range=[-2.5, 2.5], showticklabels=False,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, showgrid=False,
+                               scaleanchor='x', scaleratio=1),
+                    height=460, margin=dict(l=10, r=10, t=40, b=10),
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("PhanBao"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ phân bào: {err}")
+
+        with c3:
+            if "Nguyên phân" in division_type:
+                st.markdown("##### 📝 Kết quả")
+                st.markdown("1 tế bào (2n) → **2 tế bào con (2n)**")
+                st.markdown("##### 🎯 Ý nghĩa")
+                st.markdown("- Giúp cơ thể **sinh trưởng**")
+                st.markdown("- **Thay thế** tế bào già, tổn thương")
+                st.markdown("- Truyền **nguyên vẹn** bộ NST")
+                st.markdown("##### 📊 Số NST qua các kỳ")
+                st.markdown("- Kỳ trung gian: 2n (nhân đôi → 2n kép)")
+                st.markdown("- Kỳ giữa: 2n kép")
+                st.markdown("- Kỳ sau: 4n đơn")
+                st.markdown("- Kỳ cuối: 2n × 2 tế bào")
+            else:
+                st.markdown("##### 📝 Kết quả")
+                st.markdown("1 tế bào (2n) → **4 tế bào con (n)**")
+                st.markdown("##### 🎯 Ý nghĩa")
+                st.markdown("- Tạo **giao tử** (trứng/tinh trùng)")
+                st.markdown("- **Giảm ½** số NST → phục hồi khi thụ tinh")
+                st.markdown("- Tạo **biến dị tổ hợp**")
+                st.markdown("##### 📊 Số NST qua các kỳ")
+                st.markdown("- Kỳ trung gian: 2n (2n kép)")
+                st.markdown("- GP I: 2n kép → 2 tế bào (n kép)")
+                st.markdown("- GP II: n kép → 4 tế bào (n đơn)")
+
+    # ========== SINH HỌC: SƠ ĐỒ PUNNETT ==========
+    elif dtype == "punnett_square":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            parent1 = st.text_input("Kiểu gen Bố mẹ 1:", value=data.get("p1", "Aa"),
+                                     key="sinh_pn_p1", max_chars=2).strip()
+            parent2 = st.text_input("Kiểu gen Bố mẹ 2:", value=data.get("p2", "Aa"),
+                                     key="sinh_pn_p2", max_chars=2).strip()
+            if not parent1 or not parent2:
+                st.warning("Vui lòng nhập kiểu gen (VD: AA, Aa, aa)")
+                parent1 = parent1 or "Aa"
+                parent2 = parent2 or "Aa"
+
+        # Tính giao tử và kết quả lai
+        gametes1 = [parent1[0], parent1[1]] if len(parent1) == 2 else [parent1]
+        gametes2 = [parent2[0], parent2[1]] if len(parent2) == 2 else [parent2]
+
+        # Tạo bảng Punnett
+        punnett = []
+        for g1 in gametes1:
+            row = []
+            for g2 in gametes2:
+                # Sắp xếp để chữ hoa đứng trước
+                combo = "".join(sorted([g1, g2], key=lambda c: (not c.isupper(), c)))
+                row.append(combo)
+            punnett.append(row)
+
+        # Đếm kiểu gen
+        genotype_count = {}
+        for row in punnett:
+            for g in row:
+                genotype_count[g] = genotype_count.get(g, 0) + 1
+        total = sum(genotype_count.values())
+
+        # Đếm kiểu hình (trội nếu có ít nhất 1 chữ hoa)
+        phenotype_count = {"Trội": 0, "Lặn": 0}
+        for row in punnett:
+            for g in row:
+                if any(c.isupper() for c in g):
+                    phenotype_count["Trội"] += 1
+                else:
+                    phenotype_count["Lặn"] += 1
+
+        with c2:
+            try:
+                # Vẽ bảng Punnett
+                fig = go.Figure()
+
+                n_cols = len(gametes2)
+                n_rows = len(gametes1)
+
+                cell_size = 1.0
+                # Vẽ ô header
+                for j, g2 in enumerate(gametes2):
+                    fig.add_shape(type="rect",
+                                  x0=j * cell_size + 1, x1=(j + 1) * cell_size + 1,
+                                  y0=n_rows * cell_size, y1=(n_rows + 1) * cell_size,
+                                  line=dict(color='#38bdf8', width=2),
+                                  fillcolor='rgba(56,189,248,0.25)')
+                    fig.add_annotation(x=j * cell_size + 1.5, y=n_rows * cell_size + 0.5,
+                                       text=f"<b>{g2}</b>", showarrow=False,
+                                       font=dict(color='#f8fafc', size=18))
+                for i, g1 in enumerate(gametes1):
+                    fig.add_shape(type="rect",
+                                  x0=0, x1=cell_size,
+                                  y0=(n_rows - 1 - i) * cell_size,
+                                  y1=(n_rows - i) * cell_size,
+                                  line=dict(color='#38bdf8', width=2),
+                                  fillcolor='rgba(56,189,248,0.25)')
+                    fig.add_annotation(x=0.5, y=(n_rows - 1 - i) * cell_size + 0.5,
+                                       text=f"<b>{g1}</b>", showarrow=False,
+                                       font=dict(color='#f8fafc', size=18))
+                # Góc trên trái
+                fig.add_shape(type="rect", x0=0, x1=cell_size,
+                              y0=n_rows * cell_size, y1=(n_rows + 1) * cell_size,
+                              line=dict(color='#0f172a', width=2),
+                              fillcolor='rgba(0,0,0,0)')
+                fig.add_annotation(x=0.5, y=n_rows * cell_size + 0.5,
+                                   text="♀ \\ ♂", showarrow=False,
+                                   font=dict(color='#94a3b8', size=12))
+
+                # Vẽ ô kết quả
+                for i, row in enumerate(punnett):
+                    for j, g in enumerate(row):
+                        has_dominant = any(c.isupper() for c in g)
+                        fill = 'rgba(52,211,153,0.2)' if has_dominant else 'rgba(244,114,182,0.2)'
+                        fig.add_shape(type="rect",
+                                      x0=j * cell_size + 1, x1=(j + 1) * cell_size + 1,
+                                      y0=(n_rows - 1 - i) * cell_size,
+                                      y1=(n_rows - i) * cell_size,
+                                      line=dict(color='#334155', width=1),
+                                      fillcolor=fill)
+                        # Sắp xếp chữ hoa trước
+                        sorted_g = "".join(sorted(g, key=lambda c: (not c.isupper(), c)))
+                        fig.add_annotation(x=j * cell_size + 1.5,
+                                           y=(n_rows - 1 - i) * cell_size + 0.5,
+                                           text=f"<b>{sorted_g}</b>", showarrow=False,
+                                           font=dict(color='#f8fafc', size=20))
+
+                fig.update_layout(
+                    title=f"Phép lai: {parent1} × {parent2}",
+                    template="plotly_dark",
+                    xaxis=dict(range=[-0.3, n_cols + 1.3], showticklabels=False,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, showgrid=False),
+                    yaxis=dict(range=[-0.3, n_rows + 1.3], showticklabels=False,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, showgrid=False,
+                               scaleanchor='x', scaleratio=1),
+                    height=460, margin=dict(l=10, r=10, t=50, b=10),
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("Punnett"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ Punnett: {err}")
+
+        with c3:
+            st.markdown("##### 📊 Tỉ lệ kiểu gen")
+            for g, count in sorted(genotype_count.items()):
+                ratio = count / total
+                st.markdown(f"- **{g}**: {count}/{total} ({ratio*100:.0f}%)")
+            st.markdown("##### 🎨 Tỉ lệ kiểu hình")
+            if phenotype_count["Lặn"] > 0:
+                st.markdown(f"- **Trội**: {phenotype_count['Trội']}/{total}")
+                st.markdown(f"- **Lặn**: {phenotype_count['Lặn']}/{total}")
+            else:
+                st.markdown(f"- **100% Trội** (tất cả có alen trội)")
+            st.markdown("##### 📝 Nhận xét")
+            if parent1 == "Aa" and parent2 == "Aa":
+                st.caption("→ Phép lai phân tích của Mendel: TLKG 1:2:1, TLKH 3:1")
+            elif parent1 == "AA" and parent2 == "aa":
+                st.caption("→ F₁ đồng tính trội (100% Aa)")
+            elif parent1 == "Aa" and parent2 == "aa":
+                st.caption("→ Phép lai phân tích: TLKG 1:1, TLKH 1:1")
+
     else:
         st.info("💡 Đã tiếp nhận yêu cầu. Kéo thanh trượt hoặc nhập tham số để mô phỏng tương tác!")
 
