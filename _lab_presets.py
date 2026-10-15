@@ -8,13 +8,6 @@ Cấu trúc:
             <lớp>: [ {id, name, desc, tags, data}, ... ],
         },
     }
-
-Mỗi preset có:
-    - id:      mã duy nhất (dùng làm key)
-    - name:    tên hiển thị trên nút
-    - desc:    mô tả ngắn
-    - tags:    danh sách từ khóa để search không dấu
-    - data:    dict cùng format với output AI (type + tham số)
 """
 
 PRESET_LABS = {
@@ -25,40 +18,19 @@ PRESET_LABS = {
         10: [
             {
                 "id": "toan10_parabola_1",
-                "name": "📐 Parabol cơ bản",
-                "desc": "y = x² − 2x + 1 (nghiệm kép)",
-                "tags": ["parabol", "bac hai", "do thi", "nghiem kep"],
+                "name": "📐 Parabol bậc 2",
+                "desc": "y = x² − 2x + 1 — kéo slider để thử mọi trường hợp Δ",
+                "tags": ["parabol", "bac hai", "do thi", "nghiem", "dinh"],
                 "data": {"type": "parabola", "a": 1, "b": -2, "c": 1},
-            },
-            {
-                "id": "toan10_parabola_2",
-                "name": "📉 Parabol hướng xuống",
-                "desc": "y = −x² + 4x − 3 (2 nghiệm phân biệt)",
-                "tags": ["parabol", "bac hai", "do thi", "huong xuong"],
-                "data": {"type": "parabola", "a": -1, "b": 4, "c": -3},
-            },
-            {
-                "id": "toan10_parabola_3",
-                "name": "🎯 Parabol vô nghiệm",
-                "desc": "y = x² + x + 1 (Δ < 0)",
-                "tags": ["parabol", "bac hai", "vo nghiem"],
-                "data": {"type": "parabola", "a": 1, "b": 1, "c": 1},
             },
         ],
         12: [
             {
-                "id": "toan12_func3_2cuc",
-                "name": "🎯 Hàm bậc 3 (2 cực trị)",
-                "desc": "y = x³ − 3x + 2 — có CĐ, CT và điểm uốn",
-                "tags": ["ham bac 3", "bac ba", "khao sat", "cuc tri"],
+                "id": "toan12_func3",
+                "name": "🎯 Hàm bậc 3",
+                "desc": "y = x³ − 3x + 2 — kéo slider để thử 2 cực trị / vô cực trị",
+                "tags": ["ham bac 3", "bac ba", "khao sat", "cuc tri", "diem uon"],
                 "data": {"type": "func_3", "a": 1, "b": -3, "c": 0, "d": 2},
-            },
-            {
-                "id": "toan12_func3_vo_cuc",
-                "name": "🎯 Hàm bậc 3 (vô cực trị)",
-                "desc": "y = x³ + x + 1 — không có CĐ, CT",
-                "tags": ["ham bac 3", "bac ba", "khao sat", "vo cuc tri"],
-                "data": {"type": "func_3", "a": 1, "b": 0, "c": 1, "d": 1},
             },
             {
                 "id": "toan12_func11",
@@ -77,23 +49,45 @@ PRESET_LABS = {
             {
                 "id": "toan12_area_1",
                 "name": "🌊 Diện tích hình phẳng",
-                "desc": "S = ∫|x²−3x+2|dx từ 0 đến 3",
+                "desc": "S = ∫|x²−3x+2|dx từ 0 đến 3 — có thể chọn hàm khác trong dropdown",
                 "tags": ["tich phan", "dien tich", "hinh phang"],
                 "data": {"type": "area", "func": "x**2 - 3*x + 2", "a": 0.0, "b": 3.0},
             },
             {
                 "id": "toan12_revolve_1",
                 "name": "🌀 Khối tròn xoay Ox",
-                "desc": "y = 2x + 1 quay quanh trục Ox (a=2, b=5)",
+                "desc": "y = 2x + 1 quay quanh Ox — kéo slider góc quay để thấy mặt cắt",
                 "tags": ["tich phan", "khoi tron", "the tich", "3d"],
                 "data": {"type": "revolve_ox", "func": "2*x + 1", "a": 2.0, "b": 5.0},
             },
             {
                 "id": "toan12_oxyz_1",
-                "name": "🧊 Không gian Oxyz",
-                "desc": "Biểu diễn điểm M(2; 3; 4) trong hệ trục Oxyz",
-                "tags": ["oxyz", "khong gian", "toa do", "3d"],
+                "name": "🧊 Điểm trong không gian Oxyz",
+                "desc": "Biểu diễn điểm M(2; 3; 4) với hình hộp nét đứt",
+                "tags": ["oxyz", "khong gian", "toa do", "diem", "3d"],
                 "data": {"type": "oxyz", "x": 2, "y": 3, "z": 4},
+            },
+            {
+                "id": "toan12_oxyz_plane",
+                "name": "🟦 Mặt phẳng Oxyz",
+                "desc": "Mặt phẳng Ax + By + Cz + D = 0 với vector pháp tuyến",
+                "tags": ["oxyz", "mat phang", "phap tuyen", "khong gian", "3d"],
+                "data": {"type": "oxyz_plane", "A": 1.0, "B": 2.0, "C": -1.0, "D": -6.0},
+            },
+            {
+                "id": "toan12_oxyz_line",
+                "name": "🟩 Đường thẳng Oxyz",
+                "desc": "Đường thẳng qua M₀ với vector chỉ phương u",
+                "tags": ["oxyz", "duong thang", "chi phuong", "khong gian", "3d"],
+                "data": {"type": "oxyz_line", "x0": 1.0, "y0": 2.0, "z0": 3.0,
+                         "ux": 2.0, "uy": -1.0, "uz": 2.0},
+            },
+            {
+                "id": "toan12_oxyz_sphere",
+                "name": "🔵 Mặt cầu Oxyz",
+                "desc": "Mặt cầu tâm I(1; 2; 3), bán kính R = 2.5",
+                "tags": ["oxyz", "mat cau", "tam", "ban kinh", "khong gian", "3d"],
+                "data": {"type": "oxyz_sphere", "Ix": 1.0, "Iy": 2.0, "Iz": 3.0, "R": 2.5},
             },
             {
                 "id": "toan12_mindmap_ham_so",
@@ -111,8 +105,8 @@ PRESET_LABS = {
                         '   A --> A1["Bậc nhất: $y = ax + b$"]\n'
                         '   A --> A2["Bậc hai: $y = ax^2 + bx + c$"]\n'
                         '   A --> A3["Bậc ba: $y = ax^3 + bx^2 + cx + d$"]\n'
-                        '   B --> B1["Bậc 1/1: $y = \\\\frac{ax+b}{cx+d}$"]\n'
-                        '   B --> B2["Bậc 2/1: $y = \\\\frac{ax^2+bx+c}{dx+e}$"]\n'
+                        '   B --> B1["Bậc 1/1: $y = \\\\dfrac{ax+b}{cx+d}$"]\n'
+                        '   B --> B2["Bậc 2/1: $y = \\\\dfrac{ax^2+bx+c}{dx+e}$"]\n'
                         '   C --> C1["Hàm mũ: $y = a^x$"]\n'
                         '   C --> C2["Hàm logarit: $y = \\\\log_a x$"]\n'
                         '   D --> D1["$y = \\\\sin x$, $y = \\\\cos x$"]\n'
@@ -124,7 +118,7 @@ PRESET_LABS = {
     },
 
     # ==========================================================================
-    # VẬT LÝ
+    # VẬT LÝ (đang dùng mermaid — sẽ bổ sung render types ở Phase B)
     # ==========================================================================
     "Vật lý": {
         10: [
@@ -161,7 +155,7 @@ PRESET_LABS = {
                         '   Root["🎯 NĂNG LƯỢNG & BẢO TOÀN"] --> A["📌 Động năng"]\n'
                         '   Root --> B["📌 Thế năng"]\n'
                         '   Root --> C["📌 Cơ năng"]\n'
-                        '   A --> A1["$W_đ = \\\\frac{1}{2}mv^2$"]\n'
+                        '   A --> A1["$W_đ = \\\\dfrac{1}{2}mv^2$"]\n'
                         '   B --> B1["Thế năng trọng trường"]\n'
                         '   B --> B2["Thế năng đàn hồi"]\n'
                         '   C --> C1["$W = W_đ + W_t$"]\n'
@@ -524,18 +518,12 @@ PRESET_LABS = {
 # HELPER FUNCTIONS
 # ==============================================================================
 def get_presets_for(subject: str, grade_num: int) -> list:
-    """Lấy danh sách preset theo môn + lớp (chỉ lớp hiện tại)."""
     return list(PRESET_LABS.get(subject, {}).get(grade_num, []))
 
 
 def get_all_presets_for_subject_grade_range(
     subject: str, grade_num: int, include_lower: bool = False
 ) -> list:
-    """
-    Lấy preset theo môn + lớp.
-    - include_lower=True → thêm cả preset lớp thấp hơn.
-    - Mỗi preset được bổ sung key 'grade' để biết lớp gốc.
-    """
     result = []
     for g, presets in PRESET_LABS.get(subject, {}).items():
         if g == grade_num or (include_lower and g < grade_num):
@@ -545,5 +533,4 @@ def get_all_presets_for_subject_grade_range(
 
 
 def has_presets_for_subject(subject: str) -> bool:
-    """Kiểm tra môn có preset nào không."""
     return bool(PRESET_LABS.get(subject))
