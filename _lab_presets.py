@@ -540,6 +540,20 @@ PRESET_LABS = {
                     ),
                 },
             },
+            {
+                "id": "sinh10_cell_division",
+                "name": "🧬 Nguyên phân / Giảm phân",
+                "desc": "Xem từng giai đoạn phân bào — kéo slider",
+                "tags": ["nguyen phan", "giam phan", "phan bao", "nst"],
+                "data": {"type": "cell_division"},
+            },
+            {
+                "id": "sinh10_dna_helix",
+                "name": "🧬 DNA xoắn kép 3D",
+                "desc": "Mô hình Watson-Crick — xoay 3D",
+                "tags": ["dna", "xoan kep", "watson", "crick", "3d"],
+                "data": {"type": "dna_helix", "n_turns": 3, "radius": 1.0, "pitch": 2.0},
+            },
         ],
         11: [
             {
@@ -582,6 +596,20 @@ PRESET_LABS = {
             },
         ],
         12: [
+            {
+                "id": "sinh12_protein_synthesis",
+                "name": "🧬 Tổng hợp protein",
+                "desc": "Phiên mã + Dịch mã — mRNA → Protein",
+                "tags": ["phien ma", "dich ma", "protein", "rna", "ribosome"],
+                "data": {"type": "protein_synthesis"},
+            },
+            {
+                "id": "sinh12_punnett",
+                "name": "📊 Sơ đồ Punnett",
+                "desc": "Lai 2 cặp gen — nhập kiểu gen bố mẹ",
+                "tags": ["punnett", "mendel", "di truyen", "lai", "kieu gen"],
+                "data": {"type": "punnett_square", "p1": "Aa", "p2": "Aa"},
+            },
             {
                 "id": "sinh12_mindmap_mendel",
                 "name": "🗺️ Sơ đồ quy luật Mendel",
