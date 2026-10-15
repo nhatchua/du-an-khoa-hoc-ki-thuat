@@ -1079,6 +1079,281 @@
                 k_mag = -d_prime / d_o
                 st.latex(r"k = -\dfrac{d'}{d} = " + f"{k_mag:.2f}")
 
+    # ========== VẬT LÝ 12: THANG SÓNG ĐIỆN TỪ ==========
+    elif dtype == "em_spectrum":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            f_hz = st.slider(
+                "Tần số f (Hz):",
+                min_value=4.0, max_value=21.0,
+                value=float(data.get("log_f", 14.0)),
+                step=0.5, key="ly12_em_logf",
+                help="Log₁₀(f) — từ 10⁴ Hz (vô tuyến) đến 10²¹ Hz (gamma)"
+            )
+            st.caption("Kéo slider để xem loại sóng tương ứng")
+
+        # Xác định loại sóng theo tần số
+        if f_hz < 9:
+            band = "Sóng vô tuyến"; color = "#818cf8"; icon = "📻"
+        elif f_hz < 11:
+            band = "Vi ba"; color = "#60a5fa"; icon = "📡"
+        elif f_hz < 13:
+            band = "Hồng ngoại"; color = "#f87171"; icon = "🔥"
+        elif f_hz < 14.8:
+            band = "Ánh sáng khả kiến"; color = "#fbbf24"; icon = "👁️"
+        elif f_hz < 16:
+            band = "Tử ngoại"; color = "#a78bfa"; icon = "🟣"
+        elif f_hz < 18.5:
+            band = "Tia X"; color = "#c084fc"; icon = "☢️"
+        else:
+            band = "Tia gamma"; color = "#f43f5e"; icon = "💥"
+
+        with c2:
+            try:
+                fig = go.Figure()
+                # Dải phổ liên tục từ 10^4 đến 10^21 Hz
+                bands_data = [
+                    (4, 9, "Vô tuyến", "#818cf8"),
+                    (9, 11, "Vi ba", "#60a5fa"),
+                    (11, 13, "Hồng ngoại", "#f87171"),
+                    (13, 14.8, "Khả kiến", "#fbbf24"),
+                    (14.8, 16, "Tử ngoại", "#a78bfa"),
+                    (16, 18.5, "Tia X", "#c084fc"),
+                    (18.5, 21, "Gamma", "#f43f5e"),
+                ]
+                for x0, x1, label, col in bands_data:
+                    fig.add_shape(type="rect", x0=x0, x1=x1, y0=0, y1=1,
+                                  fillcolor=col, opacity=0.65,
+                                  line=dict(color='#0f172a', width=2))
+                    fig.add_annotation(x=(x0+x1)/2, y=0.5, text=label,
+                                       showarrow=False,
+                                       font=dict(color='#0f172a', size=12, family='Times New Roman'))
+
+                # Đường chỉ tần số hiện tại
+                fig.add_shape(type="line", x0=f_hz, x1=f_hz, y0=-0.15, y1=1.15,
+                              line=dict(color='#ffffff', width=3))
+                fig.add_annotation(x=f_hz, y=1.25,
+                                   text=f"{icon} f = 10^{f_hz:.1f} Hz",
+                                   showarrow=False,
+                                   font=dict(color='#ffffff', size=13))
+
+                fig.update_layout(
+                    title=f"Thang sóng điện từ — Đang chọn: {band}",
+                    template="plotly_dark",
+                    xaxis=dict(title="Log₁₀(Tần số) (Hz)", range=[4, 21],
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, tickfont=dict(color='#cbd5e1')),
+                    yaxis=dict(range=[-0.3, 1.5], showticklabels=False,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, showgrid=False),
+                    height=300, margin=dict(l=10, r=10, t=50, b=30),
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("ThangSongDT"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ thang sóng: {err}")
+
+        with c3:
+            st.markdown("##### 📡 Loại sóng")
+            st.markdown(f"**{icon} {band}**")
+            st.markdown("##### 📐 Bước sóng")
+            c_light = 3e8
+            lam_m = c_light / (10 ** f_hz)
+            if lam_m >= 1:
+                st.latex(r"\lambda \approx " + f"{lam_m:.2e}\\,m")
+            elif lam_m >= 1e-3:
+                st.latex(r"\lambda \approx " + f"{lam_m*100:.2f}\\,cm")
+            elif lam_m >= 1e-6:
+                st.latex(r"\lambda \approx " + f"{lam_m*1e6:.2f}\\,\\mu m")
+            elif lam_m >= 1e-9:
+                st.latex(r"\lambda \approx " + f"{lam_m*1e9:.2f}\\,nm")
+            else:
+                st.latex(r"\lambda \approx " + f"{lam_m:.2e}\\,m")
+            st.markdown("##### 📏 Công thức")
+            st.latex(r"c = \lambda \cdot f")
+
+    # ========== VẬT LÝ 12: MẠCH ĐIỆN ĐƠN GIẢN ==========
+    elif dtype == "circuit_simple":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số mạch**")
+            U = st.slider("Hiệu điện thế U (V):", 1.0, 24.0, float(data.get("U", 12.0)), 0.5, key="ly12_cir_U")
+            R1 = st.slider("Điện trở R₁ (Ω):", 1.0, 20.0, float(data.get("R1", 4.0)), 0.5, key="ly12_cir_R1")
+            R2 = st.slider("Điện trở R₂ (Ω):", 1.0, 20.0, float(data.get("R2", 6.0)), 0.5, key="ly12_cir_R2")
+            mode = st.radio("Cách mắc:", ["Nối tiếp", "Song song"], key="ly12_cir_mode")
+
+        if mode == "Nối tiếp":
+            R_total = R1 + R2
+            I_main = U / R_total
+            U1 = I_main * R1
+            U2 = I_main * R2
+        else:  # Song song
+            R_total = (R1 * R2) / (R1 + R2)
+            I_main = U / R_total
+            I1 = U / R1
+            I2 = U / R2
+            U1 = U2 = U
+        P_total = U * I_main
+
+        with c2:
+            try:
+                fig = go.Figure()
+                # Vẽ mạch điện dạng sơ đồ khối
+                # Khung mạch hình chữ nhật
+                fig.add_shape(type="rect", x0=0, x1=10, y0=0, y1=5,
+                              line=dict(color='#38bdf8', width=3), fillcolor='rgba(0,0,0,0)')
+
+                if mode == "Nối tiếp":
+                    # Nguồn U ở cạnh trái (dọc)
+                    fig.add_shape(type="line", x0=0, x1=0, y0=1.5, y1=3.5,
+                                  line=dict(color='#34d399', width=8))
+                    fig.add_annotation(x=-0.6, y=2.5, text=f"U = {U}V",
+                                       showarrow=False, textangle=-90,
+                                       font=dict(color='#34d399', size=13))
+                    # Vẽ R1 trên cạnh trên
+                    fig.add_shape(type="rect", x0=2, x1=4, y0=4.3, y1=5.7,
+                                  line=dict(color='#fbbf24', width=2),
+                                  fillcolor='rgba(251,191,36,0.2)')
+                    fig.add_annotation(x=3, y=5, text=f"R₁ = {R1}Ω",
+                                       showarrow=False, font=dict(color='#fbbf24', size=12))
+                    # Vẽ R2 trên cạnh trên
+                    fig.add_shape(type="rect", x0=6, x1=8, y0=4.3, y1=5.7,
+                                  line=dict(color='#fbbf24', width=2),
+                                  fillcolor='rgba(251,191,36,0.2)')
+                    fig.add_annotation(x=7, y=5, text=f"R₂ = {R2}Ω",
+                                       showarrow=False, font=dict(color='#fbbf24', size=12))
+                    # Mũi tên dòng điện trên cạnh trên
+                    fig.add_annotation(x=5, y=5, ax=4.5, ay=5, xref='x', yref='y',
+                                       axref='x', ayref='y', text='',
+                                       showarrow=True, arrowhead=2, arrowsize=1.5,
+                                       arrowwidth=2.5, arrowcolor='#f472b6')
+                else:  # Song song
+                    # Nguồn U ở cạnh trái
+                    fig.add_shape(type="line", x0=0, x1=0, y0=1.5, y1=3.5,
+                                  line=dict(color='#34d399', width=8))
+                    fig.add_annotation(x=-0.6, y=2.5, text=f"U = {U}V",
+                                       showarrow=False, textangle=-90,
+                                       font=dict(color='#34d399', size=13))
+                    # R1 nhánh trên
+                    fig.add_shape(type="rect", x0=4, x1=6, y0=3.2, y1=4.2,
+                                  line=dict(color='#fbbf24', width=2),
+                                  fillcolor='rgba(251,191,36,0.2)')
+                    fig.add_annotation(x=5, y=3.7, text=f"R₁ = {R1}Ω",
+                                       showarrow=False, font=dict(color='#fbbf24', size=12))
+                    # R2 nhánh dưới
+                    fig.add_shape(type="rect", x0=4, x1=6, y0=0.8, y1=1.8,
+                                  line=dict(color='#fbbf24', width=2),
+                                  fillcolor='rgba(251,191,36,0.2)')
+                    fig.add_annotation(x=5, y=1.3, text=f"R₂ = {R2}Ω",
+                                       showarrow=False, font=dict(color='#fbbf24', size=12))
+                    # Đường nối vào 2 nhánh
+                    fig.add_shape(type="line", x0=2.5, x1=2.5, y0=0.3, y1=4.7,
+                                  line=dict(color='#38bdf8', width=3))
+                    fig.add_shape(type="line", x0=7.5, x1=7.5, y0=0.3, y1=4.7,
+                                  line=dict(color='#38bdf8', width=3))
+
+                # Nhãn "Mạch điện"
+                fig.add_annotation(x=5, y=2.5, text=f"<b>Mạch {mode.lower()}</b><br>"
+                                                     f"R<sub>tđ</sub> = {R_total:.2f} Ω<br>"
+                                                     f"I = {I_main:.2f} A",
+                                   showarrow=False,
+                                   font=dict(color='#f8fafc', size=14))
+
+                fig.update_layout(
+                    title=f"Mạch điện {mode.lower()} — R₁ = {R1}Ω, R₂ = {R2}Ω",
+                    template="plotly_dark",
+                    xaxis=dict(range=[-2, 12], showticklabels=False,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b", zeroline=False),
+                    yaxis=dict(range=[-1, 7], showticklabels=False,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, scaleanchor='x', scaleratio=1),
+                    height=380, margin=dict(l=10, r=10, t=40, b=10),
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("MachDien"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ mạch điện: {err}")
+
+        with c3:
+            st.markdown("##### 📐 Điện trở tương đương")
+            if mode == "Nối tiếp":
+                st.latex(r"R_{tđ} = R_1 + R_2 = " + f"{R_total:.2f}\\,\\Omega")
+            else:
+                st.latex(r"\dfrac{1}{R_{tđ}} = \dfrac{1}{R_1} + \dfrac{1}{R_2}")
+                st.latex(r"R_{tđ} = " + f"{R_total:.2f}\\,\\Omega")
+            st.markdown("##### ⚡ Cường độ dòng điện")
+            st.latex(r"I = \dfrac{U}{R_{tđ}} = " + f"{I_main:.2f}\\,A")
+            if mode == "Nối tiếp":
+                st.latex(r"U_1 = " + f"{U1:.2f}\\,V")
+                st.latex(r"U_2 = " + f"{U2:.2f}\\,V")
+            else:
+                st.latex(r"I_1 = " + f"{I1:.2f}\\,A")
+                st.latex(r"I_2 = " + f"{I2:.2f}\\,A")
+            st.markdown("##### 🔋 Công suất")
+            st.latex(r"P = U \cdot I = " + f"{P_total:.2f}\\,W")
+
+    # ========== VẬT LÝ 12: CHUỖI PHÓNG XẠ ==========
+    elif dtype == "nuclear_decay":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            N0 = st.slider("Số hạt ban đầu N₀:", 100, 10000, int(data.get("N0", 1000)), 100, key="ly12_nd_N0")
+            half_life = st.slider("Chu kỳ bán rã T₁/₂ (đơn vị thời gian):", 1.0, 10.0, float(data.get("T", 5.0)), 0.5, key="ly12_nd_T")
+            t_max = st.slider("Khoảng thời gian khảo sát (× T₁/₂):", 1, 10, int(data.get("t_max", 5)), 1, key="ly12_nd_tmax")
+
+        lam = np.log(2) / half_life
+        t = np.linspace(0, t_max * half_life, 300)
+        N_t = N0 * np.exp(-lam * t)
+        N_con_lai = N_t
+        N_phan_ra = N0 - N_t
+
+        with c2:
+            try:
+                fig = go.Figure()
+                # Đường N(t) còn lại
+                fig.add_trace(go.Scatter(x=t, y=N_con_lai, mode='lines',
+                    line=dict(color='#38bdf8', width=3), name='N còn lại',
+                    hovertemplate="t = %{x:.2f}<br>N = %{y:.1f}<extra></extra>"))
+                # Đường N đã phân rã
+                fig.add_trace(go.Scatter(x=t, y=N_phan_ra, mode='lines',
+                    line=dict(color='#f43f5e', width=3, dash='dash'), name='N đã phân rã',
+                    hovertemplate="t = %{x:.2f}<br>N = %{y:.1f}<extra></extra>"))
+                # Đường N0/2
+                fig.add_hline(y=N0/2, line=dict(color='#fbbf24', width=2, dash='dot'),
+                              annotation_text=f"N₀/2 = {N0/2:.0f}",
+                              annotation_position="right")
+                # Đường dọc tại t = T1/2
+                fig.add_vline(x=half_life, line=dict(color='#fbbf24', width=2, dash='dot'),
+                              annotation_text=f"t = T₁/₂",
+                              annotation_position="top")
+
+                fig.update_layout(
+                    title=f"Phân rã phóng xạ — N₀ = {N0}, T₁/₂ = {half_life}",
+                    template="plotly_dark",
+                    xaxis=dict(title="t (đơn vị thời gian)", backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False),
+                    yaxis=dict(title="Số hạt N", backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False),
+                    height=420, margin=dict(l=10, r=10, t=40, b=30),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("PhongXa"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ phóng xạ: {err}")
+
+        with c3:
+            st.markdown("##### 📐 Hằng số phóng xạ")
+            st.latex(r"\lambda = \dfrac{\ln 2}{T_{1/2}} \approx " + f"{lam:.4f}")
+            st.markdown("##### 📈 Định luật phân rã")
+            st.latex(r"N(t) = N_0 \cdot e^{-\lambda t}")
+            st.markdown("##### ⏱ Tại t = T₁/₂")
+            st.latex(r"N(T_{1/2}) = \dfrac{N_0}{2} = " + f"{N0/2:.0f}")
+            st.markdown("##### 📊 Tại t = " + f"{t_max}" + " × T₁/₂")
+            t_final = t_max * half_life
+            N_final = N0 * np.exp(-lam * t_final)
+            st.latex(r"N = " + f"{N_final:.1f}" + r"\text{ hạt}")
+
     else:
         st.info("💡 Đã tiếp nhận yêu cầu. Kéo thanh trượt hoặc nhập tham số để mô phỏng tương tác!")
 
