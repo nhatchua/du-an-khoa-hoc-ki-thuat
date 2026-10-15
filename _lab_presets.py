@@ -314,6 +314,27 @@ PRESET_LABS = {
     "Hóa học": {
         10: [
             {
+                "id": "hoa10_periodic_table",
+                "name": "⚗️ Bảng tuần hoàn",
+                "desc": "118 nguyên tố — hover để xem chi tiết",
+                "tags": ["bang tuan hoan", "nguyen to", "hoa hoc"],
+                "data": {"type": "periodic_table"},
+            },
+            {
+                "id": "hoa10_energy_diagram",
+                "name": "⚡ Sơ đồ năng lượng phản ứng",
+                "desc": "Tỏa nhiệt / thu nhiệt — Ea và ΔH",
+                "tags": ["nang luong", "enthalpy", "toa nhiet", "thu nhiet", "hoat hoa"],
+                "data": {"type": "energy_diagram", "e1": 30.0, "e2": 70.0, "ea": 40.0},
+            },
+            {
+                "id": "hoa10_reaction_rate",
+                "name": "⏱ Tốc độ phản ứng",
+                "desc": "Đồ thị [A] theo t — bậc 0, 1, 2",
+                "tags": ["toc do", "phan ung", "bac phan ung", "nhiet do"],
+                "data": {"type": "reaction_rate", "k": 0.3},
+            },
+            {
                 "id": "hoa10_mindmap_nguyen_tu",
                 "name": "🗺️ Sơ đồ cấu tạo nguyên tử",
                 "desc": "Mindmap các thành phần cấu tạo nguyên tử",
@@ -353,6 +374,13 @@ PRESET_LABS = {
             },
         ],
         11: [
+            {
+                "id": "hoa11_ph_scale",
+                "name": "🧪 Thang pH",
+                "desc": "Kéo pH — xem môi trường + ví dụ thực tế",
+                "tags": ["ph", "axit", "base", "trung tinh"],
+                "data": {"type": "ph_scale", "ph": 7.0},
+            },
             {
                 "id": "hoa11_mindmap_n_s",
                 "name": "🗺️ Sơ đồ chuyển hóa N và S",
