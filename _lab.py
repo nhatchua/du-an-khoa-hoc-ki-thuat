@@ -430,6 +430,357 @@
             st.latex(r"S = 4\pi R^2 \approx " + f"{4 * math.pi * R * R:.2f}")
             st.latex(r"V = \frac{{4}}{{3}}\pi R^3 \approx " + f"{4/3 * math.pi * R**3:.2f}")
 
+    # ========== VẬT LÝ: CON LẮC ĐƠN ==========
+    elif dtype == "pendulum":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            L = st.slider("Chiều dài L (m):", 0.5, 3.0, float(data.get("L", 1.0)), 0.1, key="ly_pend_L")
+            theta0_deg = st.slider("Góc ban đầu θ₀ (°):", 5, 60, float(data.get("theta0", 30.0)), 1.0, key="ly_pend_th0")
+            g = st.slider("Gia tốc g (m/s²):", 1.6, 20.0, float(data.get("g", 9.8)), 0.1, key="ly_pend_g")
+
+        theta0 = np.radians(theta0_deg)
+        omega = np.sqrt(g / L)  # tần số góc (rad/s)
+        T = 2 * np.pi * omega / omega  # = 2π/ω
+        T = 2 * np.pi / omega
+
+        with c2:
+            try:
+                # Vẽ khung: dây + quả cầu + cung quỹ đạo
+                pivot_x, pivot_y = 0, 0
+                # Vị trí tại θ₀
+                bob_x = L * np.sin(theta0)
+                bob_y = -L * np.cos(theta0)
+
+                fig = go.Figure()
+                # Cung quỹ đạo (nét đứt)
+                theta_arc = np.linspace(-theta0, theta0, 60)
+                arc_x = L * np.sin(theta_arc)
+                arc_y = -L * np.cos(theta_arc)
+                fig.add_trace(go.Scatter(x=arc_x, y=arc_y, mode='lines',
+                    line=dict(color='#94a3b8', width=1.5, dash='dot'),
+                    name='Quỹ đạo', hoverinfo='skip'))
+                # Dây
+                fig.add_trace(go.Scatter(x=[pivot_x, bob_x], y=[pivot_y, bob_y],
+                    mode='lines', line=dict(color='#38bdf8', width=3),
+                    name='Dây', hoverinfo='skip'))
+                # Quả cầu
+                fig.add_trace(go.Scatter(x=[bob_x], y=[bob_y], mode='markers+text',
+                    marker=dict(size=18, color='#ef4444', line=dict(color='#f8fafc', width=2)),
+                    text=[f'm = ?'], textposition='middle center',
+                    textfont=dict(color='#ffffff', size=10), name='Vật nặng', hoverinfo='skip'))
+                # Trục đứng (đường cân bằng)
+                fig.add_trace(go.Scatter(x=[0, 0], y=[0, -L - 0.3], mode='lines',
+                    line=dict(color='#475569', width=1.5, dash='dash'),
+                    name='Vị trí cân bằng', hoverinfo='skip'))
+                # Điểm treo
+                fig.add_trace(go.Scatter(x=[pivot_x], y=[pivot_y], mode='markers',
+                    marker=dict(size=10, color='#fbbf24', symbol='square'),
+                    name='Điểm treo', hoverinfo='skip'))
+                # Cung góc
+                fig.add_annotation(x=0.1, y=-0.1, ax=0, ay=0,
+                    xref='x', yref='y', axref='x', ayref='y',
+                    text=f"θ₀ = {theta0_deg}°", showarrow=False,
+                    font=dict(color='#fbbf24', size=12))
+
+                fig.update_layout(
+                    title=f"Con lắc đơn — L = {L} m, g = {g} m/s²",
+                    template="plotly_dark",
+                    xaxis=dict(range=[-L*1.2, L*1.2], scaleanchor='y', scaleratio=1,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, showticklabels=False),
+                    yaxis=dict(range=[-L*1.2, 0.3], backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False, showticklabels=False),
+                    height=460, margin=dict(l=10, r=10, t=40, b=10),
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("ConLacDon"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ con lắc: {err}")
+
+        with c3:
+            st.markdown("##### 📐 Chu kỳ")
+            st.latex(r"T = 2\pi\sqrt{\dfrac{L}{g}} \approx " + f"{T:.3f}\\,s")
+            st.markdown("##### 🔄 Tần số")
+            st.latex(r"f = \dfrac{1}{T} \approx " + f"{1/T:.3f}\\,Hz")
+            st.markdown("##### 📐 Tần số góc")
+            st.latex(r"\omega = \sqrt{\dfrac{g}{L}} \approx " + f"{omega:.3f}\\,rad/s")
+
+    # ========== VẬT LÝ: CON LẮC LÒ XO ==========
+    elif dtype == "spring":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            m = st.slider("Khối lượng m (kg):", 0.1, 5.0, float(data.get("m", 1.0)), 0.1, key="ly_spring_m")
+            k = st.slider("Độ cứng k (N/m):", 5.0, 200.0, float(data.get("k", 50.0)), 5.0, key="ly_spring_k")
+            A = st.slider("Biên độ A (m):", 0.05, 0.5, float(data.get("A", 0.2)), 0.05, key="ly_spring_A")
+
+        omega = np.sqrt(k / m)
+        T = 2 * np.pi / omega
+
+        with c2:
+            try:
+                fig = go.Figure()
+                # Trục Ox ngang
+                x_max = A * 2.5
+                fig.add_trace(go.Scatter(x=[-x_max, x_max], y=[0, 0], mode='lines',
+                    line=dict(color='#cbd5e1', width=1.5), name='Trục Ox', hoverinfo='skip'))
+                # Điểm cân bằng O
+                fig.add_trace(go.Scatter(x=[0], y=[0.3], mode='text', text=['O'],
+                    textfont=dict(color='#94a3b8', size=14), showlegend=False, hoverinfo='skip'))
+                # Vẽ lò xo tại vị trí x = A (nén/giãn)
+                n_coils = 8
+                x_spring = np.linspace(-A, 0, n_coils * 10)
+                y_spring = 0.08 * np.sin((x_spring + A) / (2 * A) * n_coils * 2 * np.pi)
+                fig.add_trace(go.Scatter(x=x_spring, y=y_spring, mode='lines',
+                    line=dict(color='#38bdf8', width=3), name='Lò xo', hoverinfo='skip'))
+                # Vật nặng
+                fig.add_trace(go.Scatter(x=[-A], y=[0], mode='markers',
+                    marker=dict(size=30, color='#ef4444', symbol='square',
+                                line=dict(color='#f8fafc', width=2)),
+                    name=f'Vật (m = {m} kg)', hoverinfo='skip'))
+                # Đường biên âm
+                fig.add_trace(go.Scatter(x=[-2*A, -2*A], y=[-0.3, 0.3], mode='lines',
+                    line=dict(color='#475569', width=1, dash='dash'), showlegend=False, hoverinfo='skip'))
+                # Đường biên dương
+                fig.add_trace(go.Scatter(x=[A, A], y=[-0.3, 0.3], mode='lines',
+                    line=dict(color='#475569', width=1, dash='dash'), showlegend=False, hoverinfo='skip'))
+                # Đánh dấu biên
+                fig.add_annotation(x=-A, y=0.35, text=f"x = -A", showarrow=False,
+                    font=dict(color='#fbbf24', size=11))
+                fig.add_annotation(x=A, y=0.35, text=f"x = +A", showarrow=False,
+                    font=dict(color='#fbbf24', size=11))
+
+                fig.update_layout(
+                    title=f"Con lắc lò xo — m = {m} kg, k = {k} N/m",
+                    template="plotly_dark",
+                    xaxis=dict(range=[-x_max, x_max], backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False, showticklabels=False),
+                    yaxis=dict(range=[-0.5, 0.5], backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False, showticklabels=False),
+                    height=300, margin=dict(l=10, r=10, t=40, b=10),
+                    showlegend=True
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("ConLacLoXo"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ lò xo: {err}")
+
+        with c3:
+            st.markdown("##### 📐 Chu kỳ")
+            st.latex(r"T = 2\pi\sqrt{\dfrac{m}{k}} \approx " + f"{T:.3f}\\,s")
+            st.markdown("##### 🔄 Tần số")
+            st.latex(r"f = \dfrac{1}{T} \approx " + f"{1/T:.3f}\\,Hz")
+            st.markdown("##### 📐 Tần số góc")
+            st.latex(r"\omega = \sqrt{\dfrac{k}{m}} \approx " + f"{omega:.3f}\\,rad/s")
+
+    # ========== VẬT LÝ: ĐỒ THỊ DAO ĐỘNG ĐIỀU HÒA x, v, a ==========
+    elif dtype == "shm_graph":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            A = st.slider("Biên độ A:", 0.5, 5.0, float(data.get("A", 2.0)), 0.5, key="ly_shm_A")
+            omega = st.slider("Tần số góc ω (rad/s):", 0.5, 5.0, float(data.get("omega", 2.0)), 0.5, key="ly_shm_w")
+            phi_deg = st.slider("Pha ban đầu φ (°):", 0, 360, float(data.get("phi", 0.0)), 15.0, key="ly_shm_phi")
+            show_v = st.checkbox("Hiển thị vận tốc v(t)", value=True, key="ly_shm_showv")
+            show_a = st.checkbox("Hiển thị gia tốc a(t)", value=True, key="ly_shm_showa")
+
+        phi = np.radians(phi_deg)
+        T = 2 * np.pi / omega
+        t = np.linspace(0, 2 * T, 500)
+        x = A * np.cos(omega * t + phi)
+        v = -A * omega * np.sin(omega * t + phi)
+        a = -A * omega**2 * np.cos(omega * t + phi)
+
+        with c2:
+            try:
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=t, y=x, mode='lines',
+                    line=dict(color='#38bdf8', width=3), name='x(t)',
+                    hovertemplate="t = %{x:.2f}s<br>x = %{y:.2f}<extra></extra>"))
+                if show_v:
+                    fig.add_trace(go.Scatter(x=t, y=v, mode='lines',
+                        line=dict(color='#34d399', width=2.5), name='v(t)',
+                        hovertemplate="t = %{x:.2f}s<br>v = %{y:.2f}<extra></extra>"))
+                if show_a:
+                    fig.add_trace(go.Scatter(x=t, y=a, mode='lines',
+                        line=dict(color='#f43f5e', width=2.5), name='a(t)',
+                        hovertemplate="t = %{x:.2f}s<br>a = %{y:.2f}<extra></extra>"))
+                # Trục y=0
+                fig.add_hline(y=0, line=dict(color='#475569', width=1, dash='dash'))
+                fig.update_layout(
+                    title=f"Dao động điều hòa — A = {A}, ω = {omega} rad/s, φ = {phi_deg}°",
+                    template="plotly_dark",
+                    xaxis=dict(title="t (s)", backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False),
+                    yaxis=dict(title="x, v, a", backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False),
+                    height=420, margin=dict(l=10, r=10, t=40, b=30),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("DaoDongDH"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ đồ thị SHM: {err}")
+
+        with c3:
+            st.markdown("##### 📐 Chu kỳ")
+            st.latex(r"T = \dfrac{2\pi}{\omega} \approx " + f"{T:.3f}\\,s")
+            st.markdown("##### 📈 Vận tốc cực đại")
+            st.latex(r"v_{max} = A\omega \approx " + f"{A*omega:.2f}")
+            st.markdown("##### 📉 Gia tốc cực đại")
+            st.latex(r"a_{max} = A\omega^2 \approx " + f"{A*omega**2:.2f}")
+
+    # ========== VẬT LÝ: CHUYỂN ĐỘNG NÉM XIÊN ==========
+    elif dtype == "projectile":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            v0 = st.slider("Vận tốc ban đầu v₀ (m/s):", 5.0, 50.0, float(data.get("v0", 20.0)), 1.0, key="ly_proj_v0")
+            alpha_deg = st.slider("Góc ném α (°):", 15, 85, float(data.get("alpha", 45.0)), 5.0, key="ly_proj_a")
+            g = st.slider("Gia tốc g (m/s²):", 1.6, 20.0, float(data.get("g", 9.8)), 0.1, key="ly_proj_g")
+
+        alpha = np.radians(alpha_deg)
+        v0x = v0 * np.cos(alpha)
+        v0y = v0 * np.sin(alpha)
+        t_flight = 2 * v0y / g
+        x_max = v0x * t_flight
+        y_max = v0y**2 / (2 * g)
+
+        with c2:
+            try:
+                t_vals = np.linspace(0, t_flight, 200)
+                x_vals = v0x * t_vals
+                y_vals = v0y * t_vals - 0.5 * g * t_vals**2
+
+                fig = go.Figure()
+                # Quỹ đạo parabol
+                fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines',
+                    line=dict(color='#38bdf8', width=3), name='Quỹ đạo',
+                    hovertemplate="x = %{x:.2f}m<br>y = %{y:.2f}m<extra></extra>"))
+                # Điểm đầu
+                fig.add_trace(go.Scatter(x=[0], y=[0], mode='markers+text',
+                    marker=dict(size=10, color='#34d399', line=dict(color='#f8fafc', width=1.5)),
+                    text=['Điểm ném'], textposition='bottom right',
+                    textfont=dict(color='#34d399', size=11), showlegend=False, hoverinfo='skip'))
+                # Điểm cao nhất
+                fig.add_trace(go.Scatter(x=[x_max/2], y=[y_max], mode='markers+text',
+                    marker=dict(size=10, color='#fbbf24', line=dict(color='#f8fafc', width=1.5)),
+                    text=[f'Đỉnh ({x_max/2:.1f}; {y_max:.1f})'], textposition='top center',
+                    textfont=dict(color='#fbbf24', size=11), showlegend=False, hoverinfo='skip'))
+                # Điểm rơi
+                fig.add_trace(go.Scatter(x=[x_max], y=[0], mode='markers+text',
+                    marker=dict(size=10, color='#ef4444', line=dict(color='#f8fafc', width=1.5)),
+                    text=[f'Rơi ({x_max:.1f}; 0)'], textposition='bottom left',
+                    textfont=dict(color='#ef4444', size=11), showlegend=False, hoverinfo='skip'))
+                # Vector v0 tại điểm ném
+                fig.add_annotation(x=v0x*0.3, y=v0y*0.3, ax=0, ay=0,
+                    xref='x', yref='y', axref='x', ayref='y',
+                    text='v₀', showarrow=True, arrowhead=2, arrowsize=1.5,
+                    arrowwidth=2.5, arrowcolor='#22c55e',
+                    font=dict(color='#22c55e', size=14))
+
+                fig.update_layout(
+                    title=f"Ném xiên — v₀ = {v0} m/s, α = {alpha_deg}°, g = {g} m/s²",
+                    template="plotly_dark",
+                    xaxis=dict(title="x (m)", backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False),
+                    yaxis=dict(title="y (m)", backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False),
+                    height=420, margin=dict(l=10, r=10, t=40, b=30),
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("NemXien"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ ném xiên: {err}")
+
+        with c3:
+            st.markdown("##### ⏱ Thời gian bay")
+            st.latex(r"t = \dfrac{2v_0\sin\alpha}{g} \approx " + f"{t_flight:.2f}\\,s")
+            st.markdown("##### 📏 Tầm bay xa")
+            st.latex(r"L = \dfrac{v_0^2\sin 2\alpha}{g} \approx " + f"{x_max:.2f}\\,m")
+            st.markdown("##### 📈 Độ cao cực đại")
+            st.latex(r"H = \dfrac{v_0^2\sin^2\alpha}{2g} \approx " + f"{y_max:.2f}\\,m")
+
+    # ========== VẬT LÝ: CHUYỂN ĐỘNG TRÒN ĐỀU ==========
+    elif dtype == "circular_motion":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            R = st.slider("Bán kính R (m):", 0.5, 5.0, float(data.get("R", 2.0)), 0.5, key="ly_circ_R")
+            omega = st.slider("Tốc độ góc ω (rad/s):", 0.5, 5.0, float(data.get("omega", 2.0)), 0.5, key="ly_circ_w")
+            theta_deg = st.slider("Góc hiện tại θ (°):", 0, 360, float(data.get("theta", 45.0)), 15.0, key="ly_circ_theta")
+
+        theta = np.radians(theta_deg)
+        v = omega * R          # vận tốc dài
+        a_ht = omega**2 * R    # gia tốc hướng tâm
+        T = 2 * np.pi / omega
+
+        with c2:
+            try:
+                fig = go.Figure()
+                # Đường tròn quỹ đạo
+                t_circ = np.linspace(0, 2 * np.pi, 100)
+                fig.add_trace(go.Scatter(x=R*np.cos(t_circ), y=R*np.sin(t_circ),
+                    mode='lines', line=dict(color='#38bdf8', width=2.5, dash='dash'),
+                    name='Quỹ đạo tròn', hoverinfo='skip'))
+                # Tâm O
+                fig.add_trace(go.Scatter(x=[0], y=[0], mode='markers+text',
+                    marker=dict(size=8, color='#f8fafc'),
+                    text=['O'], textposition='bottom left',
+                    textfont=dict(color='#f8fafc', size=14), showlegend=False, hoverinfo='skip'))
+                # Bán kính đến vật
+                x_obj = R * np.cos(theta)
+                y_obj = R * np.sin(theta)
+                fig.add_trace(go.Scatter(x=[0, x_obj], y=[0, y_obj], mode='lines',
+                    line=dict(color='#94a3b8', width=1.5, dash='dot'),
+                    name='Bán kính R', hoverinfo='skip'))
+                # Vật chuyển động
+                fig.add_trace(go.Scatter(x=[x_obj], y=[y_obj], mode='markers+text',
+                    marker=dict(size=15, color='#ef4444', line=dict(color='#f8fafc', width=2)),
+                    text=['M'], textposition='top center',
+                    textfont=dict(color='#ef4444', size=13), showlegend=False,
+                    hovertemplate="M<br>x = %{x:.2f}<br>y = %{y:.2f}<extra></extra>"))
+                # Vector vận tốc v (tiếp tuyến)
+                v_scale = 0.3
+                vx = -np.sin(theta) * v * v_scale
+                vy = np.cos(theta) * v * v_scale
+                fig.add_trace(go.Scatter(x=[x_obj, x_obj + vx], y=[y_obj, y_obj + vy],
+                    mode='lines+text', line=dict(color='#22c55e', width=3),
+                    text=['', 'v'], textposition='top right',
+                    textfont=dict(color='#22c55e', size=14),
+                    name='Vector v', showlegend=False, hoverinfo='skip'))
+                # Vector gia tốc hướng tâm a
+                a_scale = 0.15
+                ax = -np.cos(theta) * a_ht * a_scale
+                ay = -np.sin(theta) * a_ht * a_scale
+                fig.add_trace(go.Scatter(x=[x_obj, x_obj + ax], y=[y_obj, y_obj + ay],
+                    mode='lines+text', line=dict(color='#fbbf24', width=3),
+                    text=['', 'a'], textposition='bottom left',
+                    textfont=dict(color='#fbbf24', size=14),
+                    name='Gia tốc hướng tâm', showlegend=False, hoverinfo='skip'))
+
+                fig.update_layout(
+                    title=f"Chuyển động tròn đều — R = {R} m, ω = {omega} rad/s",
+                    template="plotly_dark",
+                    xaxis=dict(range=[-R*1.5, R*1.5], scaleanchor='y', scaleratio=1,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, showticklabels=False),
+                    yaxis=dict(range=[-R*1.5, R*1.5], backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False, showticklabels=False),
+                    height=460, margin=dict(l=10, r=10, t=40, b=10),
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("ChuyenDongTron"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ chuyển động tròn: {err}")
+
+        with c3:
+            st.markdown("##### ⏱ Chu kỳ")
+            st.latex(r"T = \dfrac{2\pi}{\omega} \approx " + f"{T:.3f}\\,s")
+            st.markdown("##### 🏃 Vận tốc dài")
+            st.latex(r"v = \omega R \approx " + f"{v:.2f}\\,m/s")
+            st.markdown("##### 📉 Gia tốc hướng tâm")
+            st.latex(r"a_{ht} = \omega^2 R \approx " + f"{a_ht:.2f}\\,m/s^2")
+
     else:
         st.info("💡 Đã tiếp nhận yêu cầu. Kéo thanh trượt hoặc nhập tham số để mô phỏng tương tác!")
 
