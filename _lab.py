@@ -1354,6 +1354,405 @@
             N_final = N0 * np.exp(-lam * t_final)
             st.latex(r"N = " + f"{N_final:.1f}" + r"\text{ hạt}")
 
+    # ========== HÓA HỌC: BẢNG TUẦN HOÀN ==========
+    elif dtype == "periodic_table":
+        st.markdown("### ⚗️ Bảng tuần hoàn các nguyên tố hóa học")
+        st.caption("Hover để xem chi tiết · Click vào nguyên tố để xem thông tin")
+
+        # Compact data: (số hiệu, ký hiệu, tên Việt, nhóm, chu kỳ, loại)
+        # Loại: klk (kim loại kiềm), klkt (kiềm thổ), klcg (chuyển tiếp),
+        #       kl (kim loại), al (á kim), pk (phi kim), hl (halogen),
+        #       kh (khí hiếm), lan (lanthanide), act (actinide)
+        ELEMENTS = [
+            (1,"H","Hydro",1,1,"pk"),(2,"He","Heli",18,1,"kh"),
+            (3,"Li","Liti",1,2,"klk"),(4,"Be","Beri",2,2,"klkt"),
+            (5,"B","Bo",13,2,"al"),(6,"C","Cacbon",14,2,"pk"),
+            (7,"N","Nitơ",15,2,"pk"),(8,"O","Oxi",16,2,"pk"),
+            (9,"F","Flo",17,2,"hl"),(10,"Ne","Neon",18,2,"kh"),
+            (11,"Na","Natri",1,3,"klk"),(12,"Mg","Magie",2,3,"klkt"),
+            (13,"Al","Nhôm",13,3,"kl"),(14,"Si","Silic",14,3,"al"),
+            (15,"P","Photpho",15,3,"pk"),(16,"S","Lưu huỳnh",16,3,"pk"),
+            (17,"Cl","Clo",17,3,"hl"),(18,"Ar","Argon",18,3,"kh"),
+            (19,"K","Kali",1,4,"klk"),(20,"Ca","Canxi",2,4,"klkt"),
+            (21,"Sc","Scandi",3,4,"klcg"),(22,"Ti","Titan",4,4,"klcg"),
+            (23,"V","Vanadi",5,4,"klcg"),(24,"Cr","Crom",6,4,"klcg"),
+            (25,"Mn","Mangan",7,4,"klcg"),(26,"Fe","Sắt",8,4,"klcg"),
+            (27,"Co","Coban",9,4,"klcg"),(28,"Ni","Niken",10,4,"klcg"),
+            (29,"Cu","Đồng",11,4,"klcg"),(30,"Zn","Kẽm",12,4,"klcg"),
+            (31,"Ga","Gali",13,4,"kl"),(32,"Ge","Gecmani",14,4,"al"),
+            (33,"As","Asen",15,4,"al"),(34,"Se","Selen",16,4,"pk"),
+            (35,"Br","Brom",17,4,"hl"),(36,"Kr","Kripton",18,4,"kh"),
+            (37,"Rb","Rubidi",1,5,"klk"),(38,"Sr","Stronti",2,5,"klkt"),
+            (39,"Y","Ytri",3,5,"klcg"),(40,"Zr","Ziriconi",4,5,"klcg"),
+            (41,"Nb","Niobi",5,5,"klcg"),(42,"Mo","Molypden",6,5,"klcg"),
+            (43,"Tc","Tecneti",7,5,"klcg"),(44,"Ru","Rutheni",8,5,"klcg"),
+            (45,"Rh","Rhodi",9,5,"klcg"),(46,"Pd","Paladi",10,5,"klcg"),
+            (47,"Ag","Bạc",11,5,"klcg"),(48,"Cd","Cadmi",12,5,"klcg"),
+            (49,"In","Indi",13,5,"kl"),(50,"Sn","Thiếc",14,5,"kl"),
+            (51,"Sb","Antimon",15,5,"al"),(52,"Te","Telu",16,5,"al"),
+            (53,"I","Iot",17,5,"hl"),(54,"Xe","Xenon",18,5,"kh"),
+            (55,"Cs","Xesi",1,6,"klk"),(56,"Ba","Bari",2,6,"klkt"),
+            (57,"La","Lantan",3,6,"lan"),(72,"Hf","Hafni",4,6,"klcg"),
+            (73,"Ta","Tantal",5,6,"klcg"),(74,"W","Vonfram",6,6,"klcg"),
+            (75,"Re","Rheni",7,6,"klcg"),(76,"Os","Osmi",8,6,"klcg"),
+            (77,"Ir","Iridi",9,6,"klcg"),(78,"Pt","Platin",10,6,"klcg"),
+            (79,"Au","Vàng",11,6,"klcg"),(80,"Hg","Thủy ngân",12,6,"klcg"),
+            (81,"Tl","Tali",13,6,"kl"),(82,"Pb","Chì",14,6,"kl"),
+            (83,"Bi","Bitmut",15,6,"kl"),(84,"Po","Poloni",16,6,"al"),
+            (85,"At","Astatin",17,6,"hl"),(86,"Rn","Radon",18,6,"kh"),
+            (87,"Fr","Franxi",1,7,"klk"),(88,"Ra","Radi",2,7,"klkt"),
+            (89,"Ac","Actini",3,7,"act"),(104,"Rf","Rutherfordi",4,7,"klcg"),
+            (105,"Db","Dubni",5,7,"klcg"),(106,"Sg","Seaborgi",6,7,"klcg"),
+            (107,"Bh","Bohri",7,7,"klcg"),(108,"Hs","Hassi",8,7,"klcg"),
+            (109,"Mt","Meitneri",9,7,"klcg"),(110,"Ds","Darmstadti",10,7,"klcg"),
+            (111,"Rg","Roentgeni",11,7,"klcg"),(112,"Cn","Copernici",12,7,"klcg"),
+            (113,"Nh","Nihoni",13,7,"kl"),(114,"Fl","Flerovi",14,7,"kl"),
+            (115,"Mc","Moscovi",15,7,"kl"),(116,"Lv","Livermori",16,7,"kl"),
+            (117,"Ts","Tennessine",17,7,"hl"),(118,"Og","Oganesson",18,7,"kh"),
+        ]
+        # Lanthanide + Actinide (tách riêng, hiển thị 2 hàng dưới)
+        LANTHANIDE = [
+            (57,"La","Lantan"),(58,"Ce","Xeri"),(59,"Pr","Praseodymi"),(60,"Nd","Neodymi"),
+            (61,"Pm","Promethi"),(62,"Sm","Samari"),(63,"Eu","Europi"),(64,"Gd","Gadolini"),
+            (65,"Tb","Terbi"),(66,"Dy","Dysprosi"),(67,"Ho","Holmi"),(68,"Er","Erbi"),
+            (69,"Tm","Thuli"),(70,"Yb","Ytterbi"),(71,"Lu","Luteti"),
+        ]
+        ACTINIDE = [
+            (89,"Ac","Actini"),(90,"Th","Thori"),(91,"Pa","Protactini"),(92,"U","Urani"),
+            (93,"Np","Neptuni"),(94,"Pu","Plutoni"),(95,"Am","Americi"),(96,"Cm","Curi"),
+            (97,"Bk","Berkeli"),(98,"Cf","Californi"),(99,"Es","Einsteini"),(100,"Fm","Fermi"),
+            (101,"Md","Mendelevi"),(102,"No","Nobeli"),(103,"Lr","Lawrenci"),
+        ]
+
+        CATEGORY_COLORS = {
+            "klk": "#f87171", "klkt": "#fb923c", "klcg": "#fbbf24",
+            "kl": "#a3e635", "al": "#34d399", "pk": "#38bdf8",
+            "hl": "#a78bfa", "kh": "#f472b6", "lan": "#fcd34d", "act": "#fbcfe8",
+        }
+
+        with st.expander("🎨 Chú thích màu sắc", expanded=False):
+            cols_leg = st.columns(5)
+            legend_items = [
+                ("Kim loại kiềm", "#f87171"),
+                ("Kim loại kiềm thổ", "#fb923c"),
+                ("Kim loại chuyển tiếp", "#fbbf24"),
+                ("Kim loại", "#a3e635"),
+                ("Á kim", "#34d399"),
+            ]
+            for i, (name, col) in enumerate(legend_items):
+                with cols_leg[i]:
+                    st.markdown(
+                        f"<div style='background:{col};padding:6px 10px;border-radius:6px;"
+                        f"color:#0f172a;font-weight:700;font-size:12px;text-align:center;'>"
+                        f"{name}</div>", unsafe_allow_html=True)
+            cols_leg2 = st.columns(5)
+            legend_items2 = [
+                ("Phi kim", "#38bdf8"),
+                ("Halogen", "#a78bfa"),
+                ("Khí hiếm", "#f472b6"),
+                ("Lanthanide", "#fcd34d"),
+                ("Actinide", "#fbcfe8"),
+            ]
+            for i, (name, col) in enumerate(legend_items2):
+                with cols_leg2[i]:
+                    st.markdown(
+                        f"<div style='background:{col};padding:6px 10px;border-radius:6px;"
+                        f"color:#0f172a;font-weight:700;font-size:12px;text-align:center;'>"
+                        f"{name}</div>", unsafe_allow_html=True)
+
+        # Vẽ bảng bằng HTML grid
+        html = '<div style="overflow-x:auto;">'
+        html += '<table style="border-collapse:collapse;margin:12px 0;">'
+        # 7 hàng × 18 cột
+        grid = {}
+        for num, sym, name_vi, grp, per, cat in ELEMENTS:
+            if per <= 7:
+                grid[(per, grp)] = (num, sym, name_vi, cat)
+        for per in range(1, 8):
+            html += '<tr>'
+            for grp in range(1, 19):
+                if (per, grp) in grid:
+                    num, sym, name_vi, cat = grid[(per, grp)]
+                    color = CATEGORY_COLORS.get(cat, "#94a3b8")
+                    html += (
+                        f'<td style="padding:2px;">'
+                        f'<div style="background:{color};color:#0f172a;width:52px;height:52px;'
+                        f'border-radius:6px;display:flex;flex-direction:column;'
+                        f'align-items:center;justify-content:center;font-weight:700;'
+                        f'font-family:system-ui;cursor:pointer;transition:transform 0.2s;" '
+                        f'title="{sym} — {name_vi} (Z={num})">'
+                        f'<div style="font-size:10px;line-height:1;">{num}</div>'
+                        f'<div style="font-size:16px;line-height:1.2;">{sym}</div>'
+                        f'<div style="font-size:8px;line-height:1;opacity:0.8;">{name_vi[:6]}</div>'
+                        f'</div></td>'
+                    )
+                else:
+                    html += '<td style="padding:2px;"></td>'
+            html += '</tr>'
+        # 2 hàng Lanthanide + Actinide
+        html += '<tr><td colspan="18" style="height:8px;"></td></tr>'
+        for label, row in [("La-Lu (Lanthanide)", LANTHANIDE), ("Ac-Lr (Actinide)", ACTINIDE)]:
+            html += '<tr>'
+            html += f'<td colspan="2" style="color:#fcd34d;font-size:11px;font-weight:700;'
+            html += f'vertical-align:middle;padding-right:6px;">{label}</td>'
+            for i, (num, sym, name_vi) in enumerate(row):
+                cat = "lan" if "La" in label else "act"
+                color = CATEGORY_COLORS[cat]
+                html += (
+                    f'<td style="padding:2px;">'
+                    f'<div style="background:{color};color:#0f172a;width:44px;height:44px;'
+                    f'border-radius:6px;display:flex;flex-direction:column;'
+                    f'align-items:center;justify-content:center;font-weight:700;'
+                    f'font-family:system-ui;" title="{sym} — {name_vi} (Z={num})">'
+                    f'<div style="font-size:9px;line-height:1;">{num}</div>'
+                    f'<div style="font-size:14px;line-height:1.2;">{sym}</div>'
+                    f'</div></td>'
+                )
+            html += '<td colspan="3"></td></tr>'
+        html += '</table></div>'
+        st.markdown(html, unsafe_allow_html=True)
+
+        st.caption(f"📊 Tổng cộng **118 nguyên tố** đã được hiển thị")
+
+    # ========== HÓA HỌC: SƠ ĐỒ NĂNG LƯỢNG PHẢN ỨNG ==========
+    elif dtype == "energy_diagram":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            e_reactant = st.slider("Năng lượng chất đầu E₁ (kJ):", 0.0, 100.0,
+                                    float(data.get("e1", 30.0)), 5.0, key="hoa_ed_e1")
+            e_product = st.slider("Năng lượng sản phẩm E₂ (kJ):", 0.0, 100.0,
+                                   float(data.get("e2", 70.0)), 5.0, key="hoa_ed_e2")
+            e_activated = st.slider("Năng lượng hoạt hóa Ea (kJ):", 5.0, 80.0,
+                                     float(data.get("ea", 40.0)), 5.0, key="hoa_ed_ea")
+
+        delta_h = e_product - e_reactant
+        is_exo = delta_h < 0
+
+        with c2:
+            try:
+                fig = go.Figure()
+                # Trục tung: năng lượng
+                # Đường phản ứng: E1 → đỉnh (E1+Ea) → E2
+                x_vals = [0, 1, 2, 3, 4, 5, 6, 7]
+                y_vals = [
+                    e_reactant, e_reactant,      # Chất đầu
+                    e_reactant + e_activated,    # Đỉnh (phức hoạt hóa)
+                    e_reactant + e_activated,    # Đỉnh
+                    e_product, e_product,        # Sản phẩm
+                    e_product, e_product,
+                ]
+                fig.add_trace(go.Scatter(x=x_vals, y=y_vals, mode='lines',
+                    line=dict(color='#38bdf8', width=3, shape='spline'),
+                    name='Đường phản ứng', hoverinfo='skip'))
+
+                # Đường ngang E1
+                fig.add_trace(go.Scatter(x=[0, 7], y=[e_reactant, e_reactant],
+                    mode='lines', line=dict(color='#34d399', width=1.5, dash='dash'),
+                    name=f'E(chất đầu) = {e_reactant} kJ', hoverinfo='skip'))
+                # Đường ngang E2
+                fig.add_trace(go.Scatter(x=[0, 7], y=[e_product, e_product],
+                    mode='lines', line=dict(color='#f43f5e', width=1.5, dash='dash'),
+                    name=f'E(sản phẩm) = {e_product} kJ', hoverinfo='skip'))
+                # Mũi tên Ea
+                fig.add_annotation(x=3.5, y=e_reactant, ax=3.5, ay=e_reactant + e_activated,
+                    xref='x', yref='y', axref='x', ayref='y',
+                    text=f'Ea = {e_activated} kJ', showarrow=True, arrowhead=2,
+                    arrowsize=1.5, arrowwidth=2, arrowcolor='#fbbf24',
+                    font=dict(color='#fbbf24', size=12))
+                # Mũi tên ΔH
+                fig.add_annotation(x=6.5, y=e_reactant, ax=6.5, ay=e_product,
+                    xref='x', yref='y', axref='x', ayref='y',
+                    text=f'ΔH = {delta_h:+.0f} kJ', showarrow=True, arrowhead=2,
+                    arrowsize=1.5, arrowwidth=2,
+                    arrowcolor='#a78bfa' if is_exo else '#f472b6',
+                    font=dict(color='#a78bfa' if is_exo else '#f472b6', size=12))
+
+                fig.update_layout(
+                    title=f"Sơ đồ năng lượng — {'Tỏa nhiệt' if is_exo else 'Thu nhiệt'} phản ứng",
+                    template="plotly_dark",
+                    xaxis=dict(title="Tiến trình phản ứng", range=[-0.3, 7.3],
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, showticklabels=False),
+                    yaxis=dict(title="Năng lượng (kJ)", range=[min(0, e_product-10), 
+                               max(e_reactant, e_product) + e_activated + 10],
+                               backgroundcolor="#0f172a", gridcolor="#1e293b", zeroline=False),
+                    height=420, margin=dict(l=10, r=10, t=40, b=30),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("SoDoNangLuong"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ sơ đồ năng lượng: {err}")
+
+        with c3:
+            st.markdown("##### 📝 Loại phản ứng")
+            if is_exo:
+                st.markdown("🔴 **Tỏa nhiệt** (ΔH < 0)")
+                st.caption("Giải phóng năng lượng ra môi trường")
+            else:
+                st.markdown("🔵 **Thu nhiệt** (ΔH > 0)")
+                st.caption("Hấp thụ năng lượng từ môi trường")
+            st.markdown("##### 📐 Biến thiên enthalpy")
+            st.latex(r"\Delta H = E_{sp} - E_{cd} = " + f"{delta_h:+.0f}\\,kJ")
+            st.markdown("##### ⚡ Năng lượng hoạt hóa")
+            st.latex(r"E_a = " + f"{e_activated}\\,kJ")
+
+    # ========== HÓA HỌC: THANG pH ==========
+    elif dtype == "ph_scale":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Chọn pH**")
+            ph_val = st.slider("Giá trị pH:", 0.0, 14.0, float(data.get("ph", 7.0)), 0.5, key="hoa_ph_val")
+
+        # Xác định môi trường
+        if ph_val < 6.5:
+            medium = "Axit"; icon = "🔴"; color = "#ef4444"
+        elif ph_val > 7.5:
+            medium = "Base"; icon = "🔵"; color = "#3b82f6"
+        else:
+            medium = "Trung tính"; icon = "🟢"; color = "#22c55e"
+
+        # Ví dụ theo pH
+        examples = {
+            0: "HCl đặc, H₂SO₄ đặc",
+            1: "Dịch vị dạ dày (HCl 0.1M)",
+            2: "Nước chanh, giấm ăn",
+            3: "Nước cam, cà chua",
+            4: "Cà phê đen, bia",
+            5: "Nước mưa axit nhẹ",
+            6: "Sữa tươi",
+            7: "Nước tinh khiết",
+            8: "Nước biển",
+            9: "Baking soda (NaHCO₃)",
+            10: "Xà phòng, nước vôi",
+            11: "Amoniac (NH₃) loãng",
+            12: "Nước vôi trong",
+            13: "Dung dịch NaOH 0.1M",
+            14: "NaOH đặc",
+        }
+        example = examples.get(int(round(ph_val)), "—")
+
+        with c2:
+            try:
+                fig = go.Figure()
+                # Vẽ dải pH 0-14, chia gradient
+                colors_pH = ["#dc2626", "#ef4444", "#f97316", "#fb923c",
+                             "#fbbf24", "#fcd34d", "#a3e635", "#22c55e",
+                             "#34d399", "#2dd4bf", "#06b6d4", "#3b82f6",
+                             "#6366f1", "#818cf8", "#a78bfa"]
+                for i in range(14):
+                    fig.add_shape(type="rect", x0=i, x1=i+1, y0=0, y1=1,
+                                  fillcolor=colors_pH[i], opacity=0.85,
+                                  line=dict(color='#0f172a', width=2))
+                    fig.add_annotation(x=i+0.5, y=0.5, text=str(i),
+                                       showarrow=False,
+                                       font=dict(color='#ffffff', size=16, family='system-ui'))
+
+                # Đường chỉ pH hiện tại
+                fig.add_shape(type="line", x0=ph_val, x1=ph_val, y0=-0.2, y1=1.3,
+                              line=dict(color='#ffffff', width=4))
+                fig.add_annotation(x=ph_val, y=1.4,
+                                   text=f"{icon} pH = {ph_val}",
+                                   showarrow=False,
+                                   font=dict(color='#ffffff', size=15, family='system-ui'))
+
+                fig.update_layout(
+                    title=f"Thang pH — Môi trường: {medium}",
+                    template="plotly_dark",
+                    xaxis=dict(title="pH", range=[0, 14],
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, tickmode='linear', dtick=1),
+                    yaxis=dict(range=[-0.5, 1.7], showticklabels=False,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, showgrid=False),
+                    height=260, margin=dict(l=10, r=10, t=50, b=40),
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("ThangPH"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ thang pH: {err}")
+
+        with c3:
+            st.markdown("##### 🧪 Môi trường")
+            st.markdown(f"**{icon} {medium}**")
+            st.markdown("##### 💧 Ví dụ")
+            st.markdown(f"*{example}*")
+            st.markdown("##### 📐 Nồng độ H⁺")
+            h_conc = 10 ** (-ph_val)
+            st.latex(r"[H^+] = 10^{-pH} = " + f"{h_conc:.2e}\\,M")
+            st.markdown("##### 📐 Nồng độ OH⁻")
+            oh_conc = 10 ** (ph_val - 14)
+            st.latex(r"[OH^-] = 10^{pH-14} = " + f"{oh_conc:.2e}\\,M")
+
+    # ========== HÓA HỌC: ĐỒ THỊ TỐC ĐỘ PHẢN ỨNG ==========
+    elif dtype == "reaction_rate":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            k_rate = st.slider("Hằng số tốc độ k:", 0.05, 1.0,
+                               float(data.get("k", 0.3)), 0.05, key="hoa_rr_k")
+            order = st.radio("Bậc phản ứng:", [0, 1, 2], index=1, key="hoa_rr_order",
+                             horizontal=True)
+            temp_effect = st.checkbox("So sánh 2 nhiệt độ (T₁ và T₂ = 2×T₁)",
+                                      value=True, key="hoa_rr_temp")
+
+        with c2:
+            try:
+                t = np.linspace(0, 10, 200)
+                # Bậc 0: [A] = [A]0 - kt
+                # Bậc 1: [A] = [A]0 * e^(-kt)
+                # Bậc 2: 1/[A] = 1/[A]0 + kt → [A] = 1/(1/[A]0 + kt)
+                A0 = 1.0
+                if order == 0:
+                    A_t = np.clip(A0 - k_rate * t, 0, A0)
+                    A_t2 = np.clip(A0 - 2 * k_rate * t, 0, A0)
+                elif order == 1:
+                    A_t = A0 * np.exp(-k_rate * t)
+                    A_t2 = A0 * np.exp(-2 * k_rate * t)
+                else:
+                    A_t = 1 / (1 / A0 + k_rate * t)
+                    A_t2 = 1 / (1 / A0 + 2 * k_rate * t)
+
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=t, y=A_t, mode='lines',
+                    line=dict(color='#38bdf8', width=3),
+                    name=f'Bậc {order} — T₁ (k = {k_rate})',
+                    hovertemplate="t = %{x:.2f}<br>[A] = %{y:.3f}<extra></extra>"))
+                if temp_effect:
+                    fig.add_trace(go.Scatter(x=t, y=A_t2, mode='lines',
+                        line=dict(color='#f43f5e', width=3, dash='dash'),
+                        name=f'Bậc {order} — T₂ = 2T₁ (k = {2*k_rate:.2f})',
+                        hovertemplate="t = %{x:.2f}<br>[A] = %{y:.3f}<extra></extra>"))
+
+                fig.update_layout(
+                    title=f"Đồ thị tốc độ phản ứng — Bậc {order}",
+                    template="plotly_dark",
+                    xaxis=dict(title="Thời gian t (đơn vị)", backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False),
+                    yaxis=dict(title="Nồng độ [A] (M)", backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False),
+                    height=420, margin=dict(l=10, r=10, t=40, b=30),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("TocDoPhanUng"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ đồ thị tốc độ: {err}")
+
+        with c3:
+            st.markdown("##### 📐 Phương trình tốc độ")
+            if order == 0:
+                st.latex(r"v = k")
+                st.latex(r"[A] = [A]_0 - kt")
+            elif order == 1:
+                st.latex(r"v = k[A]")
+                st.latex(r"[A] = [A]_0 \cdot e^{-kt}")
+            else:
+                st.latex(r"v = k[A]^2")
+                st.latex(r"\dfrac{1}{[A]} = \dfrac{1}{[A]_0} + kt")
+            st.markdown("##### 🌡 Ảnh hưởng nhiệt độ")
+            st.caption("Khi T tăng, k tăng → phản ứng nhanh hơn (quy tắc Van't Hoff)")
+            st.latex(r"k_T = k_{T_0} \cdot \gamma^{\Delta T/10}")
+
     else:
         st.info("💡 Đã tiếp nhận yêu cầu. Kéo thanh trượt hoặc nhập tham số để mô phỏng tương tác!")
 
