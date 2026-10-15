@@ -335,6 +335,13 @@ PRESET_LABS = {
                 "data": {"type": "reaction_rate", "k": 0.3},
             },
             {
+                "id": "hoa10_molecule_3d",
+                "name": "🔬 Mô hình phân tử 3D",
+                "desc": "Xoay 3D — chọn H₂O, CH₄, C₆H₆, glucose...",
+                "tags": ["phan tu", "3d", "h2o", "ch4", "cau truc"],
+                "data": {"type": "molecule_3d"},
+            },
+            {
                 "id": "hoa10_mindmap_nguyen_tu",
                 "name": "🗺️ Sơ đồ cấu tạo nguyên tử",
                 "desc": "Mindmap các thành phần cấu tạo nguyên tử",
@@ -382,6 +389,20 @@ PRESET_LABS = {
                 "data": {"type": "ph_scale", "ph": 7.0},
             },
             {
+                "id": "hoa11_equilibrium",
+                "name": "⚖️ Cân bằng hóa học",
+                "desc": "N₂ + 3H₂ ⇌ 2NH₃ — đồ thị nồng độ theo t",
+                "tags": ["can bang", "le chatelier", "nong do"],
+                "data": {"type": "equilibrium", "Kc": 2.0, "A0": 1.0, "B0": 3.0, "t_max": 20},
+            },
+            {
+                "id": "hoa11_organic_structure",
+                "name": "🧬 Công thức cấu tạo hữu cơ",
+                "desc": "Chọn CH₄, C₂H₄, C₂H₂, ethanol, acetic, benzene...",
+                "tags": ["huu co", "cau tao", "cong thuc", "alkane", "alkene"],
+                "data": {"type": "organic_structure"},
+            },
+            {
                 "id": "hoa11_mindmap_n_s",
                 "name": "🗺️ Sơ đồ chuyển hóa N và S",
                 "desc": "Mindmap các hợp chất của Nitrogen và Sulfur",
@@ -421,6 +442,13 @@ PRESET_LABS = {
             },
         ],
         12: [
+            {
+                "id": "hoa12_electrolysis",
+                "name": "⚡ Điện phân dung dịch",
+                "desc": "Bình điện phân + phương trình tại 2 cực",
+                "tags": ["dien phan", "cathode", "anode", "dung dich"],
+                "data": {"type": "electrolysis", "U": 5.0},
+            },
             {
                 "id": "hoa12_mindmap_carb",
                 "name": "🗺️ Sơ đồ chuyển hóa Carbohydrate",
