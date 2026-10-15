@@ -2801,6 +2801,455 @@
             elif parent1 == "Aa" and parent2 == "aa":
                 st.caption("→ Phép lai phân tích: TLKG 1:1, TLKH 1:1")
 
+    # ========== SINH HỌC: CHU TRÌNH KREBS ==========
+    elif dtype == "krebs_cycle":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            show_atp = st.checkbox("Hiển thị số ATP/NADH/FADH₂", value=True, key="sinh_krebs_atp")
+            highlight_step = st.slider("Highlight bước:", 1, 8,
+                                       int(data.get("step", 1)), 1, key="sinh_krebs_step")
+
+        with c2:
+            try:
+                fig = go.Figure()
+                # 8 bước chu trình Krebs — đặt trên vòng tròn
+                steps = [
+                    ("Citrate", "Acetyl-CoA\n+ Oxaloacetate"),
+                    ("Isocitrate", "Citrate\n- H₂O"),
+                    ("α-Ketoglutarate", "Isocitrate\n- CO₂, NADH"),
+                    ("Succinyl-CoA", "α-KG\n- CO₂, NADH"),
+                    ("Succinate", "Succinyl-CoA\n- GTP"),
+                    ("Fumarate", "Succinate\n- FADH₂"),
+                    ("Malate", "Fumarate\n+ H₂O"),
+                    ("Oxaloacetate", "Malate\n- NADH"),
+                ]
+                n_steps = len(steps)
+                radius = 2.5
+                angles = np.linspace(0, 2 * np.pi, n_steps, endpoint=False)
+
+                # Vẽ vòng tròn chu trình
+                circle_t = np.linspace(0, 2 * np.pi, 100)
+                fig.add_trace(go.Scatter(x=radius*np.cos(circle_t), y=radius*np.sin(circle_t),
+                    mode='lines', line=dict(color='#475569', width=2, dash='dot'),
+                    showlegend=False, hoverinfo='skip'))
+
+                # Vẽ mũi tên giữa các bước
+                for i in range(n_steps):
+                    a1 = angles[i]
+                    a2 = angles[(i+1) % n_steps]
+                    mid_angle = (a1 + a2) / 2
+                    if a1 > a2:  # wrap around
+                        mid_angle = (a1 + a2 + 2 * np.pi) / 2
+                    # Mũi tên nhỏ
+                    fig.add_annotation(
+                        x=radius * np.cos(mid_angle),
+                        y=radius * np.sin(mid_angle),
+                        ax=radius * 0.95 * np.cos(mid_angle),
+                        ay=radius * 0.95 * np.sin(mid_angle),
+                        xref='x', yref='y', axref='x', ayref='y',
+                        text='', showarrow=True, arrowhead=2,
+                        arrowsize=1.2, arrowwidth=2, arrowcolor='#38bdf8'
+                    )
+
+                # Vẽ các chất
+                for i, (name, desc) in enumerate(steps):
+                    x = radius * np.cos(angles[i])
+                    y = radius * np.sin(angles[i])
+                    is_highlight = (i + 1 == highlight_step)
+                    color = '#fbbf24' if is_highlight else '#38bdf8'
+                    size = 30 if is_highlight else 22
+                    fig.add_trace(go.Scatter(
+                        x=[x], y=[y], mode='markers+text',
+                        marker=dict(size=size, color=color,
+                                    line=dict(color='#f8fafc', width=2)),
+                        text=[f'<b>{i+1}</b>'],
+                        textposition='middle center',
+                        textfont=dict(color='#0f172a', size=12),
+                        showlegend=False, hoverinfo='skip'
+                    ))
+                    # Nhãn tên chất
+                    label_r = radius + 0.85
+                    fig.add_annotation(x=label_r * np.cos(angles[i]),
+                                       y=label_r * np.sin(angles[i]),
+                                       text=f"<b>{name}</b>",
+                                       showarrow=False,
+                                       font=dict(color='#f8fafc', size=11),
+                                       bgcolor='rgba(15,23,42,0.7)',
+                                       borderpad=3)
+                    if show_atp:
+                        fig.add_annotation(x=(radius + 0.5) * np.cos(angles[i]),
+                                           y=(radius + 0.5) * np.sin(angles[i]),
+                                           text=desc.replace("\n", "<br>"),
+                                           showarrow=False,
+                                           font=dict(color='#94a3b8', size=9))
+
+                fig.update_layout(
+                    title=f"Chu trình Krebs (Citric Acid Cycle) — Bước {highlight_step}",
+                    template="plotly_dark",
+                    xaxis=dict(range=[-4.5, 4.5], showticklabels=False,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, showgrid=False),
+                    yaxis=dict(range=[-4.5, 4.5], showticklabels=False,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, showgrid=False,
+                               scaleanchor='x', scaleratio=1),
+                    height=560, margin=dict(l=10, r=10, t=40, b=10),
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("Krebs"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ Krebs: {err}")
+
+        with c3:
+            st.markdown("##### 📝 Bước hiện tại")
+            st.markdown(f"**Bước {highlight_step}:** {steps[highlight_step-1][0]}")
+            st.caption(steps[highlight_step-1][1].replace("\n", " "))
+            st.markdown("##### 🔋 Sản phẩm chu trình")
+            st.latex(r"3\,NADH + 1\,FADH_2 + 1\,GTP")
+            st.latex(r"+ 2\,CO_2")
+            st.markdown("##### 📊 Vị trí")
+            st.caption("Chất nền ti thể (mitochondrial matrix)")
+
+    # ========== SINH HỌC: SƠ ĐỒ QUANG HỢP ==========
+    elif dtype == "photosynthesis":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            intensity = st.slider("Cường độ ánh sáng (%):", 0, 100,
+                                  int(data.get("light", 80)), 5, key="sinh_ps_intensity")
+            co2_level = st.slider("Nồng độ CO₂ (%):", 0, 100,
+                                  int(data.get("co2", 50)), 5, key="sinh_ps_co2")
+            show_products = st.checkbox("Hiển thị sản phẩm", value=True, key="sinh_ps_prod")
+
+        with c2:
+            try:
+                fig = go.Figure()
+
+                # Lục lạp (hình oval)
+                fig.add_shape(type="circle", x0=-4, x1=4, y0=-1.8, y1=1.8,
+                              line=dict(color='#34d399', width=3),
+                              fillcolor='rgba(52,211,153,0.1)')
+                fig.add_annotation(x=0, y=2.1, text="<b>Lục lạp (Chloroplast)</b>",
+                                   showarrow=False, font=dict(color='#34d399', size=13))
+
+                # Pha sáng (bên trái - màng tilacoit)
+                fig.add_shape(type="rect", x0=-3.8, x1=-0.5, y0=-1.5, y1=1.5,
+                              line=dict(color='#fbbf24', width=2),
+                              fillcolor='rgba(251,191,36,0.15)')
+                fig.add_annotation(x=-2.15, y=1.7, text="<b>Pha sáng</b>",
+                                   showarrow=False, font=dict(color='#fbbf24', size=12))
+                # Mũi tên ánh sáng
+                alpha_light = intensity / 100 * 0.8
+                fig.add_annotation(x=-2.15, y=2.6, ax=-2.15, ay=1.9,
+                                   xref='x', yref='y', axref='x', ayref='y',
+                                   text='☀️', showarrow=True, arrowhead=2,
+                                   arrowsize=1.5, arrowwidth=2,
+                                   arrowcolor=f'rgba(251,191,36,{alpha_light})',
+                                   font=dict(size=20))
+                # H₂O vào
+                fig.add_annotation(x=-4.5, y=-1, text="H₂O",
+                                   showarrow=False, font=dict(color='#38bdf8', size=13))
+                fig.add_annotation(x=-3.9, y=-1, ax=-4.3, ay=-1,
+                                   xref='x', yref='y', axref='x', ayref='y',
+                                   text='', showarrow=True, arrowhead=2,
+                                   arrowwidth=2, arrowcolor='#38bdf8')
+                # O₂ ra
+                fig.add_annotation(x=-4.5, y=1, text="O₂",
+                                   showarrow=False, font=dict(color='#f43f5e', size=13))
+                fig.add_annotation(x=-3.9, y=1, ax=-4.3, ay=1,
+                                   xref='x', yref='y', axref='x', ayref='y',
+                                   text='', showarrow=True, arrowhead=2,
+                                   arrowwidth=2, arrowcolor='#f43f5e')
+
+                # Pha tối (bên phải - chất nền)
+                fig.add_shape(type="rect", x0=0.5, x1=3.8, y0=-1.5, y1=1.5,
+                              line=dict(color='#a78bfa', width=2),
+                              fillcolor='rgba(167,139,250,0.15)')
+                fig.add_annotation(x=2.15, y=1.7, text="<b>Pha tối (Calvin)</b>",
+                                   showarrow=False, font=dict(color='#a78bfa', size=12))
+                # CO₂ vào
+                alpha_co2 = co2_level / 100 * 0.8
+                fig.add_annotation(x=4.5, y=0, text="CO₂",
+                                   showarrow=False, font=dict(color='#94a3b8', size=13))
+                fig.add_annotation(x=3.9, y=0, ax=4.3, ay=0,
+                                   xref='x', yref='y', axref='x', ayref='y',
+                                   text='', showarrow=True, arrowhead=2,
+                                   arrowwidth=2,
+                                   arrowcolor=f'rgba(148,163,184,{alpha_co2})')
+
+                # ATP/NADPH chuyển từ pha sáng → pha tối
+                fig.add_annotation(x=0, y=0.8, ax=-0.5, ay=0.8,
+                                   xref='x', yref='y', axref='x', ayref='y',
+                                   text='ATP, NADPH', showarrow=True, arrowhead=2,
+                                   arrowwidth=2, arrowcolor='#fbbf24',
+                                   font=dict(color='#fbbf24', size=11))
+
+                # Sản phẩm glucose
+                if show_products:
+                    fig.add_annotation(x=2.15, y=-1, text="→ C₆H₁₂O₆ (Glucose)",
+                                       showarrow=False, font=dict(color='#34d399', size=14))
+                    fig.add_annotation(x=2.15, y=-1.5, text="(Sản phẩm cuối)",
+                                       showarrow=False, font=dict(color='#94a3b8', size=10))
+
+                fig.update_layout(
+                    title=f"Quang hợp — Ánh sáng {intensity}% · CO₂ {co2_level}%",
+                    template="plotly_dark",
+                    xaxis=dict(range=[-5.5, 5.5], showticklabels=False,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, showgrid=False),
+                    yaxis=dict(range=[-2.5, 3], showticklabels=False,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, showgrid=False,
+                               scaleanchor='x', scaleratio=1),
+                    height=460, margin=dict(l=10, r=10, t=40, b=10),
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("QuangHop"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ quang hợp: {err}")
+
+        with c3:
+            st.markdown("##### 📝 Phương trình tổng")
+            st.latex(r"6CO_2 + 6H_2O \xrightarrow{as} C_6H_{12}O_6 + 6O_2")
+            st.markdown("##### ☀️ Pha sáng")
+            st.caption("Vị trí: màng tilacoit")
+            st.caption("Sản phẩm: ATP, NADPH, O₂")
+            st.markdown("##### 🌙 Pha tối")
+            st.caption("Vị trí: chất nền lục lạp")
+            st.caption("Sản phẩm: Glucose (C₆H₁₂O₆)")
+            st.markdown("##### 📊 Hiệu suất ước lượng")
+            eff = min(intensity, co2_level) / 100
+            st.progress(eff)
+            st.caption(f"Hiệu suất ≈ {eff*100:.0f}%")
+
+    # ========== SINH HỌC: LƯỚI THỨC ĂN ==========
+    elif dtype == "food_web":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Chọn hệ sinh thái**")
+            ecosystem = st.radio(
+                "Hệ sinh thái:",
+                ["Đồng cỏ", "Rừng nhiệt đới", "Biển"],
+                key="sinh_fw_ecosystem"
+            )
+
+        # Dữ liệu các loài theo bậc dinh dưỡng
+        food_data = {
+            "Đồng cỏ": {
+                "producers": ["🌾 Cỏ", "🌿 Cây bụi"],
+                "primary": ["🦗 Châu chấu", "🐰 Thỏ", "🐭 Chuột đồng"],
+                "secondary": ["🐸 Ếch", "🐍 Rắn", "🦊 Cáo"],
+                "tertiary": ["🦅 Đại bàng", "🐺 Sói"],
+                "edges": [
+                    ("Cỏ", "Châu chấu"), ("Cỏ", "Thỏ"), ("Cỏ", "Chuột đồng"),
+                    ("Châu chấu", "Ếch"), ("Châu chấu", "Rắn"),
+                    ("Thỏ", "Cáo"), ("Thỏ", "Sói"),
+                    ("Chuột đồng", "Rắn"), ("Chuột đồng", "Cáo"),
+                    ("Ếch", "Rắn"), ("Rắn", "Đại bàng"),
+                    ("Cáo", "Đại bàng"), ("Cáo", "Sói"),
+                ],
+            },
+            "Rừng nhiệt đới": {
+                "producers": ["🌳 Cây gỗ", "🍃 Lá cây"],
+                "primary": ["🐛 Sâu bọ", "🐒 Khỉ", "🦜 Vẹt"],
+                "secondary": ["🐦 Chim nhỏ", "🐍 Trăn", "🐆 Báo"],
+                "tertiary": ["🦅 Đại bàng", "🐊 Cá sấu"],
+                "edges": [
+                    ("Lá cây", "Sâu bọ"), ("Lá cây", "Khỉ"), ("Lá cây", "Vẹt"),
+                    ("Sâu bọ", "Chim nhỏ"), ("Sâu bọ", "Trăn"),
+                    ("Khỉ", "Báo"), ("Vẹt", "Trăn"),
+                    ("Chim nhỏ", "Đại bàng"), ("Trăn", "Đại bàng"),
+                    ("Báo", "Cá sấu"),
+                ],
+            },
+            "Biển": {
+                "producers": ["🦠 Tảo", "🌿 Cỏ biển"],
+                "primary": ["🦐 Tôm", "🐟 Cá nhỏ", "🐚 Nghêu"],
+                "secondary": ["🐟 Cá vừa", "🦑 Mực", "🦀 Cua"],
+                "tertiary": ["🦈 Cá mập", "🐋 Cá voi", "🐬 Cá heo"],
+                "edges": [
+                    ("Tảo", "Tôm"), ("Tảo", "Cá nhỏ"), ("Cỏ biển", "Nghêu"),
+                    ("Tôm", "Cá vừa"), ("Cá nhỏ", "Cá vừa"), ("Cá nhỏ", "Mực"),
+                    ("Nghêu", "Cua"),
+                    ("Cá vừa", "Cá mập"), ("Mực", "Cá heo"),
+                    ("Cua", "Cá voi"), ("Cá vừa", "Cá heo"),
+                ],
+            },
+        }
+
+        data_fw = food_data.get(ecosystem, food_data["Đồng cỏ"])
+
+        with c2:
+            try:
+                fig = go.Figure()
+
+                # Layout: hàng ngang theo bậc dinh dưỡng
+                # Bậc 1 (producers): y = 0
+                # Bậc 2 (primary): y = 1
+                # Bậc 3 (secondary): y = 2
+                # Bậc 4 (tertiary): y = 3
+                node_pos = {}
+
+                levels = [
+                    (data_fw["producers"], 0, "#34d399", "Sinh vật sản xuất"),
+                    (data_fw["primary"], 1, "#38bdf8", "Sinh vật tiêu thụ bậc 1"),
+                    (data_fw["secondary"], 2, "#fbbf24", "Sinh vật tiêu thụ bậc 2"),
+                    (data_fw["tertiary"], 3, "#f43f5e", "Sinh vật tiêu thụ bậc 3+"),
+                ]
+
+                for nodes, y, color, label in levels:
+                    n = len(nodes)
+                    for i, node in enumerate(nodes):
+                        # Lấy tên không có emoji
+                        name = node.split(" ", 1)[1] if " " in node else node
+                        x = (i - (n - 1) / 2) * 2.5
+                        node_pos[name] = (x, y)
+                        fig.add_trace(go.Scatter(
+                            x=[x], y=[y], mode='markers+text',
+                            marker=dict(size=40, color=color,
+                                        line=dict(color='#f8fafc', width=2)),
+                            text=[node], textposition='middle center',
+                            textfont=dict(color='#0f172a', size=14),
+                            showlegend=False, hoverinfo='skip'
+                        ))
+                    # Nhãn bậc
+                    fig.add_annotation(x=-5, y=y, text=f"<b>{label}</b>",
+                                       showarrow=False,
+                                       font=dict(color=color, size=11),
+                                       xanchor='right')
+
+                # Vẽ các mối quan hệ (mũi tên)
+                for src, tgt in data_fw["edges"]:
+                    if src in node_pos and tgt in node_pos:
+                        x1, y1 = node_pos[src]
+                        x2, y2 = node_pos[tgt]
+                        fig.add_annotation(
+                            x=x2, y=y2, ax=x1, ay=y1,
+                            xref='x', yref='y', axref='x', ayref='y',
+                            text='', showarrow=True, arrowhead=2,
+                            arrowsize=1.2, arrowwidth=1.5,
+                            arrowcolor='rgba(148,163,184,0.6)'
+                        )
+
+                fig.update_layout(
+                    title=f"Lưới thức ăn — Hệ sinh thái {ecosystem}",
+                    template="plotly_dark",
+                    xaxis=dict(range=[-6, 6], showticklabels=False,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, showgrid=False),
+                    yaxis=dict(range=[-0.5, 3.5], showticklabels=False,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, showgrid=False),
+                    height=480, margin=dict(l=10, r=10, t=40, b=10),
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("LuoiThucAn"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ lưới thức ăn: {err}")
+
+        with c3:
+            st.markdown("##### 🌱 Sinh vật sản xuất")
+            for p in data_fw["producers"]:
+                st.markdown(f"- {p}")
+            st.markdown("##### 🐛 Tiêu thụ bậc 1")
+            for p in data_fw["primary"]:
+                st.markdown(f"- {p}")
+            st.markdown("##### 🐍 Tiêu thụ bậc 2")
+            for p in data_fw["secondary"]:
+                st.markdown(f"- {p}")
+            st.markdown("##### 🦅 Tiêu thụ bậc 3+")
+            for p in data_fw["tertiary"]:
+                st.markdown(f"- {p}")
+            st.caption(f"Tổng cộng **{sum(len(v) for v in data_fw.values() if isinstance(v, list))}** loài")
+
+    # ========== SINH HỌC: CHU KỲ TIM ==========
+    elif dtype == "heart_cycle":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            bpm = st.slider("Nhịp tim (bpm):", 50, 120,
+                            int(data.get("bpm", 75)), 5, key="sinh_heart_bpm")
+            show_pressure = st.checkbox("Hiển thị áp suất", value=True, key="sinh_heart_pressure")
+
+        with c2:
+            try:
+                # 1 chu kỳ tim ~ 0.8s (75 bpm)
+                cycle_time = 60.0 / bpm  # giây
+                t = np.linspace(0, cycle_time, 500)
+
+                # Mô phỏng áp suất tâm thất trái theo thời gian
+                # Pha 1: Tâm nhĩ thu (~0.1s)
+                # Pha 2: Tâm thất thu (~0.3s)
+                # Pha 3: Tâm trương (~0.4s)
+                phase_atrial = 0.125 * cycle_time
+                phase_ventricular = 0.375 * cycle_time
+                phase_diastole = 0.5 * cycle_time
+
+                # Áp suất tâm thất trái (mmHg) - đơn giản hóa
+                p_ventricle = np.zeros_like(t)
+                for i, ti in enumerate(t):
+                    if ti < phase_atrial:
+                        p_ventricle[i] = 5 + 5 * np.sin(np.pi * ti / phase_atrial)
+                    elif ti < phase_atrial + phase_ventricular:
+                        # Tâm thất thu — áp suất tăng vọt
+                        phase_t = (ti - phase_atrial) / phase_ventricular
+                        p_ventricle[i] = 5 + 115 * (1 - np.exp(-6 * phase_t))
+                    else:
+                        # Tâm trương
+                        phase_t = (ti - phase_atrial - phase_ventricular) / phase_diastole
+                        p_ventricle[i] = 120 * np.exp(-3 * phase_t) + 5
+
+                fig = go.Figure()
+
+                if show_pressure:
+                    fig.add_trace(go.Scatter(x=t, y=p_ventricle, mode='lines',
+                        line=dict(color='#ef4444', width=3),
+                        name='Áp suất tâm thất trái (mmHg)',
+                        hovertemplate="t = %{x:.2f}s<br>P = %{y:.1f} mmHg<extra></extra>"))
+
+                # Đường phân chia các pha
+                fig.add_vline(x=phase_atrial, line=dict(color='#fbbf24', width=2, dash='dash'),
+                              annotation_text="Nhĩ thu kết thúc", annotation_position="top")
+                fig.add_vline(x=phase_atrial + phase_ventricular,
+                              line=dict(color='#3b82f6', width=2, dash='dash'),
+                              annotation_text="Thất thu kết thúc", annotation_position="top")
+
+                # Nhãn pha
+                fig.add_annotation(x=phase_atrial/2, y=130, text="<b>Nhĩ thu</b>",
+                                   showarrow=False, font=dict(color='#fbbf24', size=13))
+                fig.add_annotation(x=phase_atrial + phase_ventricular/2, y=130,
+                                   text="<b>Thất thu</b>",
+                                   showarrow=False, font=dict(color='#ef4444', size=13))
+                fig.add_annotation(x=phase_atrial + phase_ventricular + phase_diastole/2, y=130,
+                                   text="<b>Tâm trương</b>",
+                                   showarrow=False, font=dict(color='#34d399', size=13))
+
+                fig.update_layout(
+                    title=f"Chu kỳ tim — Nhịp {bpm} bpm (1 chu kỳ = {cycle_time:.2f}s)",
+                    template="plotly_dark",
+                    xaxis=dict(title="Thời gian (s)", backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False),
+                    yaxis=dict(title="Áp suất (mmHg)", range=[0, 145],
+                               backgroundcolor="#0f172a", gridcolor="#1e293b", zeroline=False),
+                    height=420, margin=dict(l=10, r=10, t=40, b=30),
+                    showlegend=True
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("ChuKyTim"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ chu kỳ tim: {err}")
+
+        with c3:
+            st.markdown("##### ⏱ Thời gian các pha")
+            st.markdown(f"- **Nhĩ thu:** {phase_atrial:.2f}s")
+            st.markdown(f"- **Thất thu:** {phase_ventricular:.2f}s")
+            st.markdown(f"- **Tâm trương:** {phase_diastole:.2f}s")
+            st.markdown("##### 📊 Áp suất điển hình")
+            st.latex(r"P_{tâm\ thất\ trái} \approx 120/80\,mmHg")
+            st.latex(r"P_{tâm\ nhĩ} \approx 5\,mmHg")
+            st.markdown("##### 🔄 Chu kỳ")
+            st.caption(f"Với {bpm} bpm → 1 phút có **{bpm}** chu kỳ tim")
+
     else:
         st.info("💡 Đã tiếp nhận yêu cầu. Kéo thanh trượt hoặc nhập tham số để mô phỏng tương tác!")
 
