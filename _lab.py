@@ -116,19 +116,11 @@ def _auto_fit_view(dtype, coeffs):
 # ==============================================================================
 # MERMAID — Sơ đồ tư duy tương tác (giữ nguyên)
 # ==============================================================================
-def render_mermaid(code: str):
-    safe_code = code.strip().replace('[[', '[').replace(']]', ']')
+safe_code = code.strip().replace('[[', '[').replace(']]', ']')
     safe_code = re.sub(r'^```(?:mermaid)?', '', safe_code, flags=re.MULTILINE)
     safe_code = re.sub(r'```$', '', safe_code, flags=re.MULTILINE).strip()
     safe_code = re.sub(r'\[(?!\s*")([^\]\n]+)(?<!")\]', r'["\1"]', safe_code)
-
-    safe_code = re.sub(r'^\s*graph\s+TD', 'graph LR', safe_code, flags=re.IGNORECASE)
-    safe_code = re.sub(r'^\s*flowchart\s+TD', 'flowchart LR', safe_code, flags=re.IGNORECASE)
-    if not safe_code.startswith(("graph", "flowchart")):
-        safe_code = "graph LR\n" + safe_code
-
-    json_code_str = json.dumps(safe_code)
-
+    safe_code = re.sub(r'\\\\([a-zA-Z])', r'\\\1', safe_code)
     html_template = """
     <div style="background: radial-gradient(circle at center, #0f172a 0%, #020617 100%); border-radius: 14px; border: 1.5px solid #1e293b; padding: 12px; position: relative; font-family: system-ui, -apple-system, sans-serif;">
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; padding: 0 10px; flex-wrap: wrap; gap: 6px;">
