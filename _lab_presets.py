@@ -554,6 +554,27 @@ PRESET_LABS = {
                 "tags": ["dna", "xoan kep", "watson", "crick", "3d"],
                 "data": {"type": "dna_helix", "n_turns": 3, "radius": 1.0, "pitch": 2.0},
             },
+            {
+                "id": "sinh10_food_web",
+                "name": "🕸️ Lưới thức ăn",
+                "desc": "3 hệ sinh thái: đồng cỏ, rừng nhiệt đới, biển",
+                "tags": ["luoi thuc an", "he sinh thai", "chuoi thuc an"],
+                "data": {"type": "food_web"},
+            },
+            {
+                "id": "sinh10_photosynthesis",
+                "name": "☀️ Sơ đồ quang hợp",
+                "desc": "2 pha sáng + tối — kéo slider cường độ",
+                "tags": ["quang hop", "pha sang", "pha toi", "luc lap"],
+                "data": {"type": "photosynthesis", "light": 80, "co2": 50},
+            },
+            {
+                "id": "sinh10_heart_cycle",
+                "name": "❤️ Chu kỳ tim",
+                "desc": "Đồ thị áp suất theo 3 pha — kéo slider nhịp tim",
+                "tags": ["chu ky tim", "nhip tim", "ap suat", "tam that"],
+                "data": {"type": "heart_cycle", "bpm": 75},
+            },
         ],
         11: [
             {
@@ -593,6 +614,13 @@ PRESET_LABS = {
                         '   C --> C2["Tạo nhiều ATP nhất"]'
                     ),
                 },
+            },
+            {
+                "id": "sinh11_krebs_cycle",
+                "name": "🔄 Chu trình Krebs",
+                "desc": "8 bước — highlight từng bước",
+                "tags": ["krebs", "citric", "ho hap te bao", "chu trinh"],
+                "data": {"type": "krebs_cycle", "step": 1},
             },
         ],
         12: [
