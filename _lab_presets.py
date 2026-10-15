@@ -265,6 +265,27 @@ PRESET_LABS = {
         ],
         12: [
             {
+                "id": "ly12_em_spectrum",
+                "name": "📡 Thang sóng điện từ",
+                "desc": "Log tần số 10⁴ → 10²¹ Hz — kéo slider xem loại sóng",
+                "tags": ["song dien tu", "thang song", "tan so", "vo tuyen", "gamma"],
+                "data": {"type": "em_spectrum", "log_f": 14.0},
+            },
+            {
+                "id": "ly12_circuit_simple",
+                "name": "⚡ Mạch điện R₁, R₂",
+                "desc": "Nối tiếp / Song song — tính R_tđ, I, U, P",
+                "tags": ["mach dien", "noi tiep", "song song", "dien tro", "ohm"],
+                "data": {"type": "circuit_simple", "U": 12.0, "R1": 4.0, "R2": 6.0},
+            },
+            {
+                "id": "ly12_nuclear_decay",
+                "name": "☢️ Chuỗi phóng xạ",
+                "desc": "Định luật phân rã N(t) = N₀·e^(−λt) — kéo T₁/₂",
+                "tags": ["phong xa", "phan ra", "chu ky ban ra", "hat nhan"],
+                "data": {"type": "nuclear_decay", "N0": 1000, "T": 5.0, "t_max": 5},
+            },
+            {
                 "id": "ly12_mindmap_song_dt",
                 "name": "🗺️ Sơ đồ thang sóng điện từ",
                 "desc": "Mindmap phân loại sóng điện từ theo bước sóng",
