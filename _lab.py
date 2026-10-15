@@ -441,7 +441,6 @@
 
         theta0 = np.radians(theta0_deg)
         omega = np.sqrt(g / L)  # tần số góc (rad/s)
-        T = 2 * np.pi * omega / omega  # = 2π/ω
         T = 2 * np.pi / omega
 
         with c2:
@@ -878,8 +877,6 @@
                 x_bụng = []
                 for k_b in range(n_nodes):
                     x_bụng.append((k_b + 0.5) * L_string / n_nodes)
-                y_bụng = [A if (int((2*k_b+1)/2)) % 2 == 1 else -A for k_b in range(n_nodes)]
-                # Đơn giản: bụng sóng có y = ±A
                 y_bụng_simple = []
                 for xb in x_bụng:
                     val = A * np.sin(n_nodes * np.pi * xb / L_string)
@@ -2674,10 +2671,18 @@
                                      key="sinh_pn_p1", max_chars=2).strip()
             parent2 = st.text_input("Kiểu gen Bố mẹ 2:", value=data.get("p2", "Aa"),
                                      key="sinh_pn_p2", max_chars=2).strip()
-            if not parent1 or not parent2:
-                st.warning("Vui lòng nhập kiểu gen (VD: AA, Aa, aa)")
-                parent1 = parent1 or "Aa"
-                parent2 = parent2 or "Aa"
+
+            # ✅ FIX 5: Validate kiểu gen bằng regex
+            #   ^[AaBbCcDdEe]{2}$  → đúng 2 alen, cùng 1 gen (1 trong 5 cặp A-E)
+            _VALID_GENOTYPE = re.compile(r'^[AaBbCcDdEe]{2}$')
+            if not _VALID_GENOTYPE.match(parent1):
+                st.warning(f"⚠️ Kiểu gen 1 không hợp lệ (`{parent1 or '∅'}`) — "
+                           f"cần 2 alen cùng 1 gen (VD: AA, Aa, aa)")
+                parent1 = "Aa"
+            if not _VALID_GENOTYPE.match(parent2):
+                st.warning(f"⚠️ Kiểu gen 2 không hợp lệ (`{parent2 or '∅'}`) — "
+                           f"cần 2 alen cùng 1 gen (VD: AA, Aa, aa)")
+                parent2 = "Aa"
 
         # Tính giao tử và kết quả lai
         gametes1 = [parent1[0], parent1[1]] if len(parent1) == 2 else [parent1]
@@ -2810,20 +2815,21 @@
             highlight_step = st.slider("Highlight bước:", 1, 8,
                                        int(data.get("step", 1)), 1, key="sinh_krebs_step")
 
+        # ✅ FIX 4: `steps` được định nghĩa NGOÀI try để c3 luôn truy cập được
+        steps = [
+            ("Citrate", "Acetyl-CoA\n+ Oxaloacetate"),
+            ("Isocitrate", "Citrate\n- H₂O"),
+            ("α-Ketoglutarate", "Isocitrate\n- CO₂, NADH"),
+            ("Succinyl-CoA", "α-KG\n- CO₂, NADH"),
+            ("Succinate", "Succinyl-CoA\n- GTP"),
+            ("Fumarate", "Succinate\n- FADH₂"),
+            ("Malate", "Fumarate\n+ H₂O"),
+            ("Oxaloacetate", "Malate\n- NADH"),
+        ]
+
         with c2:
             try:
                 fig = go.Figure()
-                # 8 bước chu trình Krebs — đặt trên vòng tròn
-                steps = [
-                    ("Citrate", "Acetyl-CoA\n+ Oxaloacetate"),
-                    ("Isocitrate", "Citrate\n- H₂O"),
-                    ("α-Ketoglutarate", "Isocitrate\n- CO₂, NADH"),
-                    ("Succinyl-CoA", "α-KG\n- CO₂, NADH"),
-                    ("Succinate", "Succinyl-CoA\n- GTP"),
-                    ("Fumarate", "Succinate\n- FADH₂"),
-                    ("Malate", "Fumarate\n+ H₂O"),
-                    ("Oxaloacetate", "Malate\n- NADH"),
-                ]
                 n_steps = len(steps)
                 radius = 2.5
                 angles = np.linspace(0, 2 * np.pi, n_steps, endpoint=False)
@@ -2841,7 +2847,6 @@
                     mid_angle = (a1 + a2) / 2
                     if a1 > a2:  # wrap around
                         mid_angle = (a1 + a2 + 2 * np.pi) / 2
-                    # Mũi tên nhỏ
                     fig.add_annotation(
                         x=radius * np.cos(mid_angle),
                         y=radius * np.sin(mid_angle),
@@ -2903,6 +2908,7 @@
 
         with c3:
             st.markdown("##### 📝 Bước hiện tại")
+            # ✅ FIX 4: `steps` giờ luôn tồn tại, c3 không còn crash
             st.markdown(f"**Bước {highlight_step}:** {steps[highlight_step-1][0]}")
             st.caption(steps[highlight_step-1][1].replace("\n", " "))
             st.markdown("##### 🔋 Sản phẩm chu trình")
