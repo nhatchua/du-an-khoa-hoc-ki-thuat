@@ -781,6 +781,304 @@
             st.markdown("##### 📉 Gia tốc hướng tâm")
             st.latex(r"a_{ht} = \omega^2 R \approx " + f"{a_ht:.2f}\\,m/s^2")
 
+    # ========== VẬT LÝ: SÓNG CƠ LAN TRUYỀN (2D) ==========
+    elif dtype == "wave_2d":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            A = st.slider("Biên độ A:", 0.5, 3.0, float(data.get("A", 1.5)), 0.1, key="ly_w2d_A")
+            wavelength = st.slider("Bước sóng λ (m):", 1.0, 5.0, float(data.get("wavelength", 2.0)), 0.5, key="ly_w2d_lam")
+            k_wave = st.slider("Số sóng k:", 0.5, 4.0, float(data.get("k", 1.5)), 0.5, key="ly_w2d_k")
+            t_snapshot = st.slider("Thời điểm t (chu kỳ):", 0.0, 2.0, float(data.get("t", 0.0)), 0.1, key="ly_w2d_t")
+
+        with c2:
+            try:
+                x = np.linspace(0, 10, 400)
+                # Sóng lan truyền theo Ox: u(x,t) = A cos(2π(x/λ - t))
+                u = A * np.cos(2 * np.pi * (x / wavelength - t_snapshot))
+
+                fig = go.Figure()
+                # Trục Ox
+                fig.add_trace(go.Scatter(x=[0, 10], y=[0, 0], mode='lines',
+                    line=dict(color='#475569', width=1, dash='dash'),
+                    name='Trục Ox', hoverinfo='skip'))
+                # Sóng
+                fig.add_trace(go.Scatter(x=x, y=u, mode='lines',
+                    line=dict(color='#38bdf8', width=3), name='Sóng',
+                    hovertemplate="x = %{x:.2f}m<br>u = %{y:.2f}<extra></extra>"))
+                # Đỉnh sóng (đánh dấu 1 điểm)
+                i0 = len(x) // 2
+                fig.add_trace(go.Scatter(x=[x[i0]], y=[u[i0]], mode='markers+text',
+                    marker=dict(size=10, color='#fbbf24', line=dict(color='#f8fafc', width=1.5)),
+                    text=[f'u = {u[i0]:.2f}'], textposition='top center',
+                    textfont=dict(color='#fbbf24', size=11), showlegend=False, hoverinfo='skip'))
+
+                # Mũi tên chỉ hướng truyền sóng
+                fig.add_annotation(x=8, y=A + 0.5, ax=6, ay=A + 0.5,
+                    xref='x', yref='y', axref='x', ayref='y',
+                    text='→ v', showarrow=True, arrowhead=2, arrowsize=1.5,
+                    arrowwidth=2.5, arrowcolor='#34d399',
+                    font=dict(color='#34d399', size=14))
+
+                fig.update_layout(
+                    title=f"Sóng cơ lan truyền — λ = {wavelength} m, A = {A}",
+                    template="plotly_dark",
+                    xaxis=dict(title="x (m)", range=[0, 10], backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False),
+                    yaxis=dict(title="u (m)", range=[-A*1.5, A*1.5], backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False),
+                    height=320, margin=dict(l=10, r=10, t=40, b=30),
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("SongCo"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ sóng: {err}")
+
+        with c3:
+            st.markdown("##### 📐 Tần số")
+            st.latex(r"f = \dfrac{v}{\lambda}")
+            st.markdown("##### 🌊 Số sóng")
+            st.latex(r"k = \dfrac{2\pi}{\lambda}")
+            st.markdown("##### ⚡ Tốc độ")
+            st.latex(r"v = \lambda \cdot f")
+
+    # ========== VẬT LÝ: SÓNG DỪNG ==========
+    elif dtype == "standing_wave":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            L_string = st.slider("Chiều dài dây L (m):", 1.0, 5.0, float(data.get("L", 2.0)), 0.5, key="ly_sw_L")
+            n_nodes = st.slider("Số bó sóng:", 1, 5, int(data.get("n", 2)), 1, key="ly_sw_n")
+            A = st.slider("Biên độ bụng sóng:", 0.1, 1.0, float(data.get("A", 0.5)), 0.05, key="ly_sw_A")
+
+        with c2:
+            try:
+                x = np.linspace(0, L_string, 300)
+                # Sóng dừng trên dây 2 đầu cố định: u(x) = A sin(nπx/L)
+                u = A * np.sin(n_nodes * np.pi * x / L_string)
+
+                fig = go.Figure()
+                # Trục Ox
+                fig.add_trace(go.Scatter(x=[0, L_string], y=[0, 0], mode='lines',
+                    line=dict(color='#475569', width=1.5, dash='dash'),
+                    name='Trục Ox', hoverinfo='skip'))
+                # Sóng dừng
+                fig.add_trace(go.Scatter(x=x, y=u, mode='lines',
+                    line=dict(color='#38bdf8', width=3), name='Sóng dừng',
+                    hovertemplate="x = %{x:.2f}m<br>u = %{y:.2f}<extra></extra>"))
+                # Nút sóng (biên độ = 0)
+                x_nodes = np.linspace(0, L_string, n_nodes + 1)
+                fig.add_trace(go.Scatter(x=x_nodes, y=np.zeros_like(x_nodes),
+                    mode='markers+text', marker=dict(size=10, color='#ef4444',
+                    line=dict(color='#f8fafc', width=1.5)),
+                    text=['Nút'] * (n_nodes + 1), textposition='bottom center',
+                    textfont=dict(color='#ef4444', size=10),
+                    name='Nút sóng', hoverinfo='skip'))
+                # Bụng sóng (điểm có biên độ = A)
+                x_bụng = []
+                for k_b in range(n_nodes):
+                    x_bụng.append((k_b + 0.5) * L_string / n_nodes)
+                y_bụng = [A if (int((2*k_b+1)/2)) % 2 == 1 else -A for k_b in range(n_nodes)]
+                # Đơn giản: bụng sóng có y = ±A
+                y_bụng_simple = []
+                for xb in x_bụng:
+                    val = A * np.sin(n_nodes * np.pi * xb / L_string)
+                    y_bụng_simple.append(val)
+                fig.add_trace(go.Scatter(x=x_bụng, y=y_bụng_simple,
+                    mode='markers+text', marker=dict(size=10, color='#fbbf24',
+                    line=dict(color='#f8fafc', width=1.5)),
+                    text=['Bụng'] * len(x_bụng), textposition='top center',
+                    textfont=dict(color='#fbbf24', size=10),
+                    name='Bụng sóng', hoverinfo='skip'))
+
+                fig.update_layout(
+                    title=f"Sóng dừng — L = {L_string} m, {n_nodes} bó sóng",
+                    template="plotly_dark",
+                    xaxis=dict(title="x (m)", range=[-0.2, L_string + 0.2], backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False),
+                    yaxis=dict(title="u (m)", range=[-A*1.5, A*1.5], backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False),
+                    height=320, margin=dict(l=10, r=10, t=40, b=30),
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("SongDung"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ sóng dừng: {err}")
+
+        with c3:
+            st.markdown("##### 📐 Bước sóng")
+            st.latex(r"\lambda = \dfrac{2L}{n} = " + f"{2*L_string/n_nodes:.3f}\\,m")
+            st.markdown("##### 🔗 Điều kiện")
+            st.latex(r"L = n\cdot\dfrac{\lambda}{2}")
+            st.markdown("##### 📊 Số nút - bụng")
+            st.markdown(f"- **Nút:** {n_nodes + 1}")
+            st.markdown(f"- **Bụng:** {n_nodes}")
+
+    # ========== VẬT LÝ: GIAO THOA SÓNG ==========
+    elif dtype == "interference":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            lam = st.slider("Bước sóng λ (m):", 0.5, 3.0, float(data.get("lam", 1.0)), 0.1, key="ly_int_lam")
+            d = st.slider("Khoảng cách 2 nguồn d (m):", 0.5, 5.0, float(data.get("d", 2.0)), 0.1, key="ly_int_d")
+            A = st.slider("Biên độ mỗi nguồn:", 0.5, 3.0, float(data.get("A", 2.0)), 0.5, key="ly_int_A")
+
+        with c2:
+            try:
+                # Vùng khảo sát
+                x_grid = np.linspace(-4, 4, 200)
+                y_grid = np.linspace(-4, 4, 200)
+                X, Y = np.meshgrid(x_grid, y_grid)
+                # 2 nguồn đặt tại (-d/2, 0) và (d/2, 0)
+                S1 = (-d/2, 0)
+                S2 = (d/2, 0)
+                r1 = np.sqrt((X - S1[0])**2 + (Y - S1[1])**2)
+                r2 = np.sqrt((X - S2[0])**2 + (Y - S2[1])**2)
+                # Biên độ tổng hợp
+                k = 2 * np.pi / lam
+                U = A * np.cos(k * r1) + A * np.cos(k * r2)
+
+                fig = go.Figure()
+                # Heatmap giao thoa
+                fig.add_trace(go.Heatmap(x=x_grid, y=y_grid, z=U,
+                    colorscale='RdBu', zmid=0,
+                    colorbar=dict(title="u", len=0.7),
+                    hovertemplate="x = %{x:.2f}<br>y = %{y:.2f}<br>u = %{z:.2f}<extra></extra>"))
+                # 2 nguồn
+                fig.add_trace(go.Scatter(x=[S1[0]], y=[S1[1]], mode='markers+text',
+                    marker=dict(size=15, color='#fbbf24', symbol='circle',
+                    line=dict(color='#000', width=2)),
+                    text=['S₁'], textposition='bottom center',
+                    textfont=dict(color='#fbbf24', size=14), showlegend=False, hoverinfo='skip'))
+                fig.add_trace(go.Scatter(x=[S2[0]], y=[S2[1]], mode='markers+text',
+                    marker=dict(size=15, color='#fbbf24', symbol='circle',
+                    line=dict(color='#000', width=2)),
+                    text=['S₂'], textposition='bottom center',
+                    textfont=dict(color='#fbbf24', size=14), showlegend=False, hoverinfo='skip'))
+
+                fig.update_layout(
+                    title=f"Giao thoa sóng — λ = {lam} m, d = {d} m",
+                    template="plotly_dark",
+                    xaxis=dict(title="x (m)", backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False, scaleanchor='y', scaleratio=1),
+                    yaxis=dict(title="y (m)", backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False),
+                    height=520, margin=dict(l=10, r=10, t=40, b=30),
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("GiaoThoa"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ giao thoa: {err}")
+
+        with c3:
+            st.markdown("##### 📐 Hiệu đường đi")
+            st.latex(r"\Delta d = d_2 - d_1")
+            st.markdown("##### 🟢 Cực đại giao thoa")
+            st.latex(r"\Delta d = k\lambda")
+            st.markdown("##### 🔴 Cực tiểu giao thoa")
+            st.latex(r"\Delta d = \left(k + \dfrac{1}{2}\right)\lambda")
+            st.markdown("##### 📊 Số cực đại")
+            n_max = int(2 * d / lam) + 1
+            st.markdown(f"Trên đoạn S₁S₂: **{n_max}** cực đại")
+
+    # ========== VẬT LÝ: SƠ ĐỒ TIA SÁNG QUA THẤU KÍNH ==========
+    elif dtype == "lens_ray":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            f = st.slider("Tiêu cự f (cm):", 5.0, 30.0, float(data.get("f", 15.0)), 1.0, key="ly_lens_f")
+            d_o = st.slider("Khoảng cách vật d (cm):", 5.0, 60.0, float(data.get("d", 30.0)), 1.0, key="ly_lens_d")
+            h_o = st.slider("Chiều cao vật (cm):", 1.0, 10.0, float(data.get("h", 5.0)), 0.5, key="ly_lens_h")
+            lens_type = st.radio("Loại thấu kính:", ["Hội tụ", "Phân kỳ"], key="ly_lens_type")
+
+        # Tính toán ảnh
+        f_signed = f if lens_type == "Hội tụ" else -f
+        # 1/f = 1/d + 1/d' → d' = f*d / (d - f)
+        if abs(d_o - f_signed) < 1e-6:
+            d_prime = float('inf')
+        else:
+            d_prime = (f_signed * d_o) / (d_o - f_signed)
+        h_prime = -h_o * d_prime / d_o if d_prime != float('inf') else 0
+
+        with c2:
+            try:
+                fig = go.Figure()
+                # Trục chính (trục quang học)
+                fig.add_trace(go.Scatter(x=[-50, 70], y=[0, 0], mode='lines',
+                    line=dict(color='#475569', width=1.5, dash='dash'),
+                    name='Trục chính', hoverinfo='skip'))
+                # Ký hiệu thấu kính (đường thẳng đứng qua O)
+                fig.add_trace(go.Scatter(x=[0, 0], y=[-15, 15], mode='lines',
+                    line=dict(color='#38bdf8', width=3), name='Thấu kính', hoverinfo='skip'))
+                # Mũi tên 2 đầu cho thấu kính hội tụ
+                fig.add_annotation(x=0, y=15, ax=0, ay=-15, xref='x', yref='y',
+                    axref='x', ayref='y', text='', showarrow=True,
+                    arrowhead=2, arrowsize=1.2, arrowwidth=0)
+                # Vật (mũi tên từ trục lên)
+                fig.add_trace(go.Scatter(x=[-d_o, -d_o], y=[0, h_o], mode='lines',
+                    line=dict(color='#34d399', width=4), name='Vật',
+                    hovertemplate="Vật tại d = %{x:.1f} cm<extra></extra>"))
+                fig.add_annotation(x=-d_o, y=h_o, ax=-d_o, ay=0, xref='x', yref='y',
+                    axref='x', ayref='y', text='AB', showarrow=True,
+                    arrowhead=2, arrowsize=1.5, arrowwidth=3, arrowcolor='#34d399',
+                    font=dict(color='#34d399', size=13))
+                # Tiêu điểm F và F'
+                fig.add_trace(go.Scatter(x=[-f_signed, f_signed], y=[0, 0],
+                    mode='markers+text',
+                    marker=dict(size=8, color='#fbbf24', symbol='x'),
+                    text=["F", "F'"], textposition='bottom center',
+                    textfont=dict(color='#fbbf24', size=12),
+                    name='Tiêu điểm', showlegend=False, hoverinfo='skip'))
+                # Ảnh (nếu tồn tại và hữu hạn)
+                if d_prime != float('inf') and abs(d_prime) < 100:
+                    x_img = d_prime
+                    fig.add_trace(go.Scatter(x=[x_img, x_img], y=[0, h_prime], mode='lines',
+                        line=dict(color='#ef4444', width=4), name="Ảnh",
+                        hovertemplate="Ảnh tại d' = %{x:.1f} cm<extra></extra>"))
+                    fig.add_annotation(x=x_img, y=h_prime, ax=x_img, ay=0, xref='x', yref='y',
+                        axref='x', ayref='y', text="A'B'", showarrow=True,
+                        arrowhead=2, arrowsize=1.5, arrowwidth=3, arrowcolor='#ef4444',
+                        font=dict(color='#ef4444', size=13))
+                    # Tia sáng 1: từ B song song trục chính → qua F'
+                    fig.add_trace(go.Scatter(x=[-d_o, 0], y=[h_o, h_o], mode='lines',
+                        line=dict(color='#fbbf24', width=1.5, dash='dot'),
+                        name='Tia 1', showlegend=False, hoverinfo='skip'))
+                    # Tia sáng 2: từ B qua O
+                    fig.add_trace(go.Scatter(x=[-d_o, x_img], y=[h_o, h_prime], mode='lines',
+                        line=dict(color='#f472b6', width=1.5, dash='dot'),
+                        name='Tia 2', showlegend=False, hoverinfo='skip'))
+
+                fig.update_layout(
+                    title=f"Thấu kính {lens_type} — f = {f} cm, d = {d_o} cm",
+                    template="plotly_dark",
+                    xaxis=dict(title="Trục chính (cm)", range=[-50, 70],
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False),
+                    yaxis=dict(title="y (cm)", range=[-15, 15],
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, scaleanchor='x', scaleratio=1),
+                    height=380, margin=dict(l=10, r=10, t=40, b=30),
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("ThauKinh"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ thấu kính: {err}")
+
+        with c3:
+            st.markdown("##### 📝 Công thức thấu kính")
+            st.latex(r"\dfrac{1}{f} = \dfrac{1}{d} + \dfrac{1}{d'}")
+            st.markdown("##### 📏 Kết quả")
+            if d_prime == float('inf'):
+                st.latex(r"d' = \infty")
+                st.caption("Ảnh ở vô cực")
+            else:
+                st.latex(r"d' = \dfrac{df}{d-f} = " + f"{d_prime:.2f}\\,cm")
+                st.latex(r"h' = -\dfrac{d'}{d}\cdot h = " + f"{h_prime:.2f}\\,cm")
+            st.markdown("##### 🔍 Độ phóng đại")
+            if d_prime != float('inf'):
+                k_mag = -d_prime / d_o
+                st.latex(r"k = -\dfrac{d'}{d} = " + f"{k_mag:.2f}")
+
     else:
         st.info("💡 Đã tiếp nhận yêu cầu. Kéo thanh trượt hoặc nhập tham số để mô phỏng tương tác!")
 
