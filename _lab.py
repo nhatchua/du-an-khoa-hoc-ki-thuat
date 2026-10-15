@@ -1753,6 +1753,483 @@
             st.caption("Khi T tăng, k tăng → phản ứng nhanh hơn (quy tắc Van't Hoff)")
             st.latex(r"k_T = k_{T_0} \cdot \gamma^{\Delta T/10}")
 
+    # ========== HÓA HỌC: CÂN BẰNG HÓA HỌC ĐỘNG ==========
+    elif dtype == "equilibrium":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            Kc = st.slider("Hằng số cân bằng Kc:", 0.1, 10.0,
+                           float(data.get("Kc", 2.0)), 0.1, key="hoa_eq_Kc")
+            A0 = st.slider("Nồng độ ban đầu [N₂]₀:", 0.5, 3.0,
+                           float(data.get("A0", 1.0)), 0.1, key="hoa_eq_A0")
+            B0 = st.slider("Nồng độ ban đầu [H₂]₀:", 0.5, 3.0,
+                           float(data.get("B0", 3.0)), 0.1, key="hoa_eq_B0")
+            t_max = st.slider("Thời gian khảo sát:", 5, 50,
+                              int(data.get("t_max", 20)), 5, key="hoa_eq_tmax")
+
+        with c2:
+            try:
+                # Phản ứng mẫu: N₂ + 3H₂ ⇌ 2NH₃
+                t = np.linspace(0, t_max, 300)
+                # Mô phỏng tiến về cân bằng bằng hàm mũ
+                # Giả sử phản ứng thuận: N₂ + 3H₂ → 2NH₃
+                # Tìm x tại cân bằng: Kc = (2x)^2 / ((A0-x)*(B0-3x)^3)
+                # Đơn giản hóa: dùng x = A0 * (1 - exp(-k*t))
+                # Với Kc ảnh hưởng đến x_max
+                x_max_frac = min(0.9, Kc / (Kc + 1))  # heuristic
+                x_max = A0 * x_max_frac * 0.7
+                k_speed = 0.15
+                x_t = x_max * (1 - np.exp(-k_speed * t))
+
+                N2_t = A0 - x_t
+                H2_t = B0 - 3 * x_t
+                NH3_t = 2 * x_t
+
+                # Tránh âm
+                H2_t = np.clip(H2_t, 0, None)
+
+                fig = go.Figure()
+                fig.add_trace(go.Scatter(x=t, y=N2_t, mode='lines',
+                    line=dict(color='#38bdf8', width=3), name='[N₂]',
+                    hovertemplate="t = %{x:.1f}<br>[N₂] = %{y:.3f} M<extra></extra>"))
+                fig.add_trace(go.Scatter(x=t, y=H2_t, mode='lines',
+                    line=dict(color='#34d399', width=3), name='[H₂]',
+                    hovertemplate="t = %{x:.1f}<br>[H₂] = %{y:.3f} M<extra></extra>"))
+                fig.add_trace(go.Scatter(x=t, y=NH3_t, mode='lines',
+                    line=dict(color='#fbbf24', width=3), name='[NH₃]',
+                    hovertemplate="t = %{x:.1f}<br>[NH₃] = %{y:.3f} M<extra></extra>"))
+
+                fig.update_layout(
+                    title="Cân bằng hóa học động: N₂ + 3H₂ ⇌ 2NH₃",
+                    template="plotly_dark",
+                    xaxis=dict(title="Thời gian t", backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False),
+                    yaxis=dict(title="Nồng độ (M)", backgroundcolor="#0f172a",
+                               gridcolor="#1e293b", zeroline=False),
+                    height=420, margin=dict(l=10, r=10, t=40, b=30),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("CanBangHoaHoc"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ cân bằng: {err}")
+
+        with c3:
+            st.markdown("##### 📐 Hằng số cân bằng")
+            st.latex(r"K_c = \dfrac{[NH_3]^2}{[N_2]\cdot[H_2]^3}")
+            st.markdown("##### 📊 Tại cân bằng")
+            st.latex(r"K_c = " + f"{Kc:.2f}")
+            st.markdown("##### 🔄 Nguyên lý Le Chatelier")
+            st.caption("Khi thay đổi nồng độ, nhiệt độ, áp suất → cân bằng dịch chuyển để chống lại sự thay đổi.")
+
+    # ========== HÓA HỌC: SƠ ĐỒ ĐIỆN PHÂN ==========
+    elif dtype == "electrolysis":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Thông số**")
+            U = st.slider("Hiệu điện thế U (V):", 1.0, 12.0,
+                          float(data.get("U", 5.0)), 0.5, key="hoa_el_U")
+            solution = st.selectbox(
+                "Dung dịch điện phân:",
+                ["CuSO₄ (điện cực Cu)", "NaCl (điện cực trơ)", "H₂O (điện cực trơ)"],
+                key="hoa_el_sol"
+            )
+
+        with c2:
+            try:
+                fig = go.Figure()
+                # Bình điện phân (hình chữ nhật)
+                fig.add_shape(type="rect", x0=1, x1=9, y0=0, y1=6,
+                              line=dict(color='#38bdf8', width=3),
+                              fillcolor='rgba(56,189,248,0.1)')
+
+                # Dung dịch (màu xanh nhạt)
+                fig.add_shape(type="rect", x0=1.1, x1=8.9, y0=0.1, y1=4,
+                              fillcolor='rgba(56,189,248,0.25)',
+                              line=dict(color='rgba(0,0,0,0)'))
+
+                # 2 điện cực (nhúng xuống dung dịch)
+                # Cathode (-) bên trái
+                fig.add_shape(type="rect", x0=2.5, x1=3.0, y0=2, y1=6.5,
+                              line=dict(color='#ef4444', width=2),
+                              fillcolor='#ef4444')
+                fig.add_annotation(x=2.75, y=6.8, text="Cực âm (−)",
+                                   showarrow=False,
+                                   font=dict(color='#ef4444', size=12))
+                # Anode (+) bên phải
+                fig.add_shape(type="rect", x0=7.0, x1=7.5, y0=2, y1=6.5,
+                              line=dict(color='#3b82f6', width=2),
+                              fillcolor='#3b82f6')
+                fig.add_annotation(x=7.25, y=6.8, text="Cực dương (+)",
+                                   showarrow=False,
+                                   font=dict(color='#3b82f6', size=12))
+
+                # Nguồn điện (pin) trên đỉnh
+                fig.add_shape(type="rect", x0=4, x1=6, y0=7, y1=8,
+                              line=dict(color='#fbbf24', width=2),
+                              fillcolor='rgba(251,191,36,0.3)')
+                fig.add_annotation(x=5, y=7.5, text=f"{U}V",
+                                   showarrow=False,
+                                   font=dict(color='#fbbf24', size=14, family='system-ui'))
+                # Dây dẫn
+                fig.add_shape(type="line", x0=2.75, x1=4, y0=6.5, y1=7.5,
+                              line=dict(color='#fbbf24', width=2))
+                fig.add_shape(type="line", x0=6, x1=7.25, y0=7.5, y1=6.5,
+                              line=dict(color='#fbbf24', width=2))
+
+                # Nhãn "Dung dịch điện phân"
+                fig.add_annotation(x=5, y=1.5, text=f"<b>{solution}</b>",
+                                   showarrow=False,
+                                   font=dict(color='#f8fafc', size=13))
+
+                fig.update_layout(
+                    title=f"Bình điện phân — U = {U}V",
+                    template="plotly_dark",
+                    xaxis=dict(range=[0, 10], showticklabels=False,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b", zeroline=False),
+                    yaxis=dict(range=[-0.5, 9], showticklabels=False,
+                               backgroundcolor="#0f172a", gridcolor="#1e293b",
+                               zeroline=False, scaleanchor='x', scaleratio=1),
+                    height=500, margin=dict(l=10, r=10, t=40, b=10),
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("DienPhan"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ điện phân: {err}")
+
+        with c3:
+            st.markdown("##### 🧪 Phương trình")
+            if "CuSO₄" in solution:
+                st.markdown("**Cathode (−):**")
+                st.latex(r"Cu^{2+} + 2e^- \rightarrow Cu")
+                st.markdown("**Anode (+):**")
+                st.latex(r"Cu \rightarrow Cu^{2+} + 2e^-")
+                st.caption("→ Nồng độ CuSO₄ không đổi (anode tan)")
+            elif "NaCl" in solution:
+                st.markdown("**Cathode (−):**")
+                st.latex(r"2H_2O + 2e^- \rightarrow H_2 + 2OH^-")
+                st.markdown("**Anode (+):**")
+                st.latex(r"2Cl^- \rightarrow Cl_2 + 2e^-")
+                st.caption("→ Thu được H₂ (cathode) và Cl₂ (anode)")
+            else:
+                st.markdown("**Cathode (−):**")
+                st.latex(r"2H_2O + 2e^- \rightarrow H_2 + 2OH^-")
+                st.markdown("**Anode (+):**")
+                st.latex(r"2H_2O \rightarrow O_2 + 4H^+ + 4e^-")
+                st.caption("→ Điện phân nước: 2H₂O → 2H₂ + O₂")
+
+    # ========== HÓA HỌC: MÔ HÌNH PHÂN TỬ 3D ==========
+    elif dtype == "molecule_3d":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Chọn phân tử**")
+            molecule = st.selectbox(
+                "Phân tử:",
+                ["H₂O", "CH₄", "NH₃", "CO₂", "C₂H₄", "C₂H₂", "C₆H₆", "CH₃OH"],
+                key="hoa_mol_choice"
+            )
+            show_bonds = st.checkbox("Hiển thị liên kết", value=True, key="hoa_mol_bonds")
+            show_labels = st.checkbox("Hiển thị nhãn nguyên tử", value=True, key="hoa_mol_labels")
+
+        # Dữ liệu: (x, y, z, element, size)
+        ATOM_COLORS = {"H": "#f8fafc", "C": "#334155", "N": "#3b82f6",
+                       "O": "#ef4444", "S": "#fbbf24"}
+        ATOM_SIZES = {"H": 8, "C": 14, "N": 13, "O": 13, "S": 16}
+
+        molecules_data = {
+            "H₂O": {
+                "atoms": [(0, 0, 0, "O"), (0.757, 0.586, 0, "H"), (-0.757, 0.586, 0, "H")],
+                "bonds": [(0, 1), (0, 2)],
+            },
+            "CH₄": {
+                "atoms": [(0, 0, 0, "C"),
+                          (0.63, 0.63, 0.63, "H"), (-0.63, -0.63, 0.63, "H"),
+                          (-0.63, 0.63, -0.63, "H"), (0.63, -0.63, -0.63, "H")],
+                "bonds": [(0, 1), (0, 2), (0, 3), (0, 4)],
+            },
+            "NH₃": {
+                "atoms": [(0, 0, 0, "N"),
+                          (0, 0.94, 0, "H"),
+                          (0.81, -0.47, 0, "H"), (-0.81, -0.47, 0, "H")],
+                "bonds": [(0, 1), (0, 2), (0, 3)],
+            },
+            "CO₂": {
+                "atoms": [(0, 0, 0, "C"), (1.16, 0, 0, "O"), (-1.16, 0, 0, "O")],
+                "bonds": [(0, 1), (0, 2)],
+            },
+            "C₂H₄": {
+                "atoms": [(0.67, 0, 0, "C"), (-0.67, 0, 0, "C"),
+                          (1.23, 0.93, 0, "H"), (1.23, -0.93, 0, "H"),
+                          (-1.23, 0.93, 0, "H"), (-1.23, -0.93, 0, "H")],
+                "bonds": [(0, 1), (0, 2), (0, 3), (1, 4), (1, 5)],
+            },
+            "C₂H₂": {
+                "atoms": [(0.6, 0, 0, "C"), (-0.6, 0, 0, "C"),
+                          (1.66, 0, 0, "H"), (-1.66, 0, 0, "H")],
+                "bonds": [(0, 1), (0, 2), (1, 3)],
+            },
+            "C₆H₆": {
+                "atoms": [(1.4, 0, 0, "C"), (0.7, 1.21, 0, "C"), (-0.7, 1.21, 0, "C"),
+                          (-1.4, 0, 0, "C"), (-0.7, -1.21, 0, "C"), (0.7, -1.21, 0, "C")] +
+                         [(2.48, 0, 0, "H"), (1.24, 2.15, 0, "H"), (-1.24, 2.15, 0, "H"),
+                          (-2.48, 0, 0, "H"), (-1.24, -2.15, 0, "H"), (1.24, -2.15, 0, "H")],
+                "bonds": [(0, 1), (1, 2), (2, 3), (3, 4), (4, 5), (5, 0),
+                          (0, 6), (1, 7), (2, 8), (3, 9), (4, 10), (5, 11)],
+            },
+            "CH₃OH": {
+                "atoms": [(0, 0, 0, "C"), (1.43, 0, 0, "O"),
+                          (1.77, 0.89, 0, "H"),
+                          (-0.36, 1.02, 0, "H"), (-0.36, -0.51, 0.89, "H"),
+                          (-0.36, -0.51, -0.89, "H")],
+                "bonds": [(0, 1), (1, 2), (0, 3), (0, 4), (0, 5)],
+            },
+        }
+
+        mdata = molecules_data.get(molecule, {"atoms": [], "bonds": []})
+
+        with c2:
+            try:
+                fig = go.Figure()
+
+                # Vẽ liên kết (đường nối)
+                if show_bonds:
+                    for i, j in mdata["bonds"]:
+                        a1 = mdata["atoms"][i]
+                        a2 = mdata["atoms"][j]
+                        fig.add_trace(go.Scatter3d(
+                            x=[a1[0], a2[0]], y=[a1[1], a2[1]], z=[a1[2], a2[2]],
+                            mode='lines',
+                            line=dict(color='#94a3b8', width=6),
+                            showlegend=False, hoverinfo='skip'
+                        ))
+
+                # Vẽ nguyên tử theo nhóm element
+                grouped = {}
+                for x, y, z, elem in mdata["atoms"]:
+                    grouped.setdefault(elem, {"x": [], "y": [], "z": [], "text": []})
+                    grouped[elem]["x"].append(x)
+                    grouped[elem]["y"].append(y)
+                    grouped[elem]["z"].append(z)
+                    grouped[elem]["text"].append(elem if show_labels else "")
+
+                for elem, coords in grouped.items():
+                    fig.add_trace(go.Scatter3d(
+                        x=coords["x"], y=coords["y"], z=coords["z"],
+                        mode='markers+text' if show_labels else 'markers',
+                        marker=dict(
+                            size=ATOM_SIZES.get(elem, 12),
+                            color=ATOM_COLORS.get(elem, "#94a3b8"),
+                            line=dict(color='#0f172a', width=1.5)
+                        ),
+                        text=coords["text"],
+                        textposition="middle center",
+                        textfont=dict(color='#0f172a' if elem != "C" else '#f8fafc', size=11),
+                        name=elem,
+                        hovertemplate=f"{elem}<br>x=%{{x:.2f}}<br>y=%{{y:.2f}}<br>z=%{{z:.2f}}<extra></extra>"
+                    ))
+
+                fig.update_layout(
+                    title=f"Mô hình phân tử 3D — {molecule}",
+                    template="plotly_dark",
+                    scene=dict(
+                        xaxis=dict(showbackground=True, backgroundcolor="#0f172a",
+                                   showgrid=True, gridcolor="#1e293b",
+                                   showticklabels=False, zeroline=False),
+                        yaxis=dict(showbackground=True, backgroundcolor="#0f172a",
+                                   showgrid=True, gridcolor="#1e293b",
+                                   showticklabels=False, zeroline=False),
+                        zaxis=dict(showbackground=True, backgroundcolor="#0f172a",
+                                   showgrid=True, gridcolor="#1e293b",
+                                   showticklabels=False, zeroline=False),
+                        aspectmode='cube',
+                        camera=dict(eye=dict(x=1.5, y=1.5, z=1.2))
+                    ),
+                    height=500, margin=dict(l=10, r=10, t=40, b=10),
+                    showlegend=False
+                )
+                st.plotly_chart(fig, use_container_width=True, config=_plotly_config("PhanTu3D"))
+            except Exception as err:
+                st.error(f"Lỗi vẽ phân tử: {err}")
+
+        with c3:
+            st.markdown("##### 🧪 Phân tử")
+            st.markdown(f"### {molecule}")
+            st.markdown("##### 📐 Số nguyên tử")
+            atom_count = {}
+            for x, y, z, elem in mdata["atoms"]:
+                atom_count[elem] = atom_count.get(elem, 0) + 1
+            for elem, count in atom_count.items():
+                st.markdown(f"- **{elem}**: {count}")
+            st.markdown("##### 🎨 Chú thích màu")
+            for elem in ["H", "C", "N", "O"]:
+                if elem in atom_count:
+                    st.markdown(
+                        f"<div style='background:{ATOM_COLORS[elem]};width:20px;"
+                        f"height:20px;border-radius:50%;display:inline-block;"
+                        f"vertical-align:middle;margin-right:6px;"
+                        f"border:1px solid #475569;'></div> **{elem}**",
+                        unsafe_allow_html=True
+                    )
+
+    # ========== HÓA HỌC: CÔNG THỨC CẤU TẠO HỮU CƠ ==========
+    elif dtype == "organic_structure":
+        c1, c2, c3 = st.columns([0.8, 3.2, 1])
+        with c1:
+            st.markdown("**⚙️ Chọn hợp chất**")
+            compound = st.selectbox(
+                "Hợp chất:",
+                ["Methane (CH₄)", "Ethylene (C₂H₄)", "Acetylene (C₂H₂)",
+                 "Ethanol (C₂H₅OH)", "Acetic acid (CH₃COOH)",
+                 "Benzene (C₆H₆)", "Glucose (C₆H₁₂O₆)"],
+                key="hoa_org_choice"
+            )
+
+        # Render cấu trúc bằng HTML đơn giản
+        structures = {
+            "Methane (CH₄)": {
+                "formula": "CH₄",
+                "html": """
+                <div style="font-family: 'Courier New', monospace; font-size: 18px;
+                            color: #f8fafc; line-height: 2;">
+                    &nbsp;&nbsp;&nbsp;H<br>
+                    &nbsp;&nbsp;&nbsp;|<br>
+                    H—C—H<br>
+                    &nbsp;&nbsp;&nbsp;|<br>
+                    &nbsp;&nbsp;&nbsp;H
+                </div>
+                """,
+                "info": "Liên kết đơn C–H, cấu trúc tứ diện đều. Góc liên kết 109.5°.",
+            },
+            "Ethylene (C₂H₄)": {
+                "formula": "C₂H₄",
+                "html": """
+                <div style="font-family: 'Courier New', monospace; font-size: 18px;
+                            color: #f8fafc; line-height: 2;">
+                    H&nbsp;&nbsp;&nbsp;&nbsp;H<br>
+                    &nbsp;\\&nbsp;&nbsp;/<br>
+                    &nbsp;&nbsp;C=C<br>
+                    &nbsp;/&nbsp;&nbsp;\\<br>
+                    H&nbsp;&nbsp;&nbsp;&nbsp;H
+                </div>
+                """,
+                "info": "Liên kết đôi C=C, cấu trúc phẳng. Góc liên kết ~120°.",
+            },
+            "Acetylene (C₂H₂)": {
+                "formula": "C₂H₂",
+                "html": """
+                <div style="font-family: 'Courier New', monospace; font-size: 18px;
+                            color: #f8fafc; line-height: 2;">
+                    H—C≡C—H
+                </div>
+                """,
+                "info": "Liên kết ba C≡C, cấu trúc thẳng. Góc liên kết 180°.",
+            },
+            "Ethanol (C₂H₅OH)": {
+                "formula": "C₂H₅OH",
+                "html": """
+                <div style="font-family: 'Courier New', monospace; font-size: 16px;
+                            color: #f8fafc; line-height: 2;">
+                    &nbsp;&nbsp;&nbsp;H&nbsp;&nbsp;&nbsp;H<br>
+                    &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;|<br>
+                    H—C—C—O—H<br>
+                    &nbsp;&nbsp;&nbsp;|&nbsp;&nbsp;&nbsp;|<br>
+                    &nbsp;&nbsp;&nbsp;H&nbsp;&nbsp;&nbsp;H
+                </div>
+                """,
+                "info": "Nhóm chức –OH (alcohol). Có liên kết hydrogen giữa các phân tử.",
+            },
+            "Acetic acid (CH₃COOH)": {
+                "formula": "CH₃COOH",
+                "html": """
+                <div style="font-family: 'Courier New', monospace; font-size: 16px;
+                            color: #f8fafc; line-height: 2;">
+                    &nbsp;&nbsp;&nbsp;&nbsp;O<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;||<br>
+                    H—C—C—O—H<br>
+                    &nbsp;&nbsp;&nbsp;|<br>
+                    &nbsp;&nbsp;&nbsp;H
+                </div>
+                """,
+                "info": "Nhóm chức –COOH (carboxylic acid). Tính axit yếu.",
+            },
+            "Benzene (C₆H₆)": {
+                "formula": "C₆H₆",
+                "html": """
+                <div style="font-family: 'Courier New', monospace; font-size: 16px;
+                            color: #f8fafc; line-height: 2;">
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;H<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|<br>
+                    &nbsp;&nbsp;C&nbsp;—&nbsp;C<br>
+                    &nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;\\<br>
+                    C&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;C<br>
+                    &nbsp;\\&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/<br>
+                    &nbsp;&nbsp;C&nbsp;—&nbsp;C<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;H<br>
+                    <div style="color: #fbbf24; font-size: 14px; margin-top: 8px;">
+                    (Vòng benzen — 3 liên kết đôi xen kẽ)
+                    </div>
+                </div>
+                """,
+                "info": "Vòng thơm 6 cạnh, 3 liên kết đôi xen kẽ liên kết đơn. Bền vững.",
+            },
+            "Glucose (C₆H₁₂O₆)": {
+                "formula": "C₆H₁₂O₆",
+                "html": """
+                <div style="font-family: 'Courier New', monospace; font-size: 14px;
+                            color: #f8fafc; line-height: 1.8;">
+                    &nbsp;&nbsp;CH₂OH<br>
+                    &nbsp;&nbsp;&nbsp;|<br>
+                    &nbsp;&nbsp;C——O<br>
+                    &nbsp;/&nbsp;&nbsp;&nbsp;\\<br>
+                    C&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;C—OH<br>
+                    &nbsp;\\&nbsp;&nbsp;&nbsp;/<br>
+                    &nbsp;&nbsp;C——C—OH<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;|<br>
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;OH<br>
+                    <div style="color: #fbbf24; font-size: 13px; margin-top: 6px;">
+                    (Dạng vòng pyranose)
+                    </div>
+                </div>
+                """,
+                "info": "Monosaccharide, dạng vòng 6 cạnh. Có nhóm –OH hemiacetal.",
+            },
+        }
+
+        data_org = structures.get(compound, {"formula": "", "html": "", "info": ""})
+
+        with c2:
+            st.markdown(
+                f'<div style="background: linear-gradient(135deg, #0f172a, #1e293b); '
+                f'padding: 40px; border-radius: 12px; border: 2px solid #38bdf8; '
+                f'text-align: center; min-height: 380px; '
+                f'display: flex; align-items: center; justify-content: center; '
+                f'box-shadow: 0 0 20px rgba(56,189,248,0.15);">'
+                f'{data_org["html"]}'
+                f'</div>',
+                unsafe_allow_html=True
+            )
+
+        with c3:
+            st.markdown("##### 🧪 Hợp chất")
+            st.markdown(f"### {data_org['formula']}")
+            st.markdown("##### 📝 Đặc điểm")
+            st.info(data_org["info"])
+            st.markdown("##### 🎓 Loại hợp chất")
+            if "ane" in compound.lower() or "methane" in compound.lower():
+                st.markdown("**Alkane** (hydrocarbon no)")
+            elif "ylene" in compound.lower():
+                st.markdown("**Alkene** (1 liên kết đôi)")
+            elif "cetylene" in compound.lower():
+                st.markdown("**Alkyne** (1 liên kết ba)")
+            elif "ol" in compound.lower():
+                st.markdown("**Alcohol** (nhóm –OH)")
+            elif "acid" in compound.lower():
+                st.markdown("**Carboxylic acid** (–COOH)")
+            elif "benzene" in compound.lower():
+                st.markdown("**Arene** (vòng thơm)")
+            elif "glucose" in compound.lower():
+                st.markdown("**Carbohydrate** (monosaccharide)")
+
     else:
         st.info("💡 Đã tiếp nhận yêu cầu. Kéo thanh trượt hoặc nhập tham số để mô phỏng tương tác!")
 
