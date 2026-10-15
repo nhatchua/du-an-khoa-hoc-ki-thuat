@@ -1,13 +1,5 @@
 """
 _lab_presets.py — Thư viện mô phỏng có sẵn cho Phòng Lab.
-Tách riêng khỏi _lab.py để giữ file _lab.py gọn gàng.
-
-Cấu trúc:
-    PRESET_LABS = {
-        "<Môn>": {
-            <lớp>: [ {id, name, desc, tags, data}, ... ],
-        },
-    }
 """
 
 PRESET_LABS = {
@@ -118,11 +110,10 @@ PRESET_LABS = {
     },
 
     # ==========================================================================
-    # VẬT LÝ (đang dùng mermaid — sẽ bổ sung render types ở Phase B)
+    # VẬT LÝ
     # ==========================================================================
     "Vật lý": {
         10: [
-            {
             {
                 "id": "ly10_projectile",
                 "name": "🏹 Chuyển động ném xiên",
@@ -137,6 +128,7 @@ PRESET_LABS = {
                 "tags": ["chuyen dong tron", "tron deu", "huong tam"],
                 "data": {"type": "circular_motion", "R": 2.0, "omega": 2.0, "theta": 45.0},
             },
+            {
                 "id": "ly10_mindmap_newton",
                 "name": "🗺️ Sơ đồ 3 định luật Newton",
                 "desc": "Mindmap tóm tắt 3 định luật Newton",
@@ -180,7 +172,6 @@ PRESET_LABS = {
         ],
         11: [
             {
-            {
                 "id": "ly11_pendulum",
                 "name": "🎯 Con lắc đơn",
                 "desc": "Dây + quả cầu + cung dao động — L, θ₀, g tùy chỉnh",
@@ -196,7 +187,12 @@ PRESET_LABS = {
             },
             {
                 "id": "ly11_shm_graph",
-                            {
+                "name": "📈 Đồ thị x(t), v(t), a(t)",
+                "desc": "3 đường cong dao động điều hòa trên cùng đồ thị",
+                "tags": ["do thi", "dao dong dieu hoa", "van toc", "gia toc"],
+                "data": {"type": "shm_graph", "A": 2.0, "omega": 2.0, "phi": 0.0},
+            },
+            {
                 "id": "ly11_wave_2d",
                 "name": "🌊 Sóng cơ lan truyền",
                 "desc": "Sóng hình sin theo Ox — kéo slider thời điểm",
@@ -224,11 +220,7 @@ PRESET_LABS = {
                 "tags": ["thau kinh", "quang hoc", "tia sang", "anh"],
                 "data": {"type": "lens_ray", "f": 15.0, "d": 30.0, "h": 5.0},
             },
-                "name": "📈 Đồ thị x(t), v(t), a(t)",
-                "desc": "3 đường cong dao động điều hòa trên cùng đồ thị",
-                "tags": ["do thi", "dao dong dieu hoa", "van toc", "gia toc"],
-                "data": {"type": "shm_graph", "A": 2.0, "omega": 2.0, "phi": 0.0},
-            },
+            {
                 "id": "ly11_mindmap_dao_dong",
                 "name": "🗺️ Sơ đồ các loại dao động",
                 "desc": "Mindmap phân loại dao động: điều hòa, tắt dần, cưỡng bức, cộng hưởng",
