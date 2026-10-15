@@ -712,17 +712,19 @@ def _render_ai_lab_input(subject, grade_num):
 
 
 def _smart_fallback(lab_command):
-    cmd_lower = lab_command.lower()
-    cmd_norm = re.sub(r'x\s*\*\*\s*2|x\s*\^\s*2|x2\b', 'x²', cmd_lower)
+    # ✅ FIX 6: Xóa dấu NGAY ĐẦU để so khớp không phân biệt dấu
+    cmd_norm = _remove_diacritics(lab_command.lower())
+    cmd_norm = re.sub(r'x\s*\*\*\s*2|x\s*\^\s*2|x2\b', 'x²', cmd_norm)
     cmd_norm = re.sub(r'x\s*\*\*\s*3|x\s*\^\s*3|x3\b', 'x³', cmd_norm)
-    if 'x³' in cmd_norm or 'bậc 3' in cmd_norm or 'bậc ba' in cmd_norm:
+
+    # ✅ FIX 6: mọi so khớp dùng chuỗi KHÔNG DẤU
+    if 'x³' in cmd_norm or 'bac 3' in cmd_norm or 'bac ba' in cmd_norm:
         return {"type": "func_3", "a": 1, "b": -3, "c": 0, "d": 2}
-    elif 'x²' in cmd_norm or 'parabol' in cmd_norm or 'bậc 2' in cmd_norm or 'bậc hai' in cmd_norm:
+    elif 'x²' in cmd_norm or 'parabol' in cmd_norm or 'bac 2' in cmd_norm or 'bac hai' in cmd_norm:
         return {"type": "parabola", "a": 1, "b": -2, "c": 1}
-    elif '/' in lab_command and 'x' in cmd_lower:
+    elif '/' in lab_command and 'x' in cmd_norm:
         return {"type": "func_1_1", "a": 1, "b": 1, "c": 1, "d": -1}
     return None
-
 
 def _build_lab_prompt(lab_request, subject, grade_num, context_text):
     return f"""[HỆ TRI THỨC SƯ PHẠM QUỐC GIA - CHUẨN CT GDPT 2018 & QUY CHẾ THI 2026]
