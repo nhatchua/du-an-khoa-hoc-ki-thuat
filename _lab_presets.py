@@ -97,12 +97,12 @@ PRESET_LABS = {
                         '   A --> A1["Bậc nhất: $y = ax + b$"]\n'
                         '   A --> A2["Bậc hai: $y = ax^2 + bx + c$"]\n'
                         '   A --> A3["Bậc ba: $y = ax^3 + bx^2 + cx + d$"]\n'
-                        '   B --> B1["Bậc 1/1: $y = \\\\dfrac{ax+b}{cx+d}$"]\n'
-                        '   B --> B2["Bậc 2/1: $y = \\\\dfrac{ax^2+bx+c}{dx+e}$"]\n'
+                        '   B --> B1["Bậc 1/1: $y = \\dfrac{ax+b}{cx+d}$"]\n'
+                        '   B --> B2["Bậc 2/1: $y = \\dfrac{ax^2+bx+c}{dx+e}$"]\n'
                         '   C --> C1["Hàm mũ: $y = a^x$"]\n'
-                        '   C --> C2["Hàm logarit: $y = \\\\log_a x$"]\n'
-                        '   D --> D1["$y = \\\\sin x$, $y = \\\\cos x$"]\n'
-                        '   D --> D2["$y = \\\\tan x$, $y = \\\\cot x$"]'
+                        '   C --> C2["Hàm logarit: $y = \\log_a x$"]\n'
+                        '   D --> D1["$y = \\sin x$, $y = \\cos x$"]\n'
+                        '   D --> D2["$y = \\tan x$, $y = \\cot x$"]'
                     ),
                 },
             },
