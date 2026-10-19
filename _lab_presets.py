@@ -10,11 +10,27 @@ PRESET_LABS = {
     "Toán học": {
         10: [
             {
+                "id": "toan10_func1",
+                "name": "📏 Hàm số bậc nhất",
+                "desc": "y = ax + b — kéo slider để thấy sự thay đổi của đồng biến / nghịch biến",
+                "tags": ["ham bac nhat", "duong thang", "do thi", "dong bien", "nghich bien"],
+                "data": {"type": "func_1", "a": 2.0, "b": -1.0},
+            },
+            {
                 "id": "toan10_parabola_1",
                 "name": "📐 Parabol bậc 2",
                 "desc": "y = x² − 2x + 1 — kéo slider để thử mọi trường hợp Δ",
                 "tags": ["parabol", "bac hai", "do thi", "nghiem", "dinh"],
                 "data": {"type": "parabola", "a": 1, "b": -2, "c": 1},
+            },
+        ],
+        11: [
+            {
+                "id": "toan11_trig",
+                "name": "🌊 Hàm số Lượng giác",
+                "desc": "y = A·sin(ωx + φ) — kéo slider để thấy chu kỳ, biên độ, pha ban đầu",
+                "tags": ["luong giac", "sin", "cos", "chu ky", "bien do"],
+                "data": {"type": "trig_func", "A": 1.0, "omega": 1.0, "phi": 0.0, "func_type": "sin"},
             },
         ],
         12: [
